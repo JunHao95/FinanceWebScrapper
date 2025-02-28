@@ -38,7 +38,7 @@ class FinvizScraper(BaseScraper):
                         header = cells[i].text.strip()
                         value = cells[i+1].text.strip()
                         
-                        # Look for our target metrics
+                        # Basic valuation metrics
                         if header == "P/E":
                             data["P/E Ratio (Finviz)"] = value
                         elif header == "P/B":
@@ -47,9 +47,41 @@ class FinvizScraper(BaseScraper):
                             data["P/S Ratio (Finviz)"] = value
                         elif header == "Forward P/E":
                             data["Forward P/E (Finviz)"] = value
+                        
+                        # Additional metrics
+                        elif header == "PEG":
+                            data["PEG Ratio (Finviz)"] = value
+                        elif header == "EV/EBITDA":
+                            data["EV/EBITDA (Finviz)"] = value
+                        elif header == "ROE":
+                            data["ROE (Finviz)"] = value
+                        elif header == "ROA":
+                            data["ROA (Finviz)"] = value
+                        elif header == "ROI":
+                            data["ROIC (Finviz)"] = value
+                        elif header == "EPS (ttm)":
+                            data["EPS (Finviz)"] = value
+                        elif header == "EPS next Y":
+                            data["EPS Next Year (Finviz)"] = value
+                        elif header == "EPS growth this year":
+                            data["EPS Growth This Year (Finviz)"] = value
+                        elif header == "EPS growth next year":
+                            data["EPS Growth Next Year (Finviz)"] = value
+                        elif header == "EPS growth next 5Y":
+                            data["EPS Growth Next 5Y (Finviz)"] = value
+                        elif header == "EPS growth qtr over qtr":
+                            data["EPS Growth QoQ (Finviz)"] = value
+                        elif header == "Profit Margin":
+                            data["Profit Margin (Finviz)"] = value
+                        elif header == "Oper. Margin":
+                            data["Operating Margin (Finviz)"] = value
         else:
             self.logger.warning(f"Could not find snapshot table for {ticker} on Finviz")
         
         # Add source metadata
-        self.logger.info(f"Successfully scraped Finviz data for {ticker}")
+        if data:
+            self.logger.info(f"Successfully scraped Finviz data for {ticker}")
+        else:
+            self.logger.warning(f"No data found for {ticker} on Finviz")
+            
         return data

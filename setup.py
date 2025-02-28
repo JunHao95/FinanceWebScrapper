@@ -25,7 +25,7 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "stock-scraper=main:main",
+            "stock-scraper=stock_scraper.main:main",
         ],
     },
 )

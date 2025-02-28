@@ -34,33 +34,62 @@ class GoogleFinanceScraper(BaseScraper):
         # Try each possible URL
         for url in urls:
             try:
+                self.logger.info(f"Trying Google Finance URL: {url}")
                 response = make_request(url, headers=self.headers)
                 
                 # If we get here, the URL worked
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # Look for P/E ratio
-                metrics = soup.find_all('div', class_='P6K39c')
-                for metric in metrics:
-                    label_div = metric.find('div', class_='Mb2qrb')
-                    if label_div and "P/E ratio" in label_div.text:
-                        value_div = metric.find('div', class_='YMlKec')
-                        if value_div:
-                            data["P/E Ratio (Google)"] = value_div.text.strip()
+                # Look for key metrics in the About section
+                about_section = None
+                sections = soup.find_all('div', class_='bLLb2d')
+                for section in sections:
+                    if "About" in section.text:
+                        about_section = section
+                        break
                 
-                # Look for other metrics - Google Finance doesn't always show these clearly
-                # but we'll try to find them if available
-                all_divs = soup.find_all('div')
-                for div in all_divs:
-                    if "P/B ratio" in div.text or "Price to book" in div.text.lower():
-                        value = re.search(r'[\d.]+', div.text)
-                        if value:
-                            data["P/B Ratio (Google)"] = value.group()
+                if about_section:
+                    # Google Finance structure is different from other sources
+                    # It has a grid of metrics with labels and values
+                    metrics = soup.find_all('div', class_='P6K39c')
+                    for metric in metrics:
+                        label_div = metric.find('div')
+                        if not label_div:
+                            continue
                             
-                    if "P/S ratio" in div.text or "Price to sales" in div.text.lower():
-                        value = re.search(r'[\d.]+', div.text)
-                        if value:
-                            data["P/S Ratio (Google)"] = value.group()
+                        label = label_div.text.strip().lower()
+                        value_div = metric.find('div', class_='YMlKec')
+                        
+                        if value_div:
+                            value = value_div.text.strip()
+                            
+                            # Basic metrics
+                            if "p/e ratio" in label:
+                                data["P/E Ratio (Google)"] = value
+                            elif "price-to-book" in label or "p/b ratio" in label:
+                                data["P/B Ratio (Google)"] = value
+                            elif "price-to-sales" in label or "p/s ratio" in label:
+                                data["P/S Ratio (Google)"] = value
+                            
+                            # Additional metrics
+                            elif "eps" in label or "earnings per share" in label:
+                                data["EPS (Google)"] = value
+                            elif "roe" in label or "return on equity" in label:
+                                data["ROE (Google)"] = value
+                            elif "roic" in label or "return on invested capital" in label:
+                                data["ROIC (Google)"] = value
+                            elif "ev/ebitda" in label or "enterprise value to ebitda" in label:
+                                data["EV/EBITDA (Google)"] = value
+                            elif "peg" in label:
+                                data["PEG Ratio (Google)"] = value
+                
+                # Look for EPS in description text or elsewhere on the page
+                desc_div = soup.find('div', class_='bLLb2d')
+                if desc_div:
+                    desc_text = desc_div.text
+                    eps_match = re.search(r'EPS.*?(\$[\d.]+|\d+\.\d+)', desc_text)
+                    if eps_match and "EPS (Google)" not in data:
+                        data["EPS (Google)"] = eps_match.group(1)
                 
                 # If we found at least one metric, break the loop
                 if data:

@@ -8,7 +8,6 @@ A Python web scraping application that fetches financial metrics like P/E ratio,
   - Yahoo Finance
   - Finviz
   - Google Finance
-  - MarketWatch
 - Provides comprehensive financial ratios and metrics
 - Works with any valid stock ticker symbol
 - Offers both command-line and interactive modes
