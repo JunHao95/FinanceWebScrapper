@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 import logging
 from datetime import datetime
+import pandas as pd
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -71,15 +72,15 @@ def parse_email_list(email_string):
     # Filter out empty strings
     return [email for email in emails if email]
 
-def send_email(recipients, subject, body, attachment_path=None, config=None, cc=None, bcc=None):
+def send_email(recipients, subject, body, attachment_paths=None, config=None, cc=None, bcc=None):
     """
-    Send an email with optional attachment to multiple recipients
+    Send an email with optional attachments to multiple recipients
     
     Args:
         recipients (str or list): Recipient email address(es)
         subject (str): Email subject
         body (str): Email body
-        attachment_path (str, optional): Path to attachment file
+        attachment_paths (list, optional): List of paths to attachment files
         config (dict, optional): Email configuration. If None, will use environment variables.
         cc (str or list, optional): CC email address(es)
         bcc (str or list, optional): BCC email address(es)
@@ -130,12 +131,16 @@ def send_email(recipients, subject, body, attachment_path=None, config=None, cc=
         # Add body
         message.attach(MIMEText(body, "plain"))
         
-        # Add attachment if provided
-        if attachment_path and os.path.exists(attachment_path):
-            with open(attachment_path, "rb") as attachment:
-                part = MIMEApplication(attachment.read(), Name=os.path.basename(attachment_path))
-                part["Content-Disposition"] = f'attachment; filename="{os.path.basename(attachment_path)}"'
-                message.attach(part)
+        # Add attachments if provided
+        if attachment_paths:
+            for path in attachment_paths:
+                if os.path.exists(path):
+                    with open(path, "rb") as attachment:
+                        part = MIMEApplication(attachment.read(), Name=os.path.basename(path))
+                        part["Content-Disposition"] = f'attachment; filename="{os.path.basename(path)}"'
+                        message.attach(part)
+                else:
+                    logger.warning(f"Attachment file not found: {path}")
         
         # Combine all recipients for actual sending
         all_recipients = list(recipients) + list(cc) + list(bcc)
@@ -159,72 +164,126 @@ def send_email(recipients, subject, body, attachment_path=None, config=None, cc=
         logger.error(f"Error sending email: {str(e)}")
         return False
 
-def send_stock_report(ticker, recipients, file_path, data=None, cc=None, bcc=None):
+def generate_metrics_table(data_dict, metrics=None):
     """
-    Send a stock report via email to multiple recipients
+    Generate a simple text table of key metrics for multiple stocks
     
     Args:
-        ticker (str): Stock ticker symbol
+        data_dict (dict): Dictionary with ticker symbols as keys and data dictionaries as values
+        metrics (list, optional): List of metrics to include
+        
+    Returns:
+        str: Formatted table as string
+    """
+    if not metrics:
+        metrics = [
+            "P/E Ratio", "Forward P/E", "PEG Ratio", 
+            "EPS", "ROE", "Profit Margin", 
+            "Current Price", "RSI (14)"
+        ]
+    
+    # Extract data for each ticker
+    table_data = {}
+    for ticker, data in data_dict.items():
+        ticker_data = {"Ticker": ticker}
+        
+        # Find relevant metrics from different sources
+        for metric_name in metrics:
+            for key, value in data.items():
+                if metric_name in key:
+                    ticker_data[metric_name] = value
+                    break
+        
+        table_data[ticker] = ticker_data
+    
+    # Convert to DataFrame
+    if table_data:
+        df = pd.DataFrame([v for v in table_data.values()])
+        return df.to_string(index=False)
+    else:
+        return "No data available for metrics table."
+
+def send_consolidated_report(tickers, report_paths, all_data, recipients, summary_path=None, cc=None, bcc=None):
+    """
+    Send a consolidated report email for multiple stocks
+    
+    Args:
+        tickers (list): List of ticker symbols
+        report_paths (dict): Dictionary with ticker symbols as keys and report file paths as values
+        all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values
         recipients (str or list): Recipient email address(es)
-        file_path (str): Path to the report file
-        data (dict, optional): Stock data to include in the email body
+        summary_path (str, optional): Path to summary report file
         cc (str or list, optional): CC email address(es)
         bcc (str or list, optional): BCC email address(es)
         
     Returns:
         bool: True if successful, False otherwise
     """
-    subject = f"Stock Analysis Report: {ticker} - {datetime.now().strftime('%Y-%m-%d')}"
+    subject = f"Stock Analysis Report: {', '.join(tickers)} - {datetime.now().strftime('%Y-%m-%d')}"
     
     # Create email body
     body = [
-        f"Stock Analysis Report for {ticker}",
+        f"Stock Analysis Report for {len(tickers)} stocks: {', '.join(tickers)}",
         f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
         "This is an automated report from your Stock Data Scraper application.",
-        ""
+        "",
+        "KEY METRICS SUMMARY",
+        "===================="
     ]
     
-    # Add key metrics if data is provided
-    if data:
-        body.append("Key Metrics:")
-        body.append("-----------")
+    # Add metrics table
+    metrics_table = generate_metrics_table(all_data)
+    body.append(metrics_table)
+    body.append("")
+    
+    # Add individual stock highlights
+    body.append("INDIVIDUAL STOCK HIGHLIGHTS")
+    body.append("=========================")
+    
+    for ticker, data in all_data.items():
+        body.append(f"\n{ticker}:")
         
-        # Add a few important metrics if available
+        # Add key metrics if available
         metrics = [
             ("P/E Ratio", "P/E Ratio"),
             ("Forward P/E", "Forward P/E"),
-            ("PEG Ratio", "PEG Ratio"),
             ("EPS", "EPS"),
             ("ROE", "ROE"),
-            ("Current Price", "Current Price"),
-            ("RSI", "RSI (14)")
+            ("Current Price", "Current Price")
         ]
         
         for label, key_prefix in metrics:
             for data_key in data.keys():
                 if key_prefix in data_key:
-                    body.append(f"{label}: {data[data_key]}")
+                    body.append(f"  • {label}: {data[data_key]}")
                     break
-        
-        body.append("")
     
-    body.append("Please find the detailed report attached.")
+    body.append("\nPlease find the detailed reports attached.")
+    
+    # Add note about summary report if available
+    if summary_path:
+        body.append("\nA summary comparison report is also attached.")
+    
     body.append("")
     body.append("--")
     body.append("Stock Data Scraper")
     
-    # Debug info
-    print(f"Sending with environment variables:")
-    print(f"SMTP Server: {os.environ.get('FINANCE_SMTP_SERVER')}")
-    print(f"Sender Email: {os.environ.get('FINANCE_SENDER_EMAIL')}")
-    print(f"Password Set: {'Yes' if os.environ.get('FINANCE_SENDER_PASSWORD') else 'No'}")
+    # Prepare attachments - include both individual reports and summary
+    attachments = list(report_paths.values())
+    if summary_path:
+        attachments.append(summary_path)
     
+    # Debug info
+    print(f"Sending consolidated report with {len(attachments)} attachments")
+    print(f"Recipients: {recipients}")
+    
+    # Send email
     return send_email(
         recipients=recipients,
         subject=subject,
         body="\n".join(body),
-        attachment_path=file_path,
+        attachment_paths=attachments,
         cc=cc,
         bcc=bcc
     )
