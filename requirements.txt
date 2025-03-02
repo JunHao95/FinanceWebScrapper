@@ -2,7 +2,11 @@
 requests>=2.28.1
 beautifulsoup4>=4.11.1
 pandas>=1.5.0
+numpy>=1.23.0
 lxml>=4.9.1
+xlsxwriter>=3.0.3  # For Excel export
+tabulate>=0.9.0    # For better display formatting
+python-dotenv>=1.0.0  # For loading environment variables
 
 # Development dependencies
 pytest>=7.0.0

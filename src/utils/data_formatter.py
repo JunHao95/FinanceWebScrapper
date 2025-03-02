@@ -22,10 +22,10 @@ def format_data_as_dataframe(data):
     
     # Define metric groups
     metric_groups = {
-        "Basic Info": ["Ticker", "Data Timestamp"],
+        "Basic Info": ["Ticker", "Data Timestamp", "Company Name", "Last Updated"],
         "Valuation Ratios": [
             "P/E Ratio", "Forward P/E", "P/B Ratio", "P/S Ratio", 
-            "PEG Ratio", "EV/EBITDA"
+            "PEG Ratio", "EV/EBITDA", "Trailing P/E"
         ],
         "Profitability": [
             "ROE", "ROIC", "ROA", "Profit Margin", "Operating Margin"
@@ -34,6 +34,23 @@ def format_data_as_dataframe(data):
             "EPS", "EPS Estimate Current Year", "EPS Estimate Next Year",
             "EPS Growth This Year", "EPS Growth Next Year", "EPS Growth Next 5Y",
             "EPS Growth QoQ"
+        ],
+        "Cash Flow": [
+            "Operating Cash Flow", "Capital Expenditures", "Free Cash Flow"
+        ],
+        "Additional Metrics": [
+            "Dividend Yield", "Beta", "Book Value", "Market Cap"
+        ],
+        "Technical Indicators": [
+            "Current Price", "RSI", "BB Middle Band", "BB Upper Band", "BB Lower Band", 
+            "BB Width", "BB %B", "BB Signal", "RSI Signal"
+        ],
+        "Moving Averages": [
+            "MA10", "MA20", "MA50", "MA100", "MA200", "EMA12", "EMA26", 
+            "EMA50", "EMA200", "MACD"
+        ],
+        "Volume Indicators": [
+            "Current Volume", "Volume MA", "OBV Trend"
         ]
     }
     
@@ -143,7 +160,7 @@ def save_to_excel(df, file_path):
         worksheet.set_column('B:B', 15)
         
         # Save the workbook
-        writer.save()
+        writer.close()
         return True
     except Exception as e:
         print(f"Error saving to Excel: {str(e)}")

@@ -4,10 +4,19 @@ A Python web scraping application that fetches financial metrics like P/E ratio,
 
 ## Features
 
-- Scrapes financial data from multiple sources:
-  - Yahoo Finance
-  - Finviz
-  - Google Finance
+- Collects financial data from multiple sources:
+  - Web sources:
+    - Yahoo Finance
+    - Finviz
+    - Google Finance
+  - API services:
+    - Alpha Vantage API
+    - Finhub API
+  - Technical indicators:
+    - Bollinger Bands
+    - Moving Averages (SMA, EMA, MACD)
+    - RSI (Relative Strength Index)
+    - Volume indicators (OBV, Volume MA)
 - Provides comprehensive financial ratios and metrics
 - Works with any valid stock ticker symbol
 - Offers both command-line and interactive modes
@@ -33,6 +42,15 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+4. Set API keys (optional but recommended)
+```bash
+# For Alpha Vantage API
+export ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key_here
+
+# For Finhub API
+export FINHUB_API_KEY=your_finhub_key_here
+```
+
 ## Usage
 
 ### Interactive Mode
@@ -50,16 +68,25 @@ python main.py --ticker AAPL
 # Scrape data from specific sources
 python main.py --ticker MSFT --sources yahoo finviz
 
-# Scrape data and save to a file
-python main.py --ticker GOOGL --output output/google_data.csv
+# Use API sources with keys
+python main.py --ticker GOOGL --sources alphavantage finhub --alpha-key YOUR_KEY --finhub-key YOUR_KEY
+
+# Get technical indicators
+python main.py --ticker AAPL --sources technical --alpha-key YOUR_KEY
+
+# Scrape data and save to an Excel file
+python main.py --ticker GOOGL --output output/google_data.xlsx --format excel
 ```
 
 ### Command Line Arguments
 
 - `--ticker`: Stock ticker symbol to scrape
-- `--output`: Output CSV file path
-- `--sources`: Data sources to scrape from (choices: yahoo, finviz, google, marketwatch, all)
+- `--output`: Output CSV or Excel file path
+- `--sources`: Data sources to use (choices: yahoo, finviz, google, alphavantage, finhub, technical, all)
+- `--format`: Output file format (choices: csv, excel)
 - `--interactive`: Run in interactive mode
+- `--alpha-key`: Alpha Vantage API key
+- `--finhub-key`: Finhub API key
 
 ## Project Structure
 
