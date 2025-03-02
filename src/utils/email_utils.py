@@ -9,6 +9,10 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 import logging
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +52,37 @@ def validate_email_config(config):
     
     return True
 
-def send_email(recipient_email, subject, body, attachment_path=None, config=None):
+def parse_email_list(email_string):
     """
-    Send an email with optional attachment
+    Parse a comma-separated list of email addresses
     
     Args:
-        recipient_email (str): Recipient email address
+        email_string (str): Comma-separated list of email addresses
+        
+    Returns:
+        list: List of email addresses
+    """
+    if not email_string:
+        return []
+        
+    # Split by comma and strip whitespace
+    emails = [email.strip() for email in email_string.split(",")]
+    
+    # Filter out empty strings
+    return [email for email in emails if email]
+
+def send_email(recipients, subject, body, attachment_path=None, config=None, cc=None, bcc=None):
+    """
+    Send an email with optional attachment to multiple recipients
+    
+    Args:
+        recipients (str or list): Recipient email address(es)
         subject (str): Email subject
         body (str): Email body
         attachment_path (str, optional): Path to attachment file
         config (dict, optional): Email configuration. If None, will use environment variables.
+        cc (str or list, optional): CC email address(es)
+        bcc (str or list, optional): BCC email address(es)
         
     Returns:
         bool: True if successful, False otherwise
@@ -68,11 +93,38 @@ def send_email(recipient_email, subject, body, attachment_path=None, config=None
     if not validate_email_config(config):
         return False
     
+    # Convert string recipient to list if needed
+    if isinstance(recipients, str):
+        recipients = parse_email_list(recipients)
+    
+    # Convert CC and BCC to lists if needed
+    if isinstance(cc, str):
+        cc = parse_email_list(cc)
+    elif cc is None:
+        cc = []
+        
+    if isinstance(bcc, str):
+        bcc = parse_email_list(bcc)
+    elif bcc is None:
+        bcc = []
+    
+    # Ensure we have at least one recipient
+    if not recipients and not cc and not bcc:
+        logger.error("No recipients specified")
+        return False
+    
     try:
         # Create message
         message = MIMEMultipart()
         message["From"] = config["sender_email"]
-        message["To"] = recipient_email
+        
+        # Set To, CC, and BCC headers
+        if recipients:
+            message["To"] = ", ".join(recipients)
+        if cc:
+            message["Cc"] = ", ".join(cc)
+        # BCC is not included in headers
+        
         message["Subject"] = subject
         
         # Add body
@@ -85,34 +137,39 @@ def send_email(recipient_email, subject, body, attachment_path=None, config=None
                 part["Content-Disposition"] = f'attachment; filename="{os.path.basename(attachment_path)}"'
                 message.attach(part)
         
+        # Combine all recipients for actual sending
+        all_recipients = list(recipients) + list(cc) + list(bcc)
+        
         # Connect to server and send email
         if config["use_tls"]:
             context = ssl.create_default_context()
             with smtplib.SMTP(config["smtp_server"], config["smtp_port"]) as server:
                 server.starttls(context=context)
                 server.login(config["sender_email"], config["sender_password"])
-                server.send_message(message)
+                server.sendmail(config["sender_email"], all_recipients, message.as_string())
         else:
             with smtplib.SMTP(config["smtp_server"], config["smtp_port"]) as server:
                 server.login(config["sender_email"], config["sender_password"])
-                server.send_message(message)
+                server.sendmail(config["sender_email"], all_recipients, message.as_string())
         
-        logger.info(f"Email sent successfully to {recipient_email}")
+        logger.info(f"Email sent successfully to {len(all_recipients)} recipients")
         return True
         
     except Exception as e:
         logger.error(f"Error sending email: {str(e)}")
         return False
 
-def send_stock_report(ticker, recipient_email, file_path, data=None):
+def send_stock_report(ticker, recipients, file_path, data=None, cc=None, bcc=None):
     """
-    Send a stock report via email
+    Send a stock report via email to multiple recipients
     
     Args:
         ticker (str): Stock ticker symbol
-        recipient_email (str): Recipient email address
+        recipients (str or list): Recipient email address(es)
         file_path (str): Path to the report file
         data (dict, optional): Stock data to include in the email body
+        cc (str or list, optional): CC email address(es)
+        bcc (str or list, optional): BCC email address(es)
         
     Returns:
         bool: True if successful, False otherwise
@@ -157,9 +214,17 @@ def send_stock_report(ticker, recipient_email, file_path, data=None):
     body.append("--")
     body.append("Stock Data Scraper")
     
+    # Debug info
+    print(f"Sending with environment variables:")
+    print(f"SMTP Server: {os.environ.get('FINANCE_SMTP_SERVER')}")
+    print(f"Sender Email: {os.environ.get('FINANCE_SENDER_EMAIL')}")
+    print(f"Password Set: {'Yes' if os.environ.get('FINANCE_SENDER_PASSWORD') else 'No'}")
+    
     return send_email(
-        recipient_email=recipient_email,
+        recipients=recipients,
         subject=subject,
         body="\n".join(body),
-        attachment_path=file_path
+        attachment_path=file_path,
+        cc=cc,
+        bcc=bcc
     )

@@ -7,19 +7,13 @@ import sys
 import argparse
 from datetime import datetime
 import pandas as pd
+from dotenv import load_dotenv
+
+# Load environment variables at the start
+load_dotenv()
 
 # Add the src directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
-
-# Add this at the top of your main.py file (or the file containing the main function)
-from dotenv import load_dotenv
-import os
-
-# Load environment variables from .env file
-load_dotenv()
-
-# You can verify the variables are loaded with a debug print (remove in production)
-print(f"Email config loaded: {bool(os.environ.get('FINANCE_SENDER_EMAIL'))}")
 
 from src.scrapers.yahoo_scraper import YahooFinanceScraper
 from src.scrapers.finviz_scraper import FinvizScraper
@@ -28,7 +22,7 @@ from src.scrapers.api_scraper import AlphaVantageAPIScraper, FinhubAPIScraper
 from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe, save_to_csv, save_to_excel
 from src.utils.display_formatter import print_grouped_metrics, save_formatted_report
-from src.utils.email_utils import send_stock_report
+from src.utils.email_utils import send_stock_report, parse_email_list
 from src.config import setup_logging
 
 def parse_arguments():
@@ -47,7 +41,9 @@ def parse_arguments():
     parser.add_argument('--finhub-key', type=str, help="Finhub API key")
     parser.add_argument('--display-mode', type=str, choices=['table', 'grouped'], 
                       default='grouped', help="How to display results")
-    parser.add_argument('--email', type=str, help="Email address to send the report to")
+    parser.add_argument('--email', type=str, help="Comma-separated email addresses to send the report to")
+    parser.add_argument('--cc', type=str, help="Comma-separated email addresses to CC the report to")
+    parser.add_argument('--bcc', type=str, help="Comma-separated email addresses to BCC the report to")
     
     return parser.parse_args()
 
@@ -191,20 +187,38 @@ def save_report(data, ticker, file_format, custom_path=None):
     
     return filename
 
-def send_email_report(data, ticker, email_address, report_path):
+def send_email_report(data, ticker, recipients, report_path, cc=None, bcc=None):
     """
-    Send report via email
+    Send report via email to multiple recipients
     
     Args:
         data (dict): Stock data dictionary
         ticker (str): Stock ticker symbol
-        email_address (str): Recipient email address
+        recipients (str or list): Recipient email address(es)
         report_path (str): Path to the report file
+        cc (str or list, optional): CC email address(es)
+        bcc (str or list, optional): BCC email address(es)
         
     Returns:
         bool: True if successful, False otherwise
     """
-    print(f"Sending report to {email_address}...")
+    if isinstance(recipients, str):
+        recipients_list = parse_email_list(recipients)
+    else:
+        recipients_list = recipients
+        
+    recipient_count = len(recipients_list)
+    cc_count = len(parse_email_list(cc)) if cc else 0
+    bcc_count = len(parse_email_list(bcc)) if bcc else 0
+    
+    total_recipients = recipient_count + cc_count + bcc_count
+    
+    if total_recipients == 0:
+        print("No valid email addresses provided.")
+        return False
+        
+    plural = "s" if total_recipients > 1 else ""
+    print(f"Sending report to {total_recipients} recipient{plural}...")
     
     # Check if email configuration is set
     if not os.environ.get("FINANCE_SENDER_EMAIL") or not os.environ.get("FINANCE_SENDER_PASSWORD"):
@@ -217,12 +231,12 @@ def send_email_report(data, ticker, email_address, report_path):
         return False
     
     # Send the report
-    success = send_stock_report(ticker, email_address, report_path, data)
+    success = send_stock_report(ticker, recipients_list, report_path, data, cc, bcc)
     
     if success:
-        print(f"Report successfully sent to {email_address}")
+        print(f"Report successfully sent to {total_recipients} recipient{plural}")
     else:
-        print(f"Failed to send report to {email_address}")
+        print(f"Failed to send report")
     
     return success
 
@@ -290,14 +304,22 @@ def main():
                 # Ask if user wants to email the report
                 email = input("\nWould you like to email this report? (y/n): ").strip().lower()
                 if email == 'y':
-                    email_address = args.email
-                    if not email_address:
-                        email_address = input("Enter recipient email address: ").strip()
+                    recipients = args.email
+                    if not recipients:
+                        recipients = input("Enter recipient email address(es) (comma-separated): ").strip()
                     
-                    if email_address:
-                        send_email_report(data, ticker, email_address, saved_file)
+                    cc = args.cc
+                    if not cc and input("Would you like to CC anyone? (y/n): ").strip().lower() == 'y':
+                        cc = input("Enter CC email address(es) (comma-separated): ").strip()
+                    
+                    bcc = args.bcc
+                    if not bcc and input("Would you like to BCC anyone? (y/n): ").strip().lower() == 'y':
+                        bcc = input("Enter BCC email address(es) (comma-separated): ").strip()
+                    
+                    if recipients or cc or bcc:
+                        send_email_report(data, ticker, recipients, saved_file, cc, bcc)
                     else:
-                        print("No email address provided. Skipping email.")
+                        print("No email addresses provided. Skipping email.")
             
             # Ask if user wants to analyze another stock
             continue_scraping = input("\nWould you like to analyze another stock? (y/n): ").strip().lower()
@@ -330,7 +352,7 @@ def main():
         
         # Save to file if output is specified or email is requested
         report_path = None
-        if args.output or args.email:
+        if args.output or args.email or args.cc or args.bcc:
             # Determine file format
             file_format = args.format
             
@@ -338,8 +360,8 @@ def main():
             report_path = save_report(data, ticker, file_format, args.output)
             
             # Send email if requested
-            if args.email:
-                send_email_report(data, ticker, args.email, report_path)
+            if args.email or args.cc or args.bcc:
+                send_email_report(data, ticker, args.email, report_path, args.cc, args.bcc)
 
 if __name__ == "__main__":
     main()
