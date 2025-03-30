@@ -56,6 +56,8 @@ def parse_arguments():
                       help="Enable or disable logging (default: on)")
     parser.add_argument('--log-level', choices=['debug', 'info', 'warning', 'error', 'critical'],
                       default='info', help="Set logging level (default: info)")
+    parser.add_argument('--saveReports', choices=['on', 'off'], default='on',
+                      help="Enable or disable saving reports to files (default: on)")
     
     return parser.parse_args()
 
@@ -198,9 +200,10 @@ def run_scrapers(ticker, sources, logger, alpha_key=None, finhub_key=None, delay
     
     return results
 
-def save_report(data, ticker, file_format, output_dir="output"):
+def save_report(data, ticker, file_format, output_dir="output", save_enabled=True):
     """
     Save report to file and return the file path
+    Default as True to save report
     
     Args:
         data (dict): Stock data dictionary
@@ -225,6 +228,10 @@ def save_report(data, ticker, file_format, output_dir="output"):
     else:
         filename += ".csv"
     
+    # if saving report mode is disabled, just return filename wihtout saving 
+    if save_enabled == False:
+        print(f"Report saving is disabled. File path: {filename}")
+        return None
     # Ensure directory exists
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     
@@ -296,7 +303,7 @@ def send_email_report(data, ticker, recipients, report_path, cc=None, bcc=None):
     
     return success
 
-def create_summary_report(all_data, output_dir, file_format):
+def create_summary_report(all_data, output_dir, file_format, saved_enabled=True):
     """
     Create a summary report for all analyzed tickers
     
@@ -304,6 +311,7 @@ def create_summary_report(all_data, output_dir, file_format):
         all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values
         output_dir (str): Directory to save the report
         file_format (str): Output format (csv, excel, text)
+        save_enabled (bool): Whether to actually save the file
         
     Returns:
         str: Path to the saved summary file
@@ -346,9 +354,33 @@ def create_summary_report(all_data, output_dir, file_format):
     # Add extension
     if file_format == 'excel':
         filename += ".xlsx"
-        save_to_excel(summary_df, filename)
     elif file_format == 'text':
         filename += ".txt"
+    else:
+        filename += ".csv"
+    
+    # If saving is disabled, just display the summary and return
+    if not save_enabled:
+        print("\n" + "="*80)
+        print("Stock Comparison Summary")
+        print("="*80)
+        print(f"Tickers analyzed: {', '.join(tickers)}")
+        print("\nSummary data:")
+        
+        # Display the summary DataFrame
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
+            print(summary_df)
+            
+        print(f"\nReport saving is disabled. Would have saved to: {filename}")
+        return None
+    
+    # Save the file in the specified format
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    
+    if file_format == 'excel':
+        save_to_excel(summary_df, filename)
+    elif file_format == 'text':
         # Custom text summary
         with open(filename, 'w') as f:
             f.write("="*80 + "\n")
@@ -358,7 +390,6 @@ def create_summary_report(all_data, output_dir, file_format):
             f.write(summary_df.to_string(index=False))
             f.write("\n\n")
     else:
-        filename += ".csv"
         save_to_csv(summary_df, filename)
     
     print(f"Summary report saved to: {filename}")
@@ -377,7 +408,7 @@ def process_ticker(ticker, args, logger):
         tuple: (ticker, data, report_path)
     """
     print(f"\nProcessing ticker: {ticker}")
-    
+    save_reports_enabled = args.saveReports.lower() == 'on'
     # Run scrapers
     data = run_scrapers(ticker, args.sources, logger, 
                      alpha_key=args.alpha_key, 
@@ -404,7 +435,7 @@ def process_ticker(ticker, args, logger):
             print(df.T)  # Transpose for better display
     
     # Save report
-    report_path = save_report(data, ticker, args.format, args.output_dir)
+    report_path = save_report(data, ticker, args.format, args.output_dir, save_enabled=save_reports_enabled)
     
     return (ticker, data, report_path)
 
@@ -426,6 +457,9 @@ def process_all_tickers(tickers, args, logger):
     all_reports = {}
     # Check if logging is enabled
     logging_enabled = args.logging.lower() == 'on'
+     # Check if saving reports is enabled
+    save_reports_enabled = args.saveReports.lower() == 'on'
+    print(f"DEBBUUGG save reports , ", save_reports_enabled)
     
     if args.parallel and len(tickers) > 1:
         print(f"Processing {len(tickers)} tickers in parallel with {args.max_workers} workers...")
@@ -463,7 +497,7 @@ def process_all_tickers(tickers, args, logger):
     # Create summary report if requested
     summary_path = None
     if args.summary and len(all_data) > 1:
-        summary_path = create_summary_report(all_data, args.output_dir, args.format)
+        summary_path = create_summary_report(all_data, args.output_dir, args.format, saved_enabled=save_reports_enabled)
     
     # Send email if requested
     if (args.email or args.cc or args.bcc) and all_reports:
