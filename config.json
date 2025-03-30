@@ -1,0 +1,9 @@
+{
+  "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "DDOG", "CVX", "KO", "XOM","AMD","TEAM", "TTD", "CRM", "RCL", "HWM","TSLA","DPZ", "CMG","NVO", "POR" ],
+  "sources": ["yahoo", "finviz", "technical"],
+  "format": "text",
+  "output_dir": "/Users/junhaotee/Desktop/Side_projects/FinanceWebScrapper/reports",
+  "summary": true,
+  "email": "teejunhao@gmail.com",
+  "cc":  "lyh1718@gmail.com"
+}
