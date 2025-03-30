@@ -33,7 +33,7 @@ REQUEST_RETRIES = 3
 REQUEST_DELAY = 1
 
 # Configure logging
-def setup_logging(log_level=logging.INFO):
+def setup_logging(log_level=logging.INFO, logging_enabled=True):
     """
     Configure logging for the application
     
@@ -42,6 +42,16 @@ def setup_logging(log_level=logging.INFO):
     """
     # Create logger
     logger = logging.getLogger()
+    # Clear any existing handlers
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    if not logging_enabled:
+        # Set logging level higher than critical to disable logging
+        logger.setLevel(logging.CRITICAL + 1)
+        return logger
+    
+    # Normal logging setup
     logger.setLevel(log_level)
     
     # Create console handler
@@ -68,5 +78,5 @@ def setup_logging(log_level=logging.INFO):
     
     return logger
 
-# Initialize logging
-logger = setup_logging()
+# Initialize logging - will be properly configured in main.py
+logger = logging.getLogger()

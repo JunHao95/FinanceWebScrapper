@@ -10,6 +10,7 @@ import pandas as pd
 from dotenv import load_dotenv
 import concurrent.futures
 import time
+import logging
 
 # Load environment variables at the start
 load_dotenv()
@@ -51,6 +52,10 @@ def parse_arguments():
     parser.add_argument('--max-workers', type=int, default=4, help="Maximum number of parallel workers")
     parser.add_argument('--delay', type=int, default=1, help="Delay between API requests in seconds")
     parser.add_argument('--summary', action='store_true', help="Generate a summary report for all tickers")
+    parser.add_argument('--logging', choices=['on', 'off'], default='on', 
+                      help="Enable or disable logging (default: on)")
+    parser.add_argument('--log-level', choices=['debug', 'info', 'warning', 'error', 'critical'],
+                      default='info', help="Set logging level (default: info)")
     
     return parser.parse_args()
 
@@ -104,23 +109,28 @@ def load_tickers_from_file(file_path):
 def run_scrapers(ticker, sources, logger, alpha_key=None, finhub_key=None, delay=1):
     """Run the selected scrapers and combine results"""
     results = {"Ticker": ticker, "Data Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-    
+
+    # Check if logging is enabled (logger level will be set higher than CRITICAL if disabled)
+    logging_enabled = logger.level <= logging.CRITICAL
     if 'all' in sources or 'yahoo' in sources:
-        logger.info(f"Scraping Yahoo Finance data for {ticker}...")
+        if logging_enabled: 
+            logger.info(f"Scraping Yahoo Finance data for {ticker}...")
         print(f"Scraping Yahoo Finance data for {ticker}...")
         yahoo_scraper = YahooFinanceScraper()
         results.update(yahoo_scraper.get_data(ticker))
         time.sleep(delay)  # Add delay to avoid rate limiting
     
     if 'all' in sources or 'finviz' in sources:
-        logger.info(f"Scraping Finviz data for {ticker}...")
+        if logging_enabled: 
+            logger.info(f"Scraping Finviz data for {ticker}...")
         print(f"Scraping Finviz data for {ticker}...")
         finviz_scraper = FinvizScraper()
         results.update(finviz_scraper.get_data(ticker))
         time.sleep(delay)  # Add delay to avoid rate limiting
     
     if 'all' in sources or 'google' in sources:
-        logger.info(f"Scraping Google Finance data for {ticker}...")
+        if logging_enabled: 
+            logger.info(f"Scraping Google Finance data for {ticker}...")
         print(f"Scraping Google Finance data for {ticker}...")
         google_scraper = GoogleFinanceScraper()
         results.update(google_scraper.get_data(ticker))
@@ -128,33 +138,38 @@ def run_scrapers(ticker, sources, logger, alpha_key=None, finhub_key=None, delay
     
     # Alpha Vantage API (only if API key is available)
     if 'all' in sources or 'alphavantage' in sources:
-        logger.info(f"Fetching Alpha Vantage API data for {ticker}...")
+        if logging_enabled: 
+            logger.info(f"Fetching Alpha Vantage API data for {ticker}...")
         print(f"Fetching Alpha Vantage API data for {ticker}...")
         alpha_scraper = AlphaVantageAPIScraper(api_key=alpha_key)
         if alpha_key or os.environ.get("ALPHA_VANTAGE_API_KEY"):
             results.update(alpha_scraper.get_data(ticker))
         else:
-            logger.warning("Alpha Vantage API key not provided. Skipping this data source.")
+            if logging_enabled: 
+                logger.warning("Alpha Vantage API key not provided. Skipping this data source.")
             print("Alpha Vantage API key not provided. Skipping this data source.")
             print("Set with --alpha-key or ALPHA_VANTAGE_API_KEY environment variable.")
         time.sleep(delay)  # Add delay to avoid rate limiting
     
     # Finhub API (only if API key is available)
     if 'all' in sources or 'finhub' in sources:
-        logger.info(f"Fetching Finhub API data for {ticker}...")
+        if logging_enabled: 
+            logger.info(f"Fetching Finhub API data for {ticker}...")
         print(f"Fetching Finhub API data for {ticker}...")
         finhub_scraper = FinhubAPIScraper(api_key=finhub_key)
         if finhub_key or os.environ.get("FINHUB_API_KEY"):
             results.update(finhub_scraper.get_data(ticker))
         else:
-            logger.warning("Finhub API key not provided. Skipping this data source.")
+            if logging_enabled: 
+                logger.warning("Finhub API key not provided. Skipping this data source.")
             print("Finhub API key not provided. Skipping this data source.")
             print("Set with --finhub-key or FINHUB_API_KEY environment variable.")
         time.sleep(delay)  # Add delay to avoid rate limiting
     
     # Technical indicators (only if API key is available)
     if 'all' in sources or 'technical' in sources:
-        logger.info(f"Calculating technical indicators for {ticker}...")
+        if logging_enabled: 
+            logger.info(f"Calculating technical indicators for {ticker}...")
         print(f"Calculating technical indicators for {ticker}...")
         tech_indicators = TechnicalIndicators(api_key=alpha_key)
         if alpha_key or os.environ.get("ALPHA_VANTAGE_API_KEY"):
@@ -169,10 +184,12 @@ def run_scrapers(ticker, sources, logger, alpha_key=None, finhub_key=None, delay
                         formatted_indicators[key] = value
                 results.update(formatted_indicators)
             else:
-                logger.warning(f"Error calculating technical indicators: {indicator_data['error']}")
+                if logging_enabled: 
+                    logger.warning(f"Error calculating technical indicators: {indicator_data['error']}")
                 print(f"Error calculating technical indicators: {indicator_data['error']}")
         else:
-            logger.warning("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
+            if logging_enabled: 
+                logger.warning("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
             print("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
             print("Set with --alpha-key or ALPHA_VANTAGE_API_KEY environment variable.")
     
@@ -407,6 +424,8 @@ def process_all_tickers(tickers, args, logger):
     """
     all_data = {}
     all_reports = {}
+    # Check if logging is enabled
+    logging_enabled = args.logging.lower() == 'on'
     
     if args.parallel and len(tickers) > 1:
         print(f"Processing {len(tickers)} tickers in parallel with {args.max_workers} workers...")
@@ -424,7 +443,8 @@ def process_all_tickers(tickers, args, logger):
                     all_data[ticker] = data
                     all_reports[ticker] = report_path
                 except Exception as e:
-                    logger.error(f"Error processing ticker {ticker}: {str(e)}")
+                    if logging_enabled:
+                        logger.error(f"Error processing ticker {ticker}: {str(e)}")
                     print(f"Error processing ticker {ticker}: {str(e)}")
     else:
         print(f"Processing {len(tickers)} tickers sequentially...")
@@ -436,7 +456,8 @@ def process_all_tickers(tickers, args, logger):
                 all_data[ticker] = data
                 all_reports[ticker] = report_path
             except Exception as e:
-                logger.error(f"Error processing ticker {ticker}: {str(e)}")
+                if logging_enabled:
+                    logger.error(f"Error processing ticker {ticker}: {str(e)}")
                 print(f"Error processing ticker {ticker}: {str(e)}")
     
     # Create summary report if requested
@@ -485,6 +506,27 @@ def main():
     
     args = parse_arguments()
     
+    # Setup logging based on command-line arguments
+    logging_enabled = args.logging.lower() == 'on'
+
+    # Set log level based on command-line argument
+    log_level_map = {
+        'debug': logging.DEBUG,
+        'info': logging.INFO,
+        'warning': logging.WARNING,
+        'error': logging.ERROR,
+        'critical': logging.CRITICAL
+    }
+    log_level = log_level_map.get(args.log_level.lower(), logging.INFO)
+     # Initialize logger with proper settings
+    logger = setup_logging(log_level=log_level, logging_enabled=logging_enabled)
+
+    if logging_enabled:
+        logger.info("Logging is enabled at %s level", args.log_level.upper())
+        print(f"Logging is enabled at {args.log_level.upper()} level")
+    else:
+        print("Logging is disabled")
+
     try:
         # Import tabulate only if needed
         if args.display_mode == 'grouped':
@@ -517,7 +559,8 @@ def main():
                 all_data[ticker] = data
                 all_reports[ticker] = report_path
             except Exception as e:
-                logger.error(f"Error processing ticker {ticker}: {str(e)}")
+                if logging_enabled:
+                    logger.error(f"Error processing ticker {ticker}: {str(e)}")
                 print(f"Error processing ticker {ticker}: {str(e)}")
         
         # Create summary report if requested or if multiple tickers

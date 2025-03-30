@@ -4,24 +4,24 @@ A Python web scraping application that fetches financial metrics like P/E ratio,
 
 ## Features
 
-- Collects financial data from multiple sources:
-  - Web sources:
-    - Yahoo Finance
-    - Finviz
-    - Google Finance
-  - API services:
-    - Alpha Vantage API
-    - Finhub API
-  - Technical indicators:
-    - Bollinger Bands
-    - Moving Averages (SMA, EMA, MACD)
-    - RSI (Relative Strength Index)
-    - Volume indicators (OBV, Volume MA)
-- Provides comprehensive financial ratios and metrics
-- Works with any valid stock ticker symbol
-- Offers both command-line and interactive modes
-- Exports data to CSV format
-- Robust error handling and retry mechanisms
+- Scrapes financial data from multiple sources:
+  - Web sources: Yahoo Finance, Finviz, Google Finance
+  - APIs: Alpha Vantage, Finhub (API keys required)
+- Calculates technical indicators:
+  - Bollinger Bands
+  - Moving Averages
+  - RSI
+  - Volume indicators
+- Supports multiple output formats:
+  - CSV
+  - Excel
+  - Text reports
+- Additional features:
+  - Email reports
+  - Parallel processing
+  - Interactive mode
+  - Summary reports
+  - Configurable logging
 
 ## Installation
 
@@ -53,11 +53,31 @@ export FINHUB_API_KEY=your_finhub_key_here
 
 ## Usage
 
-### Interactive Mode
+### Basic Usage
 
 ```bash
-python main.py --interactive
+python main.py --tickers AAPL,MSFT,GOOG
 ```
+
+### Logging Options 
+
+Control logging behavior:
+
+```bash
+# Turn off logging
+python main.py --tickers AAPL --logging off
+
+# Set logging level
+python main.py --tickers AAPL --log-level debug
+python main.py --tickers AAPL --log-level warning
+```
+
+Available logging levels:
+- `debug`: Most verbose, shows all details
+- `info`: Standard information (default)
+- `warning`: Only warnings and errors
+- `error`: Only errors
+- `critical`: Only critical errors
 
 ### Command Line Mode
 
@@ -88,6 +108,23 @@ python main.py --ticker GOOGL --output output/google_data.xlsx --format excel
 - `--alpha-key`: Alpha Vantage API key
 - `--finhub-key`: Finhub API key
 
+## API Keys
+
+Some features require API keys:
+
+- Alpha Vantage API: Set `ALPHA_VANTAGE_API_KEY` environment variable or use `--alpha-key`
+- Finhub API: Set `FINHUB_API_KEY` environment variable or use `--finhub-key`
+
+## Email Configuration
+
+To enable email reports, set the following environment variables:
+
+- `FINANCE_SENDER_EMAIL`: Sender email address
+- `FINANCE_SENDER_PASSWORD`: Sender email password
+- `FINANCE_SMTP_SERVER`: SMTP server (default: smtp.gmail.com)
+- `FINANCE_SMTP_PORT`: SMTP port (default: 587)
+- `FINANCE_USE_TLS`: Use TLS (default: True)
+
 ## Project Structure
 
 ```
@@ -116,9 +153,6 @@ stock_scraper/
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Disclaimer
 
