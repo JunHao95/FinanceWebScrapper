@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 import pandas as pd
 from dotenv import load_dotenv
-
+from tabulate import tabulate
 # Load environment variables
 load_dotenv()
 
@@ -72,7 +72,7 @@ def parse_email_list(email_string):
     # Filter out empty strings
     return [email for email in emails if email]
 
-def send_email(recipients, subject, body, attachment_paths=None, config=None, cc=None, bcc=None):
+def send_email(recipients, subject, body, attachment_paths=None, config=None, cc=None, bcc=None, is_html=False):
     """
     Send an email with optional attachments to multiple recipients
     
@@ -129,7 +129,10 @@ def send_email(recipients, subject, body, attachment_paths=None, config=None, cc
         message["Subject"] = subject
         
         # Add body
-        message.attach(MIMEText(body, "plain"))
+        if is_html:
+            message.attach(MIMEText(body, "html"))
+        else:
+            message.attach(MIMEText(body, "plain"))
         
         # Add attachments if provided
         if attachment_paths:
@@ -164,13 +167,14 @@ def send_email(recipients, subject, body, attachment_paths=None, config=None, cc
         logger.error(f"Error sending email: {str(e)}")
         return False
 
-def generate_metrics_table(data_dict, metrics=None):
+def generate_metrics_table(data_dict, metrics=None, table_format="grid"):
     """
     Generate a simple text table of key metrics for multiple stocks
     
     Args:
         data_dict (dict): Dictionary with ticker symbols as keys and data dictionaries as values
         metrics (list, optional): List of metrics to include
+        table_format (str, optional): Format of the table (e.g., "grid", "plain"). Defaults to "grid".
         
     Returns:
         str: Formatted table as string
@@ -181,31 +185,60 @@ def generate_metrics_table(data_dict, metrics=None):
             "EPS", "ROE", "Profit Margin", 
             "Current Price", "RSI (14)"
         ]
-    
-    # Extract data for each ticker
-    table_data = {}
+     # Prepare the data for tabulation
+    summary_data = []
     for ticker, data in data_dict.items():
-        ticker_data = {"Ticker": ticker}
-        
-        # Find relevant metrics from different sources
+        row = [ticker]  # Start with the ticker symbol
         for metric_name in metrics:
-            for key, value in data.items():
-                if metric_name in key:
-                    ticker_data[metric_name] = value
-                    break
-        
-        table_data[ticker] = ticker_data
+            # Perform a case-insensitive partial match for the metric
+            value = next((data[key] for key in data if metric_name.lower() in key.lower()), "--")
+            row.append(value)
+        summary_data.append(row)
     
-    # Convert to DataFrame
-    if table_data:
-        df = pd.DataFrame([v for v in table_data.values()])
-        return df.to_string(index=False)
+    # Add headers (Ticker + Metrics)
+    headers = ["Ticker"] + metrics
+    
+    # Generate the formatted table using tabulate
+    if summary_data:
+        return tabulate(summary_data, headers=headers, tablefmt=table_format)
     else:
         return "No data available for metrics table."
 
+
+def generate_html_metrics_table(all_data):
+    """
+    Generate an HTML table for key metrics.
+    
+    Args:
+        all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values.
+        
+    Returns:
+        str: HTML table as a string.
+    """
+    # Define the key metrics to include in the summary
+    key_metrics = ["Ticker", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "Profit Margin"]
+    
+    # Start the HTML table
+    html = '<table border="1" style="border-collapse: collapse; width: 100%;">'
+    html += "<thead><tr>"
+    for metric in key_metrics:
+        html += f"<th style='padding: 8px; text-align: left;'>{metric}</th>"
+    html += "</tr></thead><tbody>"
+    
+    # Add rows for each ticker
+    for ticker, data in all_data.items():
+        html += "<tr>"
+        html += f"<td style='padding: 8px;'>{ticker}</td>"
+        for metric in key_metrics[1:]:  # Skip "Ticker" as it's already added
+            value = next((data[key] for key in data if metric in key), "--")
+            html += f"<td style='padding: 8px;'>{value}</td>"
+        html += "</tr>"
+    
+    html += "</tbody></table>"
+    return html
 def send_consolidated_report(tickers, report_paths, all_data, recipients, summary_path=None, cc=None, bcc=None):
     """
-    Send a consolidated report email for multiple stocks
+    Send a consolidated report email for multiple stocks using HTML formatting.
     
     Args:
         tickers (list): List of ticker symbols
@@ -221,30 +254,27 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
     """
     subject = f"Stock Analysis Report: {', '.join(tickers)} - {datetime.now().strftime('%Y-%m-%d')}"
     
-    # Create email body
-    body = [
-        f"Stock Analysis Report for {len(tickers)} stocks: {', '.join(tickers)}",
-        f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        "",
-        "This is an automated report from your Stock Data Scraper application.",
-        "",
-        "KEY METRICS SUMMARY",
-        "===================="
-    ]
+    # Generate the HTML table for key metrics
+    metrics_table_html = generate_html_metrics_table(all_data)
     
-    # Add metrics table
-    metrics_table = generate_metrics_table(all_data)
-    body.append(metrics_table)
-    body.append("")
+    # Create the HTML email body
+    body = f"""
+    <html>
+        <body>
+            <h2>Stock Analysis Report</h2>
+            <p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            <p>This is an automated report from your Stock Data Scraper application.</p>
+            
+            <h3>Key Metrics Summary</h3>
+            {metrics_table_html}
+            
+            <h3>Individual Stock Highlights</h3>
+            <ul>
+    """
     
     # Add individual stock highlights
-    body.append("INDIVIDUAL STOCK HIGHLIGHTS")
-    body.append("=========================")
-    
     for ticker, data in all_data.items():
-        body.append(f"\n{ticker}:")
-        
-        # Add key metrics if available
+        body += f"<li><strong>{ticker}:</strong><ul>"
         metrics = [
             ("P/E Ratio", "P/E Ratio"),
             ("Forward P/E", "Forward P/E"),
@@ -252,22 +282,27 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
             ("ROE", "ROE"),
             ("Current Price", "Current Price")
         ]
-        
         for label, key_prefix in metrics:
             for data_key in data.keys():
                 if key_prefix in data_key:
-                    body.append(f"  • {label}: {data[data_key]}")
+                    body += f"<li>{label}: {data[data_key]}</li>"
                     break
+        body += "</ul></li>"
     
-    body.append("\nPlease find the detailed reports attached.")
+    body += """
+            </ul>
+            <p>Please find the detailed reports attached.</p>
+    """
     
     # Add note about summary report if available
     if summary_path:
-        body.append("\nA summary comparison report is also attached.")
+        body += "<p>A summary comparison report is also attached.</p>"
     
-    body.append("")
-    body.append("--")
-    body.append("Stock Data Scraper")
+    body += """
+            <p>--<br>Stock Data Scraper</p>
+        </body>
+    </html>
+    """
     
     # Prepare attachments - include both individual reports and summary
     attachments = list(report_paths.values())
@@ -282,8 +317,9 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
     return send_email(
         recipients=recipients,
         subject=subject,
-        body="\n".join(body),
+        body=body,
         attachment_paths=attachments,
         cc=cc,
-        bcc=bcc
+        bcc=bcc,
+        is_html=True  # Indicate that the email body is HTML
     )
