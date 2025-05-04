@@ -216,7 +216,7 @@ def generate_html_metrics_table(all_data):
         str: HTML table as a string.
     """
     # Define the key metrics to include in the summary
-    key_metrics = ["Ticker", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "Profit Margin"]
+    key_metrics = ["Ticker", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
     
     # Start the HTML table
     html = '<table border="1" style="border-collapse: collapse; width: 100%;">'
@@ -314,6 +314,7 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
     print(f"Recipients: {recipients}")
     
     # Send email
+    print(f"DEBUGG CC email to: {cc}")
     return send_email(
         recipients=recipients,
         subject=subject,
