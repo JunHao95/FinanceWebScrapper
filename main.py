@@ -52,12 +52,12 @@ def parse_arguments():
     parser.add_argument('--max-workers', type=int, default=4, help="Maximum number of parallel workers")
     parser.add_argument('--delay', type=int, default=1, help="Delay between API requests in seconds")
     parser.add_argument('--summary', action='store_true', help="Generate a summary report for all tickers")
-    parser.add_argument('--logging', choices=['on', 'off'], default='on', 
-                      help="Enable or disable logging (default: on)")
+    parser.add_argument('--logging', choices=['true', 'false'], default='true', 
+                      help="Enable or disable logging (default: true)")
     parser.add_argument('--log-level', choices=['debug', 'info', 'warning', 'error', 'critical'],
                       default='info', help="Set logging level (default: info)")
-    parser.add_argument('--saveReports', choices=['on', 'off'], default='on',
-                      help="Enable or disable saving reports to files (default: on)")
+    parser.add_argument('--saveReports', choices=['true', 'false'], default='false',
+                      help="Enable or disable saving reports to files (default: false)")
     
     return parser.parse_args()
 
@@ -230,10 +230,14 @@ def save_report(data, ticker, file_format, output_dir="output", save_enabled=Tru
     
     # if saving report mode is disabled, just return filename wihtout saving 
     if save_enabled == False:
-        print(f"Report saving is disabled. File path: {filename}")
-        return None
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_format}")
+        filename = temp_file.name
+        print(f"Report saving is disabledTemporary file created for email: {filename}")
+
     # Ensure directory exists
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    if save_enabled:
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
     
     # Save the file in the specified format
     if file_format == 'excel':
@@ -303,9 +307,10 @@ def send_email_report(data, ticker, recipients, report_path, cc=None, bcc=None):
     
     return success
 
-def create_summary_report(all_data, output_dir, file_format, saved_enabled=True):
+def create_summary_report(all_data, output_dir, file_format, save_enabled=False):
     """
     Create a summary report for all analyzed tickers
+    If saved_enabled is false, create a temporary file for email attachments 
     
     Args:
         all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values
@@ -314,7 +319,7 @@ def create_summary_report(all_data, output_dir, file_format, saved_enabled=True)
         save_enabled (bool): Whether to actually save the file
         
     Returns:
-        str: Path to the saved summary file
+        str: Path to the saved summary file, or None if saving is disabled
     """
     # Generate summary data
     tickers = list(all_data.keys())
@@ -332,14 +337,12 @@ def create_summary_report(all_data, output_dir, file_format, saved_enabled=True)
     
     for ticker, data in all_data.items():
         ticker_summary = {"Ticker": ticker}
-        
         # Get the most relevant value for each key metric
         for metric in key_metrics:
             for key, value in data.items():
                 if metric in key:
                     ticker_summary[metric] = value
-                    break
-        
+                    break      
         summary_data.append(ticker_summary)
     
     # Create DataFrame
@@ -372,11 +375,16 @@ def create_summary_report(all_data, output_dir, file_format, saved_enabled=True)
             print(summary_df)
             
         print(f"\nReport saving is disabled. Would have saved to: {filename}")
-        return None
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_format}")
+        filename = temp_file.name
+        print(f"Temporary file created for email: {filename}")
+        #return None
     
     # Save the file in the specified format
     # Ensure directory exists
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    if save_enabled:
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
     
     if file_format == 'excel':
         save_to_excel(summary_df, filename)
@@ -408,7 +416,7 @@ def process_ticker(ticker, args, logger):
         tuple: (ticker, data, report_path)
     """
     print(f"\nProcessing ticker: {ticker}")
-    save_reports_enabled = args.saveReports.lower() == 'on'
+    save_reports_enabled = args.saveReports.lower() == 'true'
     # Run scrapers
     data = run_scrapers(ticker, args.sources, logger, 
                      alpha_key=args.alpha_key, 
@@ -456,9 +464,9 @@ def process_all_tickers(tickers, args, logger):
     all_data = {}
     all_reports = {}
     # Check if logging is enabled
-    logging_enabled = args.logging.lower() == 'on'
+    logging_enabled = args.logging.lower() == 'true'
      # Check if saving reports is enabled
-    save_reports_enabled = args.saveReports.lower() == 'on'
+    save_reports_enabled = args.saveReports.lower() == 'true'
     print(f"DEBBUUGG save reports , ", save_reports_enabled)
     
     if args.parallel and len(tickers) > 1:
@@ -497,12 +505,15 @@ def process_all_tickers(tickers, args, logger):
     # Create summary report if requested
     summary_path = None
     if args.summary and len(all_data) > 1:
-        summary_path = create_summary_report(all_data, args.output_dir, args.format, saved_enabled=save_reports_enabled)
+        summary_path = create_summary_report(all_data, args.output_dir, args.format, save_enabled=save_reports_enabled)
     
     # Send email if requested
     if (args.email or args.cc or args.bcc) and all_reports:
         print("\nPreparing consolidated email report...")
-        
+        valid_report = {ticker: path for ticker, path in all_reports.items() if path}
+        if not valid_report:
+            print("No valid reports to send via email.")
+            return all_data
         # Import the consolidated email function
         from src.utils.email_utils import send_consolidated_report
         
@@ -539,9 +550,10 @@ def main():
     print("Added metrics: EV/EBITDA, PEG ratio, ROE, ROIC, EPS, and more!")
     
     args = parse_arguments()
+    print("DEBUGG ARGS: ", args)
     
     # Setup logging based on command-line arguments
-    logging_enabled = args.logging.lower() == 'on'
+    logging_enabled = args.logging.lower() == 'true'
 
     # Set log level based on command-line argument
     log_level_map = {
