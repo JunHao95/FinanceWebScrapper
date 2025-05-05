@@ -83,19 +83,19 @@ Available logging levels:
 
 ```bash
 # Scrape data for a specific ticker
-python main.py --ticker AAPL
+python main.py --tickers AAPL
 
 # Scrape data from specific sources
-python main.py --ticker MSFT --sources yahoo finviz
+python main.py --tickers MSFT --sources yahoo finviz
 
 # Use API sources with keys
-python main.py --ticker GOOGL --sources alphavantage finhub --alpha-key YOUR_KEY --finhub-key YOUR_KEY
+python main.py --tickers GOOGL --sources alphavantage finhub --alpha-key YOUR_KEY --finhub-key YOUR_KEY
 
 # Get technical indicators
-python main.py --ticker AAPL --sources technical --alpha-key YOUR_KEY
+python main.py --tickers AAPL --sources technical --alpha-key YOUR_KEY
 
 # Scrape data and save to an Excel file
-python main.py --ticker GOOGL --output output/google_data.xlsx --format excel
+python main.py --tickers GOOGL --output output/google_data.xlsx --format excel
 ```
 
 ### Command Line Arguments
