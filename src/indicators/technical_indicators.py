@@ -26,77 +26,148 @@ class TechnicalIndicators:
         if not self.api_key:
             self.logger.warning("Alpha Vantage API key not provided. Set ALPHA_VANTAGE_API_KEY environment variable.")
     
-    def get_historical_data(self, ticker, days=100):
+    def get_historical_data(self, ticker: str, days: int = 100) -> pd.DataFrame:
         """
-        Retrieve historical price data for a ticker
-        
+        Retrieve historical price data for a ticker.
+
         Args:
-            ticker (str): Stock ticker symbol
-            days (int): Number of days of historical data to fetch
-            
+            ticker (str): Stock ticker symbol.
+            days (int): Number of days of historical data to fetch.
+
         Returns:
-            pandas.DataFrame: DataFrame containing the historical data
+            pandas.DataFrame: DataFrame containing the historical data.
         """
         if not self.api_key:
             self.logger.error("Alpha Vantage API key not available. Cannot fetch historical data.")
             return pd.DataFrame()
-        
+
+        # Try Alpha Vantage API
+        df = self._fetch_alpha_vantage_data(ticker, days)
+        if not df.empty:
+            return df
+        self.logger.info("Alpha Vantage API failed to fetch historical data. Trying Finnhub API...")
+        # Fallback to Finnhub API
+        df = self._fetch_finnhub_data(ticker, days)
+        if not df.empty:
+            return df
+
+        # If both APIs fail
+        self.logger.error("Both Alpha Vantage and Finnhub APIs failed. Unable to fetch historical data.")
+        return pd.DataFrame()
+
+    def _fetch_alpha_vantage_data(self, ticker: str, days: int) -> pd.DataFrame:
+        """
+        Fetch historical data from Alpha Vantage API.
+
+        Args:
+            ticker (str): Stock ticker symbol.
+            days (int): Number of days of historical data to fetch.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the historical data.
+        """
+        url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={self.api_key}"
+        self.logger.info(f"Fetching data from Alpha Vantage: {url}")
+
         try:
-            # Get daily price data from Alpha Vantage
-            url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={self.api_key}"
-            
             response = requests.get(url, timeout=10)
             response.raise_for_status()
-            
             data = response.json()
-            
+
             if "Error Message" in data:
-                self.logger.error(f"API Error: {data['Error Message']}")
+                self.logger.error(f"Alpha Vantage API error: {data['Error Message']}")
                 return pd.DataFrame()
-                
+
             if "Time Series (Daily)" not in data:
-                self.logger.error("No time series data returned from API")
+                self.logger.error(f"No time series data returned from Alpha Vantage. Response: {data}")
                 return pd.DataFrame()
-            
-            # Convert to DataFrame
-            time_series = data["Time Series (Daily)"]
-            df = pd.DataFrame.from_dict(time_series, orient='index')
-            
-            # Convert index to datetime
-            df.index = pd.to_datetime(df.index)
-            
-            # Convert columns to numeric
-            for col in df.columns:
-                df[col] = pd.to_numeric(df[col])
-            
-            # Rename columns
-            df.rename(columns={
-                '1. open': 'open',
-                '2. high': 'high',
-                '3. low': 'low',
-                '4. close': 'close',
-                '5. volume': 'volume'
-            }, inplace=True)
-            
-            # Sort by date (most recent first)
-            df.sort_index(ascending=False, inplace=True)
-            
-            # Limit to requested number of days
-            df = df.head(days)
-            
-            # Handle NaN values - fill with preceding values
-            df.fillna(method='ffill', inplace=True)
-            
-            # Check if we have enough data
-            if len(df) < 5:
-                self.logger.warning(f"Insufficient historical data for {ticker}: only {len(df)} days available")
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"Error fetching historical data: {str(e)}")
+
+            return self._convert_alpha_vantage_to_dataframe(data["Time Series (Daily)"], days)
+
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Alpha Vantage API request failed: {str(e)}")
             return pd.DataFrame()
-    
+    def _fetch_finnhub_data(self, ticker: str, days: int) -> pd.DataFrame:
+        """
+        Fetch historical data from Finnhub API.
+
+        Args:
+            ticker (str): Stock ticker symbol.
+            days (int): Number of days of historical data to fetch.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the historical data.
+        """
+        finnhub_api_key = os.environ.get("FINHUB_API_KEY")
+        if not finnhub_api_key:
+            self.logger.error("Finnhub API key not available. Cannot fetch historical data.")
+            return pd.DataFrame()
+
+        url = f"https://finnhub.io/api/v1/stock/candle?symbol={ticker}&resolution=D&count={days}&token={finnhub_api_key}"
+        self.logger.info(f"Fetching data from Finnhub: {url}")
+
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                self.logger.error(f"Finnhub API error: {data['error']}")
+                return pd.DataFrame()
+
+            if "c" not in data:
+                self.logger.error("No data returned from Finnhub API.")
+                return pd.DataFrame()
+
+            return self._convert_finnhub_to_dataframe(data)
+
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Finnhub API request failed: {str(e)}")
+            return pd.DataFrame()   
+    def _convert_alpha_vantage_to_dataframe(self, time_series: dict, days: int) -> pd.DataFrame:
+        """
+        Convert Alpha Vantage time series data to a DataFrame.
+
+        Args:
+            time_series (dict): Time series data from Alpha Vantage.
+            days (int): Number of days of historical data to fetch.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the historical data.
+        """
+        df = pd.DataFrame.from_dict(time_series, orient='index')
+        df.index = pd.to_datetime(df.index)
+        df = df.rename(columns={
+            '1. open': 'open',
+            '2. high': 'high',
+            '3. low': 'low',
+            '4. close': 'close',
+            '5. volume': 'volume'
+        })
+        df = df.astype(float)
+        df.sort_index(ascending=False, inplace=True)
+        df = df.head(days)
+        df.fillna(method='ffill', inplace=True)
+        return df
+    def _convert_finnhub_to_dataframe(self, data: dict) -> pd.DataFrame:
+        """
+        Convert Finnhub API data to a DataFrame.
+
+        Args:
+            data (dict): Data from Finnhub API.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the historical data.
+        """
+        df = pd.DataFrame({
+            'close': data['c'],
+            'high': data['h'],
+            'low': data['l'],
+            'open': data['o'],
+            'volume': data['v']
+        }, index=pd.to_datetime(data['t'], unit='s'))
+        df.sort_index(ascending=False, inplace=True)
+        return df
     def calculate_bollinger_bands(self, df, window=20, num_std=2):
         """
         Calculate Bollinger Bands for a given DataFrame
@@ -293,6 +364,35 @@ class TechnicalIndicators:
             self.logger.error(f"Error calculating RSI: {str(e)}")
             return {}
     
+    def calculate_scrape_ratio(self,df):
+        """
+        Calculate the Scrape Ratio for a given DataFrame
+        
+        Args:
+            df (pandas.DataFrame): DataFrame with price data
+            
+        Returns:
+            dict: Dictionary with Scrape Ratio value
+        """
+        if df.empty:
+            return {"Scrape Ratio": "Insufficient Data"}
+        
+        try:
+            # Calculate the scrape ratio as the ratio of the highest close to the lowest close
+            highest_close = df['close'].max()
+            lowest_close = df['close'].min()
+            
+            # Avoid division by zero
+            if lowest_close == 0:
+                return {"Scrape Ratio": "Invalid Data (Division by Zero)"}
+            
+            scrape_ratio = highest_close / lowest_close
+            
+            return {"Scrape Ratio": round(scrape_ratio, 2)}
+    
+        except Exception as e:
+            self.logger.error(f"Error calculating Scrape Ratio: {str(e)}")
+            return {"Scrape Ratio": "Calculation Error"}
     def calculate_volume_indicators(self, df):
         """
         Calculate volume-based indicators
@@ -399,6 +499,9 @@ class TechnicalIndicators:
         df = self.get_historical_data(ticker)
         
         if df.empty:
+            print(20*"###")
+            print("No historical data available for the ticker.")
+            self.logger.error("No historical data available for the ticker.")
             return {"error": "Could not retrieve historical data"}
         
         # Calculate all indicators
@@ -432,5 +535,11 @@ class TechnicalIndicators:
         except Exception as e:
             self.logger.error(f"Failed to calculate Volume Indicators: {str(e)}")
             results["Volume Indicators"] = "Calculation Error"
-        
+        try:
+            print("DEBBUUGGGGGGGGGGG Scrap ratio")
+            scrape_ratio = self.calculate_scrape_ratio(df)
+            results.update(scrape_ratio)
+        except Exception as e:
+            self.logger.error(f"Failed to calculate Scrape Ratio: {str(e)}")
+            results["Scrape Ratio"] = "Calculation Error"
         return results
