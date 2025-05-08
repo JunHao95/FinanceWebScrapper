@@ -231,7 +231,7 @@ class FinhubAPIScraper(BaseScraper):
                     if "finnhubIndustry" in profile:
                         data["Industry (Finhub)"] = profile["finnhubIndustry"]
                     if "marketCapitalization" in profile:
-                        data["Market Cap (Finhub)"] = f"{profile['marketCapitalization']:.2f}B"
+                        data["Market Cap (Finhub)"] = f"{profile['marketCapitalization']/1000:.2f} Billion"
             
             except Exception as e:
                 self.logger.warning(f"Error fetching company profile for {ticker}: {str(e)}")
