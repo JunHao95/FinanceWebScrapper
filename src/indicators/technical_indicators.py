@@ -364,12 +364,13 @@ class TechnicalIndicators:
             self.logger.error(f"Error calculating RSI: {str(e)}")
             return {}
     
-    def calculate_scrape_ratio(self,df):
+    def calculate_scrape_ratio(self, df, risk_free_rate=0.01):
         """
         Calculate the Scrape Ratio for a given DataFrame
         
         Args:
             df (pandas.DataFrame): DataFrame with price data
+            risk_free_rate (float): Risk-free rate (default is 0.01 or 1%) because it represents a reasonable approximation of the annualized return of a risk-free investment, such as a 10-year U.S. Treasury bond
             
         Returns:
             dict: Dictionary with Scrape Ratio value
@@ -378,21 +379,27 @@ class TechnicalIndicators:
             return {"Scrape Ratio": "Insufficient Data"}
         
         try:
-            # Calculate the scrape ratio as the ratio of the highest close to the lowest close
-            highest_close = df['close'].max()
-            lowest_close = df['close'].min()
-            
+            # Calculate daily returns
+            df['daily_return'] = df['close'].pct_change()
+
+            # Calculate excess returns (daily return - risk-free rate / 252 for daily rate)
+            excess_returns = df['daily_return'] - (risk_free_rate / 252)
+
+            # Calculate Sharpe Ratio
+            mean_excess_return = excess_returns.mean()
+            std_dev_excess_return = excess_returns.std()
+
             # Avoid division by zero
-            if lowest_close == 0:
-                return {"Scrape Ratio": "Invalid Data (Division by Zero)"}
-            
-            scrape_ratio = highest_close / lowest_close
-            
-            return {"Scrape Ratio": round(scrape_ratio, 2)}
-    
+            if std_dev_excess_return == 0:
+                return {"Sharpe Ratio": "Undefined (Zero Volatility)"}
+
+            sharpe_ratio = mean_excess_return / std_dev_excess_return
+
+            return {"Sharpe Ratio": round(sharpe_ratio, 2)}
+
         except Exception as e:
-            self.logger.error(f"Error calculating Scrape Ratio: {str(e)}")
-            return {"Scrape Ratio": "Calculation Error"}
+            self.logger.error(f"Error calculating Sharpe Ratio: {str(e)}")
+            return {"Sharpe Ratio": "Calculation Error"}
     def calculate_volume_indicators(self, df):
         """
         Calculate volume-based indicators
@@ -537,7 +544,7 @@ class TechnicalIndicators:
             results["Volume Indicators"] = "Calculation Error"
         try:
             print("DEBBUUGGGGGGGGGGG Scrap ratio")
-            scrape_ratio = self.calculate_scrape_ratio(df)
+            scrape_ratio = self.calculate_scrape_ratio(df, risk_free_rate=0.01)
             results.update(scrape_ratio)
         except Exception as e:
             self.logger.error(f"Failed to calculate Scrape Ratio: {str(e)}")
