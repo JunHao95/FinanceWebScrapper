@@ -1,6 +1,6 @@
 {
-  "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "DDOG", "CVX", "KO", "XOM","AMD","TEAM", "TTD", "CRM", "RCL", "HWM","TSLA","DPZ", "CMG","NVO", "POR" ],
-  "tickers_for_testing": ["AAPL"],
+  "tickers": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "DDOG", "CVX", "KO", "XOM","AMD","TEAM", "TTD", "CRM", "RCL", "HWM","TSLA", "CMG","NVO", "TXRH", "CROX", "DVN", "PLTR", "PANW", "ADBE", "EL" ],
+  "tickers_test": ["AAPL"],
   "sources": ["yahoo", "finviz", "technical"],
   "format": "text",
   "output_dir": "/Users/junhaotee/Desktop/Side_projects/FinanceWebScrapper/reports",
