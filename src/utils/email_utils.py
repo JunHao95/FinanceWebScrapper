@@ -167,44 +167,6 @@ def send_email(recipients, subject, body, attachment_paths=None, config=None, cc
         logger.error(f"Error sending email: {str(e)}")
         return False
 
-def generate_metrics_table(data_dict, metrics=None, table_format="grid"):
-    """
-    Generate a simple text table of key metrics for multiple stocks
-    
-    Args:
-        data_dict (dict): Dictionary with ticker symbols as keys and data dictionaries as values
-        metrics (list, optional): List of metrics to include
-        table_format (str, optional): Format of the table (e.g., "grid", "plain"). Defaults to "grid".
-        
-    Returns:
-        str: Formatted table as string
-    """
-    if not metrics:
-        metrics = [
-            "P/E Ratio", "Forward P/E", "PEG Ratio", 
-            "EPS", "ROE", "Profit Margin", 
-            "Current Price", "RSI (14)"
-        ]
-     # Prepare the data for tabulation
-    summary_data = []
-    for ticker, data in data_dict.items():
-        row = [ticker]  # Start with the ticker symbol
-        for metric_name in metrics:
-            # Perform a case-insensitive partial match for the metric
-            value = next((data[key] for key in data if metric_name.lower() in key.lower()), "--")
-            row.append(value)
-        summary_data.append(row)
-    
-    # Add headers (Ticker + Metrics)
-    headers = ["Ticker"] + metrics
-    
-    # Generate the formatted table using tabulate
-    if summary_data:
-        return tabulate(summary_data, headers=headers, tablefmt=table_format)
-    else:
-        return "No data available for metrics table."
-
-
 def generate_html_metrics_table(all_data):
     """
     Generate an HTML table for key metrics.
@@ -216,21 +178,27 @@ def generate_html_metrics_table(all_data):
         str: HTML table as a string.
     """
     # Define the key metrics to include in the summary
-    key_metrics = ["Ticker", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
+    key_metrics = ["Ticker", "Current Price", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
     
     # Start the HTML table
-    html = '<table border="1" style="border-collapse: collapse; width: 100%;">'
+    html = """
+    <table border="1" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">
+        <thead>
+            <tr style="background-color: #4CAF50; color: white; font-weight: bold;">
+    """
     html += "<thead><tr>"
     for metric in key_metrics:
-        html += f"<th style='padding: 8px; text-align: left;'>{metric}</th>"
+        html += f"<th style='padding: 8px; text-align: left; font-style: italic; font-weight: bold; text-decoration: underline;'>{metric}</th>"
     html += "</tr></thead><tbody>"
     
     # Add rows for each ticker
-    for ticker, data in all_data.items():
-        html += "<tr>"
+    row_color = ["#f2f2f2", "white"]  # Alternating colors
+    for i, (ticker, data) in enumerate(all_data.items()):
+        html += f"<tr style='background-color: {row_color[i % 2]};'>"
         html += f"<td style='padding: 8px;'>{ticker}</td>"
         for metric in key_metrics[1:]:  # Skip "Ticker" as it's already added
-            value = next((data[key] for key in data if metric in key), "--")
+            # value = next((data[key] for key in data if metric in key), "--")
+            value = data.get(metric, next((data[key] for key in data if metric in key), "--"))
             html += f"<td style='padding: 8px;'>{value}</td>"
         html += "</tr>"
     
@@ -276,11 +244,13 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
     for ticker, data in all_data.items():
         body += f"<li><strong>{ticker}:</strong><ul>"
         metrics = [
-            ("P/E Ratio", "P/E Ratio"),
-            ("Forward P/E", "Forward P/E"),
-            ("EPS", "EPS"),
-            ("ROE", "ROE"),
-            ("Current Price", "Current Price")
+            ("Sharpe Ratio","Sharpe Ratio"),
+            ("Sharpe Ratio Interpretation","Sharpe Ratio Interpretation"),
+            ("Sortino Ratio","Sortino Ratio"),
+            ("Annualized Return","Annualized Return"),
+            ("Annualized Volatility","Annualized Volatility"),
+            ("Risk-Free Rate","Risk-Free Rate")
+            # ("Current Price", "Current Price")
         ]
         for label, key_prefix in metrics:
             for data_key in data.keys():
