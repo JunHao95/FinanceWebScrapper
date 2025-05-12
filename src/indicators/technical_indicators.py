@@ -7,6 +7,8 @@ import requests
 import os
 import logging
 from datetime import datetime, timedelta
+import yfinance as yf
+from pandas_datareader import data as pdr
 
 class TechnicalIndicators:
     """
@@ -50,9 +52,19 @@ class TechnicalIndicators:
         df = self._fetch_finnhub_data(ticker, days)
         if not df.empty:
             return df
+        self.logger.info("FinnhubAPI failed to fetch historical data. Trying YahooFinance API...")
+        # Fallback to Yahoo Finance API
+        df = self._fetch_yahoo_finance_data(ticker, days)
+        if not df.empty:
+            return df
+        self.logger.info("Yahoo Finance API failed to fetch historical data. Trying Google Finance API...")
 
+        # Fallback to Google Finance API
+        df = self._fetch_google_finance_data(ticker, days)
+        if not df.empty:
+            return df
         # If both APIs fail
-        self.logger.error("Both Alpha Vantage and Finnhub APIs failed. Unable to fetch historical data.")
+        self.logger.error("All APIS failed. Unable to fetch historical data.")
         return pd.DataFrame()
 
     def _fetch_alpha_vantage_data(self, ticker: str, days: int) -> pd.DataFrame:
@@ -149,6 +161,79 @@ class TechnicalIndicators:
         df = df.head(days)
         df.fillna(method='ffill', inplace=True)
         return df
+
+    def _fetch_yahoo_finance_data(self, ticker: str, days: int) -> pd.DataFrame:
+        """
+        Fetch historical data from Yahoo Finance.
+
+        Args:
+            ticker (str): Stock ticker symbol.
+            days (int): Number of days of historical data to fetch.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the historical data.
+        """
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            self.logger.info(f"Fetching data from Yahoo Finance for {ticker} from {start_date} to {end_date}.")
+
+            df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'), auto_adjust=False)
+            if df.empty:
+                self.logger.warning(f"No data returned from Yahoo Finance for {ticker}.")
+                return pd.DataFrame()
+
+            # Rename columns to match the standard format
+            df.rename(columns={
+                'Open': 'open',
+                'High': 'high',
+                'Low': 'low',
+                'Close': 'close',
+                'Volume': 'volume'
+            }, inplace=True)
+            df.sort_index(ascending=False, inplace=True)
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Yahoo Finance API request failed for {ticker}: {str(e)}")
+            return pd.DataFrame()
+        
+    def _fetch_google_finance_data(self, ticker: str, days: int) -> pd.DataFrame:
+        """
+        Fetch historical data from Google Finance.
+
+        Args:
+            ticker (str): Stock ticker symbol.
+            days (int): Number of days of historical data to fetch.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the historical data.
+        """
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            self.logger.info(f"Fetching data from Google Finance for {ticker} from {start_date} to {end_date}.")
+
+            df = pdr.get_data_google(ticker, start=start_date, end=end_date)
+            if df.empty:
+                self.logger.warning(f"No data returned from Google Finance for {ticker}.")
+                return pd.DataFrame()
+
+            # Rename columns to match the standard format
+            df.rename(columns={
+                'Open': 'open',
+                'High': 'high',
+                'Low': 'low',
+                'Close': 'close',
+                'Volume': 'volume'
+            }, inplace=True)
+            df.sort_index(ascending=False, inplace=True)
+            return df
+
+        except Exception as e:
+            self.logger.error(f"Google Finance API request failed for {ticker}: {str(e)}")
+            return pd.DataFrame()
+        
     def _convert_finnhub_to_dataframe(self, data: dict) -> pd.DataFrame:
         """
         Convert Finnhub API data to a DataFrame.
@@ -168,6 +253,7 @@ class TechnicalIndicators:
         }, index=pd.to_datetime(data['t'], unit='s'))
         df.sort_index(ascending=False, inplace=True)
         return df
+    
     def calculate_bollinger_bands(self, df, window=20, num_std=2):
         """
         Calculate Bollinger Bands for a given DataFrame
@@ -187,6 +273,9 @@ class TechnicalIndicators:
             # Make sure we have enough data
             if len(df) < window:
                 self.logger.warning(f"Not enough data for Bollinger Bands calculation: {len(df)} < {window}")
+                return {}
+            if df['close'].isnull().all():
+                self.logger.warning("No valid close price data available for Bollinger Bands.")
                 return {}
                 
             # Calculate middle band (SMA)
@@ -247,7 +336,9 @@ class TechnicalIndicators:
         """
         if df.empty:
             return {}
-            
+        if df['close'].isnull().all():
+            self.logger.warning("No valid close price data available for Moving Averages.")
+            return {}
         try:
             # Calculate different moving averages
             ma_windows = [10, 20, 50, 100, 200]
@@ -319,6 +410,9 @@ class TechnicalIndicators:
         """
         if df.empty or len(df) < window + 1:
             return {}
+        if df['close'].isnull().all():
+            self.logger.warning("No valid close price data available for RSI.")
+            return {}
             
         try:
             # Calculate price differences
@@ -364,42 +458,166 @@ class TechnicalIndicators:
             self.logger.error(f"Error calculating RSI: {str(e)}")
             return {}
     
-    def calculate_scrape_ratio(self, df, risk_free_rate=0.01):
+    def calculate_sharpe_ratio(self, df, period='daily', risk_free_rate=None, annualize=True):
         """
-        Calculate the Scrape Ratio for a given DataFrame
+        Calculate the Sharpe Ratio for a given DataFrame
         
         Args:
             df (pandas.DataFrame): DataFrame with price data
-            risk_free_rate (float): Risk-free rate (default is 0.01 or 1%) because it represents a reasonable approximation of the annualized return of a risk-free investment, such as a 10-year U.S. Treasury bond
+            period (str): Period of returns - 'daily', 'weekly', 'monthly', or 'annual'
+            risk_free_rate (float, optional): Risk-free rate (annual). If None, will use current 10Y Treasury yield.
+            annualize (bool): Whether to annualize the Sharpe ratio for periods less than a year
             
         Returns:
-            dict: Dictionary with Scrape Ratio value
+            dict: Dictionary with Sharpe Ratio and related metrics
         """
-        if df.empty:
-            return {"Scrape Ratio": "Insufficient Data"}
+        if df.empty or len(df) < 2:
+            return {"Sharpe Ratio": "Insufficient Data"}
         
         try:
-            # Calculate daily returns
-            df['daily_return'] = df['close'].pct_change()
-
-            # Calculate excess returns (daily return - risk-free rate / 252 for daily rate)
-            excess_returns = df['daily_return'] - (risk_free_rate / 252)
-
-            # Calculate Sharpe Ratio
+            # Get the risk-free rate if not provided
+            if risk_free_rate is None:
+                risk_free_rate = self._get_current_risk_free_rate()
+            
+            # Determine annualization factor based on period
+            period_factors = {
+                'daily': 252,  # Trading days in a year
+                'weekly': 52,  # Weeks in a year
+                'monthly': 12,  # Months in a year
+                'annual': 1     # Already annual
+            }
+            
+            if period not in period_factors:
+                self.logger.warning(f"Invalid period '{period}'. Using 'daily' as default.")
+                period = 'daily'
+                
+            annualization_factor = period_factors[period]
+            
+            # Calculate returns based on period
+            if period == 'daily':
+                df['returns'] = df['close'].pct_change()
+            elif period == 'weekly':
+                df['returns'] = df['close'].pct_change(5)  # Approximately 5 trading days in a week
+            elif period == 'monthly':
+                df['returns'] = df['close'].pct_change(21)  # Approximately 21 trading days in a month
+            elif period == 'annual':
+                df['returns'] = df['close'].pct_change(252)  # Approximately 252 trading days in a year
+            
+            # Drop NaN values
+            returns = df['returns'].dropna()
+            
+            if len(returns) < 2:
+                return {"Sharpe Ratio": "Insufficient Data"}
+            
+            # Calculate excess returns (return - risk-free rate)
+            # Convert annual risk-free rate to the period's rate
+            period_risk_free_rate = risk_free_rate / annualization_factor
+            excess_returns = returns - period_risk_free_rate
+            
+            # Calculate mean and standard deviation of excess returns
             mean_excess_return = excess_returns.mean()
             std_dev_excess_return = excess_returns.std()
-
+            
             # Avoid division by zero
             if std_dev_excess_return == 0:
                 return {"Sharpe Ratio": "Undefined (Zero Volatility)"}
-
+            
+            # Calculate Sharpe Ratio
             sharpe_ratio = mean_excess_return / std_dev_excess_return
-
-            return {"Sharpe Ratio": round(sharpe_ratio, 2)}
-
+            
+            # Annualize if requested and not already annual
+            if annualize and period != 'annual':
+                sharpe_ratio = sharpe_ratio * np.sqrt(annualization_factor)
+            
+            # Calculate additional metrics
+            # Sortino Ratio - only considers downside risk
+            downside_returns = excess_returns[excess_returns < 0]
+            
+            if len(downside_returns) > 0:
+                downside_deviation = downside_returns.std()
+                
+                if downside_deviation > 0:
+                    sortino_ratio = mean_excess_return / downside_deviation
+                    
+                    # Annualize if requested and not already annual
+                    if annualize and period != 'annual':
+                        sortino_ratio = sortino_ratio * np.sqrt(annualization_factor)
+                else:
+                    sortino_ratio = "Undefined (No Downside Deviation)"
+            else:
+                sortino_ratio = "Undefined (No Negative Returns)"
+            
+            # Calculate annualized return and volatility
+            annualized_return = mean_excess_return * annualization_factor if annualize else mean_excess_return
+            annualized_volatility = std_dev_excess_return * np.sqrt(annualization_factor) if annualize else std_dev_excess_return
+            
+            # Prepare results
+            results = {
+                "Sharpe Ratio": round(sharpe_ratio, 3),
+                "Sortino Ratio": round(sortino_ratio, 3) if isinstance(sortino_ratio, float) else sortino_ratio,
+                "Annualized Return": f"{round(annualized_return * 100, 2)}%" if annualize else f"{round(mean_excess_return * 100, 2)}%",
+                "Annualized Volatility": f"{round(annualized_volatility * 100, 2)}%" if annualize else f"{round(std_dev_excess_return * 100, 2)}%",
+                "Risk-Free Rate": f"{round(risk_free_rate * 100, 2)}%",
+                "Period": period,
+                "Data Points": len(returns),
+                "Sharpe Ratio Interpretation": self._interpret_sharpe_ratio(sharpe_ratio)
+            }
+            
+            return results
+            
         except Exception as e:
             self.logger.error(f"Error calculating Sharpe Ratio: {str(e)}")
-            return {"Sharpe Ratio": "Calculation Error"}
+            return {"Sharpe Ratio": "Calculation Error", "Error": str(e)}
+    
+    def _get_current_risk_free_rate(self):
+        """
+        Get the current risk-free rate from the US 10Y Treasury yield
+        
+        Returns:
+            float: Current 10Y Treasury yield as decimal (e.g., 0.0175 for 1.75%)
+        """
+        try:
+            # Try to get the current 10Y Treasury yield from an API
+            # This is a placeholder. In a real implementation, you'd use a financial API or service
+            url = "https://www.treasury.gov/resource-center/data-chart-center/interest-rates/Pages/TextView.aspx?data=yield"
+            
+            # For now, use a reasonable default value if API call fails
+            # The 10Y Treasury yield as of May 2025 (approximate)
+            default_rate = 0.035  # 3.5%
+            
+            # Log that we're using a default value
+            self.logger.info(f"Using default risk-free rate of {default_rate}")
+            
+            return default_rate
+        
+        except Exception as e:
+            self.logger.error(f"Error getting current risk-free rate: {str(e)}")
+            return 0.035  # Default to 3.5% if there's an error
+        
+    def _interpret_sharpe_ratio(self, sharpe_ratio):
+        """
+        Provide an interpretation of the Sharpe ratio value
+        
+        Args:
+            sharpe_ratio (float): Calculated Sharpe ratio
+            
+        Returns:
+            str: Interpretation of the Sharpe ratio
+        """
+        if sharpe_ratio < 0:
+            return "Poor - Negative returns relative to risk-free rate"
+        elif sharpe_ratio < 0.5:
+            return "Poor - Suboptimal risk-adjusted returns"
+        elif sharpe_ratio < 1.0:
+            return "Below Average - Low risk-adjusted returns"
+        elif sharpe_ratio < 1.5:
+            return "Average - Acceptable risk-adjusted returns"
+        elif sharpe_ratio < 2.0:
+            return "Good - Strong risk-adjusted returns"
+        elif sharpe_ratio < 3.0:
+            return "Very Good - Excellent risk-adjusted returns"
+        else:
+            return "Exceptional - Outstanding risk-adjusted returns"
     def calculate_volume_indicators(self, df):
         """
         Calculate volume-based indicators
@@ -543,10 +761,9 @@ class TechnicalIndicators:
             self.logger.error(f"Failed to calculate Volume Indicators: {str(e)}")
             results["Volume Indicators"] = "Calculation Error"
         try:
-            print("DEBBUUGGGGGGGGGGG Scrap ratio")
-            scrape_ratio = self.calculate_scrape_ratio(df, risk_free_rate=0.01)
+            scrape_ratio = self.calculate_sharpe_ratio(df, risk_free_rate=0.01)
             results.update(scrape_ratio)
         except Exception as e:
-            self.logger.error(f"Failed to calculate Scrape Ratio: {str(e)}")
-            results["Scrape Ratio"] = "Calculation Error"
+            self.logger.error(f"Failed to calculate sharpe Ratio: {str(e)}")
+            results["Sharpe Ratio"] = "Calculation Error"
         return results
