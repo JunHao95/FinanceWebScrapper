@@ -555,6 +555,7 @@ class TechnicalIndicators:
             results = {
                 "Sharpe Ratio": round(sharpe_ratio, 3),
                 "Sortino Ratio": round(sortino_ratio, 3) if isinstance(sortino_ratio, float) else sortino_ratio,
+                "Sortino Ratio Interpretation": self._interpret_sortino_ratio(sortino_ratio) if isinstance(sortino_ratio, float) else "N/A",
                 "Annualized Return": f"{round(annualized_return * 100, 2)}%" if annualize else f"{round(mean_excess_return * 100, 2)}%",
                 "Annualized Volatility": f"{round(annualized_volatility * 100, 2)}%" if annualize else f"{round(std_dev_excess_return * 100, 2)}%",
                 "Risk-Free Rate": f"{round(risk_free_rate * 100, 2)}%",
@@ -615,6 +616,30 @@ class TechnicalIndicators:
         elif sharpe_ratio < 2.0:
             return "Good - Strong risk-adjusted returns"
         elif sharpe_ratio < 3.0:
+            return "Very Good - Excellent risk-adjusted returns"
+        else:
+            return "Exceptional - Outstanding risk-adjusted returns"
+    def _interpret_sortino_ratio(self, sortino_ratio: float) -> str:
+        """
+        Provide an interpretation of the Sortino Ratio value.
+
+        Args:
+            sortino_ratio (float): Calculated Sortino Ratio.
+
+        Returns:
+            str: Interpretation of the Sortino Ratio.
+        """
+        if sortino_ratio < 0:
+            return "Poor - Negative returns relative to risk-free rate"
+        elif sortino_ratio < 0.5:
+            return "Poor - Suboptimal risk-adjusted returns"
+        elif sortino_ratio < 1.0:
+            return "Below Average - Low risk-adjusted returns"
+        elif sortino_ratio < 1.5:
+            return "Average - Acceptable risk-adjusted returns"
+        elif sortino_ratio < 2.0:
+            return "Good - Strong risk-adjusted returns"
+        elif sortino_ratio < 3.0:
             return "Very Good - Excellent risk-adjusted returns"
         else:
             return "Exceptional - Outstanding risk-adjusted returns"
