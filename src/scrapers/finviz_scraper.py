@@ -26,7 +26,20 @@ class FinvizScraper(BaseScraper):
         
         # Initialize data dictionary
         data = {}
-        
+        # Scrape analyst price target
+        try:
+            price_target = soup.find(text="Target Price").find_next("td").text
+            data["Analyst Price Target (Finviz)"] = price_target
+            print(  f"Analyst Price Target (Finviz): {price_target}")
+        except Exception as e:
+            self.logger.warning(f"Error scraping analyst price target for {ticker} from Finviz: {str(e)}")
+        # Scrape current price 
+        try:
+            price_target = soup.find(text="Price").find_next("td").text
+            data["Current Price (Finviz)"] = price_target
+            print( f"Curernt Price (Finviz): {price_target}")
+        except Exception as e:
+            self.logger.warning(f"Error scraping current price  for {ticker} from Finviz: {str(e)}")
         # Find the snapshot table
         snapshot_table = soup.find('table', class_='snapshot-table2')
         if snapshot_table:
@@ -59,18 +72,21 @@ class FinvizScraper(BaseScraper):
                             data["ROA (Finviz)"] = value
                         elif header == "ROI":
                             data["ROIC (Finviz)"] = value
+                        # EPS metrics
                         elif header == "EPS (ttm)":
-                            data["EPS (Finviz)"] = value
+                            data["EPS (TTM) (Finviz)"] = value
                         elif header == "EPS next Y":
                             data["EPS Next Year (Finviz)"] = value
-                        elif header == "EPS growth this year":
+                        elif header == "EPS this Y":
                             data["EPS Growth This Year (Finviz)"] = value
-                        elif header == "EPS growth next year":
+                        elif header == "EPS next Y":
                             data["EPS Growth Next Year (Finviz)"] = value
-                        elif header == "EPS growth next 5Y":
+                        elif header == "EPS next 5Y":
                             data["EPS Growth Next 5Y (Finviz)"] = value
                         elif header == "EPS growth qtr over qtr":
                             data["EPS Growth QoQ (Finviz)"] = value
+                        
+                        # Profitability metrics
                         elif header == "Profit Margin":
                             data["Profit Margin (Finviz)"] = value
                         elif header == "Oper. Margin":
