@@ -166,6 +166,34 @@ def send_email(recipients, subject, body, attachment_paths=None, config=None, cc
     except Exception as e:
         logger.error(f"Error sending email: {str(e)}")
         return False
+    
+def get_all_sources_data(data, metric):
+    """
+    Get all values for a metric from different sources.
+
+    Args:
+        data (dict): Dictionary containing all data.
+        metric (str): The metric to retrieve (e.g., "P/E Ratio").
+
+    Returns:
+        str: Concatenated values from all sources.
+    """
+    print(20*"##")
+    print(f"DEBUGG data: {data}")
+    print(20*"##")
+     # Filter keys that match the metric
+    matching_keys = [key for key in data.keys() if metric in key]
+
+    # Group and format the values
+    values = []
+    for key in matching_keys:
+        # Extract the source from the key (e.g., "Finviz" from "EPS (TTM) (Finviz)")
+        source = key.split('(')[-1][:-1] if '(' in key else "Unknown"
+        # Format the value with the source and specific metric label
+        specific_metric = key.replace(f" ({source})", "").strip()  # Remove source from key
+        values.append(f"{specific_metric} ({source}): {data[key]}")
+
+    return ", ".join(values) if values else "--"
 
 def generate_html_metrics_table(all_data):
     """
@@ -178,7 +206,7 @@ def generate_html_metrics_table(all_data):
         str: HTML table as a string.
     """
     # Define the key metrics to include in the summary
-    key_metrics = ["Ticker", "Current Price", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
+    key_metrics = ["Ticker", "Analyst Price Target", "Current Price", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
     
     # Start the HTML table
     html = """
@@ -198,7 +226,8 @@ def generate_html_metrics_table(all_data):
         html += f"<td style='padding: 8px;'>{ticker}</td>"
         for metric in key_metrics[1:]:  # Skip "Ticker" as it's already added
             # value = next((data[key] for key in data if metric in key), "--")
-            value = data.get(metric, next((data[key] for key in data if metric in key), "--"))
+            # value = data.get(metric, next((data[key] for key in data if metric in key), "--"))
+            value = get_all_sources_data(data,metric)
             html += f"<td style='padding: 8px;'>{value}</td>"
         html += "</tr>"
     
