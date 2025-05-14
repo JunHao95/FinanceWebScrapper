@@ -235,7 +235,26 @@ class FinhubAPIScraper(BaseScraper):
             
             except Exception as e:
                 self.logger.warning(f"Error fetching company profile for {ticker}: {str(e)}")
+            # Fetch analyst price target
+            try:
+                self.logger.info(f"Fetching analyst price target from Finhub for {ticker}")
+                price_target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker}&token={self.api_key}"
+                
+                response = requests.get(price_target_url, timeout=10)
+                response.raise_for_status()
+                
+                result = response.json()
+                print(10*"###")
+                print(f"DEbUG result of finhub price target: {result}")
+                if "targetHigh" in result and "targetLow" in result and "targetMean" in result:
+                    data["Analyst Price Target High (Finhub)"] = f"{result['targetHigh']:.2f}"
+                    data["Analyst Price Target Low (Finhub)"] = f"{result['targetLow']:.2f}"
+                    data["Analyst Price Target Mean (Finhub)"] = f"{result['targetMean']:.2f}"
+                else:
+                    self.logger.warning(f"No analyst price target data found for {ticker} on Finhub")
             
+            except Exception as e:
+                self.logger.warning(f"Error fetching analyst price target for {ticker} from Finhub: {str(e)}")
             return data
                 
         except Exception as e:
