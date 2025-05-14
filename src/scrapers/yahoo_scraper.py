@@ -2,9 +2,10 @@
 Yahoo Finance scraper module
 """
 from bs4 import BeautifulSoup
-
+import requests
 from .base_scraper import BaseScraper
 from ..utils.request_handler import make_request
+import yfinance as yf
 
 class YahooFinanceScraper(BaseScraper):
     """Scraper for Yahoo Finance"""
@@ -20,7 +21,7 @@ class YahooFinanceScraper(BaseScraper):
             dict: Dictionary containing scraped data
         """
         # Statistics page contains most valuation metrics
-        statistics_url = f"https://finance.yahoo.com/quote/{ticker}/key-statistics"
+        statistics_url = f"https://finance.yahoo.com/quote/{ticker}/key-statistics/"
         
         # Analysis page contains EPS and growth estimates
         analysis_url = f"https://finance.yahoo.com/quote/{ticker}/analysis"
@@ -29,9 +30,15 @@ class YahooFinanceScraper(BaseScraper):
         data = {}
         
         # Scrape statistics page
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                        '(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
         try:
             self.logger.info(f"Fetching statistics from Yahoo Finance for {ticker}")
-            response = make_request(statistics_url, headers=self.headers)
+            response = requests.get(statistics_url, headers=self.headers, timeout=10)
+            response.raise_for_status()  # Raise an exception for HTTP errors
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Parse valuation ratios from tables
@@ -71,7 +78,25 @@ class YahooFinanceScraper(BaseScraper):
                             data["EPS (Yahoo)"] = value
                         elif "Return on Investment" in header or "Return on Capital" in header:
                             data["ROIC (Yahoo)"] = value
-            
+            # Get the price targets from yahoo
+            try:
+                self.logger.info(f"Fetching data from Yahoo Finance for {ticker}")
+                stock = yf.Ticker(ticker)
+                
+                # Fetch analyst price targets
+                target_mean_price = stock.info.get("targetMeanPrice", None)
+                target_low_price = stock.info.get("targetLowPrice", None)
+                target_high_price = stock.info.get("targetHighPrice", None)
+                
+                if target_mean_price:
+                    data["Analyst Price Target Mean (Yahoo)"] = f"{target_mean_price:.2f}"
+                if target_low_price:
+                    data["Analyst Price Target Low (Yahoo)"] = f"{target_low_price:.2f}"
+                if target_high_price:
+                    data["Analyst Price Target High (Yahoo)"] = f"{target_high_price:.2f}"
+                print(f"Analyst Price Target Mean (Yahoo) {target_mean_price}, low: {target_low_price}, high: {target_high_price}")
+            except Exception as e:
+                self.logger.warning(f"Error fetching data from Yahoo Finance for {ticker}: {str(e)}")
             # Scrape analysis page for additional EPS data
             try:
                 analysis_response = make_request(analysis_url, headers=self.headers)
