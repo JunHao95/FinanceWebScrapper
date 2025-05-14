@@ -786,7 +786,7 @@ class TechnicalIndicators:
             self.logger.error(f"Failed to calculate Volume Indicators: {str(e)}")
             results["Volume Indicators"] = "Calculation Error"
         try:
-            scrape_ratio = self.calculate_sharpe_ratio(df, risk_free_rate=0.01)
+            scrape_ratio = self.calculate_sharpe_ratio(df)
             results.update(scrape_ratio)
         except Exception as e:
             self.logger.error(f"Failed to calculate sharpe Ratio: {str(e)}")
