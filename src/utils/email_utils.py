@@ -276,6 +276,7 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
             ("Sharpe Ratio","Sharpe Ratio"),
             ("Sharpe Ratio Interpretation","Sharpe Ratio Interpretation"),
             ("Sortino Ratio","Sortino Ratio"),
+            ("Sortino Ratio Interpretation", "Sortino Ratio Interpretation"),
             ("Annualized Return","Annualized Return"),
             ("Annualized Volatility","Annualized Volatility"),
             ("Risk-Free Rate","Risk-Free Rate")
