@@ -178,9 +178,6 @@ def get_all_sources_data(data, metric):
     Returns:
         str: Concatenated values from all sources.
     """
-    print(20*"##")
-    print(f"DEBUGG data: {data}")
-    print(20*"##")
      # Filter keys that match the metric
     matching_keys = [key for key in data.keys() if metric in key]
 
@@ -305,6 +302,7 @@ def generate_html_metrics_table(all_data):
         html += f"<td style='padding: 8px;'>{ticker}</td>"
         for metric in key_metrics[1:]:  # Skip "Ticker" as it's already added
             value = get_all_sources_data(data,metric)
+            value = value.replace(", ", ",<br>")  # Replace commas with line breaks for better readability
             html += f"<td style='padding: 8px;'>{value}</td>"
         html += "</tr>"
     
@@ -397,7 +395,6 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     print(f"Recipients: {recipients}")
     
     # Send email
-    print(f"DEBUGG CC email to: {cc}")
     return send_email(
         recipients=recipients,
         subject=subject,
