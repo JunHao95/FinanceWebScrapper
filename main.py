@@ -238,10 +238,10 @@ def run_scrapers(ticker: str, sources: list, logger: logging.Logger, alpha_key: 
                 logger.warning("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
             print("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
             print("Set with --alpha-key or ALPHA_VANTAGE_API_KEY environment variable.")
-    print(f"ENDED COMPLETED Run_scrapers, results before : {results}")
+
     # Filter out any error messages
     results = {k: v for k, v in results.items() if not isinstance(v, dict) or "error" not in v}
-    print(f"ENDED COMPLETED Run_scrapers, results after : {results}")
+
     return results
 
 def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "output", save_enabled: bool = True) -> str:
@@ -276,15 +276,12 @@ def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "ou
     else:
         filename += ".csv"
     
-    print(f"DEBUGGING, filename: {filename}. file_format: {file_format}")   
-    print(f"DEBUGGING, save_enabled: {save_enabled}")
     # If saving report mode is disabled, just return filename without saving 
     if not save_enabled:
         
         filename = create_temp_file("text")
         print(f"Report saving is disabled. Temporary file created for email: {filename}")
-        #return # since we are not saving the file to local dir, we should exit
-    print(f"DEBUGGING, filename updated: {filename}")   
+ 
     # Ensure directory exists
     
     if save_enabled:
@@ -430,7 +427,6 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
     
     if args.display_mode == 'grouped':
         try:
-            print("Debugging, i am in grouped mode")
             print_grouped_metrics(data)
         except ImportError:
             print("Warning: tabulate package not found. Falling back to table display.")
@@ -438,18 +434,15 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
             with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
                 print(df.T)
     else:
-        print("Debugging, i am not in grouped mode")
         df = format_data_as_dataframe(data)
         # Set display options to show more rows
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
             print(df.T)  # Transpose for better display
     
     # Save report
-    print(f"RUNNING SAVE REPORT, file format is {args.format}")
+
     report_path = save_report(data, ticker, args.format, args.output_dir, save_enabled=save_reports_enabled)
-    print(20*"###")
-    print(f"DEbuggin, ticket : {ticker}, data: {data},report path: {report_path}")
-    print(20*"###")
+
     return (ticker, data, report_path)
 
 # Update this function in main.py to use consolidated email
@@ -504,9 +497,7 @@ def process_all_tickers(
         # Process tickers sequentially
         for ticker in tickers:
             try:
-                print("DEBUG< i am going to process ticker: ", ticker)
                 ticker, data, report_path = process_ticker(ticker, args, logger)
-                print(f"Inside each sequential Ticker ,DEBUGGING ticker: {ticker}, data: {data}, report_path: {report_path}")
                 all_data[ticker] = data
                 all_reports[ticker] = report_path
             except Exception as e:
@@ -515,13 +506,9 @@ def process_all_tickers(
                 print(f"Error processing ticker {ticker}: {str(e)}")
     
     # Create summary report if requested
-    print(20*"###")
-    print(f"DEBUGGING all_data: {all_data}")
-    print(20*"###")
     summary_path: str = None
     if args.summary and len(all_data) > 1:
         summary_path = create_summary_report(all_data, CnnMetricData, args.output_dir, args.format, save_enabled=save_reports_enabled)
-        print(f"DEBUGGING summary path: {summary_path}")
     
     # Send email if requested
     if (args.email or args.cc or args.bcc) and all_reports:
@@ -576,7 +563,6 @@ def main() -> None:
     print("Added metrics: EV/EBITDA, PEG ratio, ROE, ROIC, EPS, and more!")
     
     args = parse_arguments()
-    print("DEBUGG ARGS: ", args)
     
     # Setup logging based on command-line arguments
     logging_enabled = args.logging.lower() == 'true'
@@ -621,7 +607,6 @@ def main() -> None:
     tickers = []
     
     if args.interactive:
-        
         tickers = get_tickers_interactively()
         
         print(f"\nAnalyzing {len(tickers)} ticker(s): {', '.join(tickers)}")
