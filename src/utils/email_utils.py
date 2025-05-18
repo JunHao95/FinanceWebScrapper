@@ -195,6 +195,85 @@ def get_all_sources_data(data, metric):
 
     return ", ".join(values) if values else "--"
 
+
+def generate_html_CNN_metrics_table(cnnMetricData):
+    """
+    Generate an HTML table for CNN data metrics with columns: Metric, Score, Rating.
+    Args:
+        cnnMetricData (dict): Dictionary with key Metric as keys and data dictionaries as values.
+    Returns:
+        str: HTML table as a string.
+    """
+    # Define human-readable meanings for each metric
+    metric_meanings = {
+        "fear_and_greed": {
+            "Composite gauge of  market sentiment, ranging from 0 (extreme fear) to 100 (extreme greed).<br> "
+            "Excessive fear indicates a bearish market, while excessive greed indicates a bullish market."
+        },
+        "fear_and_greed_historical": {
+            "Historical data of the Fear and Greed Index. "
+        },
+        "market_momentum_sp500": {
+            "Market momentum (S&P 500). If S&P 500 stocks is well above their 125-day average <br> "
+            " >50 indicates bullish sentiment and has strong momentum."
+        },
+        "market_momentum_sp125": {
+            "Market momentum (S&P 125 stocks above 125-day average). "
+        },
+        "stock_price_strength": {
+            "Stock price strength (Ratio of stocks at 52-week highs vs lows). <br>"
+            ">50 indicates more stocks at making 52 weeks highs compared to 52 weeks lows."
+        },
+        "stock_price_breadth": {
+            "Stock price breadth (volume of advancing vs. declining stocks) <br> "
+            " >50 indicates more volume in advancing stocks than declining."
+        },
+        "put_call_options": {
+            "Measures ratio of bearish(put) to bullish (call) options (derivatives sentiment. <br> "
+            ">50 indicates more call than put, bullish sentiment in market."
+        },
+        "market_volatility_vix": {
+            "Market volatility (VIX), higher VIX <br> "
+            ">50 indicates more volatility in the market, more fearful than greed."
+        },
+        "market_volatility_vix_50": {
+            "Market volatility (VIX vs. 50-day average)."
+        },
+        "junk_bond_demand": {
+            "Measures spread between junk bond and investment grade yield.<br> "
+            ">50 indicates tight spread, indicating more demand for junk bonds, higher risk appetite. Bullish sentiment."
+        },
+        "safe_haven_demand": {
+            "Compares demand for stocks vs Treasuries.<br> "
+            ">50 indicates higher demand for stocks than Treasuries, indicating bullish sentiment (Greed)."
+        }
+    }
+
+    html = """
+    <table border="1" style="border-collapse: collapse; width: 80%; font-family: Arial, sans-serif;">
+        <thead>
+            <tr style="background-color: #4CAF50; color: white; font-weight: bold;">
+                <th style='padding: 8px;'>Metric</th>
+                <th style='padding: 8px;'>Interpretation</th>
+                <th style='padding: 8px;'>Score</th>
+                <th style='padding: 8px;'>Rating</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+    row_color = ["#f2f2f2", "white"]
+    i = 0
+    for metric, values in cnnMetricData.items():
+        html += f"<tr style='background-color: {row_color[i % 2]};'>"
+        html += f"<td style='padding: 8px; font-weight: bold;'>{metric.replace('_', ' ').title()}</td>"
+        html += f"<td style='padding: 8px;'>{metric_meanings.get(metric, '--')}</td>"
+        html += f"<td style='padding: 8px;'>{values.get('score', '--')}</td>"
+        html += f"<td style='padding: 8px;'>{values.get('rating', '--')}</td>"
+        html += "</tr>"
+        i += 1
+    html += "</tbody></table>"
+    return html
+
 def generate_html_metrics_table(all_data):
     """
     Generate an HTML table for key metrics.
@@ -225,15 +304,13 @@ def generate_html_metrics_table(all_data):
         html += f"<tr style='background-color: {row_color[i % 2]};'>"
         html += f"<td style='padding: 8px;'>{ticker}</td>"
         for metric in key_metrics[1:]:  # Skip "Ticker" as it's already added
-            # value = next((data[key] for key in data if metric in key), "--")
-            # value = data.get(metric, next((data[key] for key in data if metric in key), "--"))
             value = get_all_sources_data(data,metric)
             html += f"<td style='padding: 8px;'>{value}</td>"
         html += "</tr>"
     
     html += "</tbody></table>"
     return html
-def send_consolidated_report(tickers, report_paths, all_data, recipients, summary_path=None, cc=None, bcc=None):
+def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None):
     """
     Send a consolidated report email for multiple stocks using HTML formatting.
     
@@ -241,6 +318,7 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
         tickers (list): List of ticker symbols
         report_paths (dict): Dictionary with ticker symbols as keys and report file paths as values
         all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values
+        cnnMetricData (dict): Dictionary with CNN Fear and Greed Index data
         recipients (str or list): Recipient email address(es)
         summary_path (str, optional): Path to summary report file
         cc (str or list, optional): CC email address(es)
@@ -250,6 +328,7 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
         bool: True if successful, False otherwise
     """
     subject = f"Stock Analysis Report: {', '.join(tickers)} - {datetime.now().strftime('%Y-%m-%d')}"
+    cnn_metrics_html = generate_html_CNN_metrics_table(cnnMetricData)
     
     # Generate the HTML table for key metrics
     metrics_table_html = generate_html_metrics_table(all_data)
@@ -261,7 +340,11 @@ def send_consolidated_report(tickers, report_paths, all_data, recipients, summar
             <h2>Stock Analysis Report</h2>
             <p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
             <p>This is an automated report from your Stock Data Scraper application.</p>
-            
+            <h3>Below is the current market sentiment based on CNN's Fear and Greed Index:</p>
+            <p>Note: The score ranges from 0 to 100, where 0 indicates extreme fear, 50 indicates neutrality, and 100 indicates extreme greed.</p>
+            <p>For more details, visit: <a href="https://money.cnn.com/data/fear-and-greed/">CNN Fear and Greed Index</a></p>
+            {cnn_metrics_html}
+
             <h3>Key Metrics Summary</h3>
             {metrics_table_html}
             

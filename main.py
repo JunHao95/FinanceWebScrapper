@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "."))
 from src.scrapers.yahoo_scraper import YahooFinanceScraper
 from src.scrapers.finviz_scraper import FinvizScraper
 from src.scrapers.google_scraper import GoogleFinanceScraper
+from src.scrapers.cnn_scraper import CNNFearGreedScraper
 from src.scrapers.api_scraper import AlphaVantageAPIScraper, FinhubAPIScraper
 from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe, save_to_csv, save_to_excel
@@ -237,10 +238,10 @@ def run_scrapers(ticker: str, sources: list, logger: logging.Logger, alpha_key: 
                 logger.warning("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
             print("Alpha Vantage API key not provided. Cannot calculate technical indicators.")
             print("Set with --alpha-key or ALPHA_VANTAGE_API_KEY environment variable.")
-    
+    print(f"ENDED COMPLETED Run_scrapers, results before : {results}")
     # Filter out any error messages
     results = {k: v for k, v in results.items() if not isinstance(v, dict) or "error" not in v}
-    
+    print(f"ENDED COMPLETED Run_scrapers, results after : {results}")
     return results
 
 def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "output", save_enabled: bool = True) -> str:
@@ -250,6 +251,7 @@ def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "ou
     
     Args:
         data (dict): Stock data dictionary
+        cnnMetricData (dict): CNN metrics data
         ticker (str): Stock ticker symbol
         file_format (str): Output format (csv, excel, text)
         output_dir (str): Directory to save the file
@@ -263,7 +265,9 @@ def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "ou
         output_dir, 
         f"{ticker}_financial_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     )
-    
+   
+    if not file_format:
+        file_format = 'text'
     # Add extension
     if file_format == 'excel':
         filename += ".xlsx"
@@ -272,12 +276,17 @@ def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "ou
     else:
         filename += ".csv"
     
+    print(f"DEBUGGING, filename: {filename}. file_format: {file_format}")   
+    print(f"DEBUGGING, save_enabled: {save_enabled}")
     # If saving report mode is disabled, just return filename without saving 
     if not save_enabled:
-        filename = create_temp_file(file_format)
+        
+        filename = create_temp_file("text")
         print(f"Report saving is disabled. Temporary file created for email: {filename}")
-    
+        #return # since we are not saving the file to local dir, we should exit
+    print(f"DEBUGGING, filename updated: {filename}")   
     # Ensure directory exists
+    
     if save_enabled:
         os.makedirs(os.path.dirname(filename), exist_ok=True)
     
@@ -296,13 +305,14 @@ def save_report(data: dict, ticker: str, file_format: str, output_dir: str = "ou
     
     return filename
 
-def create_summary_report(all_data: dict, output_dir: str, file_format: str, save_enabled: bool = False) -> str:
+def create_summary_report(all_data: dict, cnnMetricData: dict, output_dir: str, file_format: str, save_enabled: bool = False) -> str:
     """
     Create a summary report for all analyzed tickers
     If saved_enabled is false, create a temporary file for email attachments 
     
     Parameters:
         all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values
+        cnnMetricData (dict): Dictionary with CNN metrics
         output_dir (str): Directory to save the report
         file_format (str): Output format (csv, excel, text)
         save_enabled (bool): Whether to actually save the file
@@ -336,7 +346,7 @@ def create_summary_report(all_data: dict, output_dir: str, file_format: str, sav
     
     # Create DataFrame
     summary_df = pd.DataFrame(summary_data)
-    
+
     # Generate filename
     filename = os.path.join(
         output_dir, 
@@ -420,6 +430,7 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
     
     if args.display_mode == 'grouped':
         try:
+            print("Debugging, i am in grouped mode")
             print_grouped_metrics(data)
         except ImportError:
             print("Warning: tabulate package not found. Falling back to table display.")
@@ -427,20 +438,25 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
             with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
                 print(df.T)
     else:
+        print("Debugging, i am not in grouped mode")
         df = format_data_as_dataframe(data)
         # Set display options to show more rows
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
             print(df.T)  # Transpose for better display
     
     # Save report
+    print(f"RUNNING SAVE REPORT, file format is {args.format}")
     report_path = save_report(data, ticker, args.format, args.output_dir, save_enabled=save_reports_enabled)
-    
+    print(20*"###")
+    print(f"DEbuggin, ticket : {ticker}, data: {data},report path: {report_path}")
+    print(20*"###")
     return (ticker, data, report_path)
 
 # Update this function in main.py to use consolidated email
 
 def process_all_tickers(
     tickers: List[str],
+    CnnMetricData: Dict[str, Any],
     args: argparse.Namespace,
     logger: logging.Logger
 ) -> Dict[str, Dict[str, Any]]:
@@ -488,7 +504,9 @@ def process_all_tickers(
         # Process tickers sequentially
         for ticker in tickers:
             try:
+                print("DEBUG< i am going to process ticker: ", ticker)
                 ticker, data, report_path = process_ticker(ticker, args, logger)
+                print(f"Inside each sequential Ticker ,DEBUGGING ticker: {ticker}, data: {data}, report_path: {report_path}")
                 all_data[ticker] = data
                 all_reports[ticker] = report_path
             except Exception as e:
@@ -497,9 +515,13 @@ def process_all_tickers(
                 print(f"Error processing ticker {ticker}: {str(e)}")
     
     # Create summary report if requested
+    print(20*"###")
+    print(f"DEBUGGING all_data: {all_data}")
+    print(20*"###")
     summary_path: str = None
     if args.summary and len(all_data) > 1:
-        summary_path = create_summary_report(all_data, args.output_dir, args.format, save_enabled=save_reports_enabled)
+        summary_path = create_summary_report(all_data, CnnMetricData, args.output_dir, args.format, save_enabled=save_reports_enabled)
+        print(f"DEBUGGING summary path: {summary_path}")
     
     # Send email if requested
     if (args.email or args.cc or args.bcc) and all_reports:
@@ -514,6 +536,7 @@ def process_all_tickers(
             tickers=list(all_data.keys()),
             report_paths=all_reports,
             all_data=all_data,
+            cnnMetricData=CnnMetricData,
             recipients=args.email,
             summary_path=summary_path,
             cc=args.cc,
@@ -588,10 +611,17 @@ def main() -> None:
     except:
         pass
     
+    # CNN Fear & Greed Index (does not require ticker)
+    if logging_enabled:
+        logger.info("Scraping CNN Fear & Greed Index data...")
+    print("Scraping CNN Fear & Greed Index data...")
+    cnn_scraper = CNNFearGreedScraper()
+    cnnMetricData = cnn_scraper.scrape_data()
     # Get tickers to process
     tickers = []
     
     if args.interactive:
+        
         tickers = get_tickers_interactively()
         
         print(f"\nAnalyzing {len(tickers)} ticker(s): {', '.join(tickers)}")
@@ -618,7 +648,7 @@ def main() -> None:
                 create_summary = input("\nWould you like to create a summary comparison report? (y/n): ").strip().lower() == 'y'
                 
             if create_summary:
-                summary_path = create_summary_report(all_data, args.output_dir, args.format)
+                summary_path = create_summary_report(all_data, cnnMetricData, args.output_dir, args.format)
         
         # Ask if user wants to email the report
         send_email = False
@@ -647,6 +677,7 @@ def main() -> None:
                     tickers=list(all_data.keys()),
                     report_paths=all_reports,
                     all_data=all_data,
+                    cnnMetricData=cnnMetricData,
                     recipients=recipients,
                     summary_path=summary_path,
                     cc=cc,
@@ -674,7 +705,7 @@ def main() -> None:
     print(f"\nAnalyzing {len(tickers)} ticker(s): {', '.join(tickers)}")
     
     # Process all tickers
-    process_all_tickers(tickers, args, logger)
+    process_all_tickers(tickers, cnnMetricData, args, logger)
     
     print("\nAll processing complete!")
 
