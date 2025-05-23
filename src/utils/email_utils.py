@@ -203,47 +203,18 @@ def generate_html_CNN_metrics_table(cnnMetricData):
     """
     # Define human-readable meanings for each metric
     metric_meanings = {
-        "fear_and_greed": {
-            "Composite gauge of  market sentiment, ranging from 0 (extreme fear) to 100 (extreme greed).<br> "
-            "Excessive fear indicates a bearish market, while excessive greed indicates a bullish market."
-        },
-        "fear_and_greed_historical": {
-            "Historical data of the Fear and Greed Index. "
-        },
-        "market_momentum_sp500": {
-            "Market momentum (S&P 500). If S&P 500 stocks is well above their 125-day average <br> "
-            " >50 indicates bullish sentiment and has strong momentum."
-        },
-        "market_momentum_sp125": {
-            "Market momentum (S&P 125 stocks above 125-day average). "
-        },
-        "stock_price_strength": {
-            "Stock price strength (Ratio of stocks at 52-week highs vs lows). <br>"
-            ">50 indicates more stocks at making 52 weeks highs compared to 52 weeks lows."
-        },
-        "stock_price_breadth": {
-            "Stock price breadth (volume of advancing vs. declining stocks) <br> "
-            " >50 indicates more volume in advancing stocks than declining."
-        },
-        "put_call_options": {
-            "Measures ratio of bearish(put) to bullish (call) options (derivatives sentiment. <br> "
-            ">50 indicates more call than put, bullish sentiment in market."
-        },
-        "market_volatility_vix": {
-            "Market volatility (VIX), higher VIX <br> "
-            ">50 indicates more volatility in the market, more fearful than greed."
-        },
-        "market_volatility_vix_50": {
-            "Market volatility (VIX vs. 50-day average)."
-        },
-        "junk_bond_demand": {
-            "Measures spread between junk bond and investment grade yield.<br> "
-            ">50 indicates tight spread, indicating more demand for junk bonds, higher risk appetite. Bullish sentiment."
-        },
-        "safe_haven_demand": {
-            "Compares demand for stocks vs Treasuries.<br> "
-            ">50 indicates higher demand for stocks than Treasuries, indicating bullish sentiment (Greed)."
-        }
+        "fear_and_greed": "Composite gauge of  market sentiment, ranging from 0 (extreme fear) to 100 (extreme greed).<br> Excessive fear indicates a bearish market, while excessive greed indicates a bullish market.",
+        "fear_and_greed_historical": "Historical data of the Fear and Greed Index. ",
+
+        "market_momentum_sp500": "Market momentum (S&P 500). If S&P 500 stocks is well above their 125-day average <br> >50 indicates bullish sentiment and has strong momentum.",
+        "market_momentum_sp125":  "Market momentum (S&P 125 stocks above 125-day average). ",
+        "stock_price_strength": "Stock price strength (Ratio of stocks at 52-week highs vs lows). <br> >50 indicates more stocks at making 52 weeks highs compared to 52 weeks lows.",
+        "stock_price_breadth": "Stock price breadth (volume of advancing vs. declining stocks) <br> >50 indicates more volume in advancing stocks than declining.",
+        "put_call_options": "Measures ratio of bearish(put) to bullish (call) options (derivatives sentiment. <br> >50 indicates more call than put, bullish sentiment in market.",
+        "market_volatility_vix":  "Market volatility (VIX), higher VIX <br>  >50 indicates more volatility in the market, more fearful than greed." ,
+        "market_volatility_vix_50":"Market volatility (VIX vs. 50-day average)." ,
+        "junk_bond_demand":  "Measures spread between junk bond and investment grade yield.<br> >50 indicates tight spread, indicating more demand for junk bonds, higher risk appetite. Bullish sentiment.",
+        "safe_haven_demand": "Compares demand for stocks vs Treasuries.<br> >50 indicates higher demand for stocks than Treasuries, indicating bullish sentiment (Greed)."
     }
 
     html = """
