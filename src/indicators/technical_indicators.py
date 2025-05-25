@@ -350,7 +350,11 @@ class TechnicalIndicators:
             for window in ma_windows:
                 if len(df) >= window:
                     ma = df['close'].rolling(window=window).mean()
-                    mas[f"MA{window}"] = round(ma.iloc[0], 2)
+                    last_valid_index = ma.last_valid_index()
+                    if last_valid_index is not None:
+                        mas[f"MA{window}"] = round(ma.loc[last_valid_index], 2)
+                    else:
+                        mas[f"MA{window}"] = np.nan
             
             # Calculate exponential moving averages
             ema_windows = [12, 26, 50, 200]
@@ -441,8 +445,12 @@ class TechnicalIndicators:
             rs = avg_gain / avg_loss
             rsi = 100 - (100 / (1 + rs))
             
-            # Get current RSI value
-            current_rsi = round(rsi.iloc[0], 2)
+            # Get the most recent valid RSI value
+            last_valid = rsi.last_valid_index()
+            if last_valid is not None and not np.isnan(rsi.loc[last_valid]):
+                current_rsi = round(rsi.loc[last_valid], 2)
+            else:
+                current_rsi = np.nan
             
             # Determine RSI signal
             if current_rsi > 70:
@@ -750,7 +758,7 @@ class TechnicalIndicators:
         """
         # Get historical data
         df = self.get_historical_data(ticker)
-        
+
         if df.empty:
             print(20*"###")
             print("No historical data available for the ticker.")
