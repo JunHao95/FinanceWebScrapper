@@ -274,7 +274,7 @@ class TechnicalIndicators:
             if len(df) < window:
                 self.logger.warning(f"Not enough data for Bollinger Bands calculation: {len(df)} < {window}")
                 return {}
-            if df['close'].isnull().all():
+            if df['close'].isnull().all().item():
                 self.logger.warning("No valid close price data available for Bollinger Bands.")
                 return {}
                 
@@ -288,12 +288,15 @@ class TechnicalIndicators:
             upper_band = middle_band + (std * num_std)
             lower_band = middle_band - (std * num_std)
             
-            # Get the most recent values
-            current_middle = middle_band.iloc[0]
-            current_upper = upper_band.iloc[0]
-            current_lower = lower_band.iloc[0]
-            current_close = df['close'].iloc[0]
-            
+            valid_idx = middle_band.last_valid_index()
+            if valid_idx is None:
+                self.logger.warning("No valid Bollinger Band values found (all NaN).")
+                return {}
+
+            current_middle = middle_band.loc[valid_idx]
+            current_upper = upper_band.loc[valid_idx]
+            current_lower = lower_band.loc[valid_idx]
+            current_close = df['close'].loc[valid_idx]
             # Calculate band width and %B
             band_width = (current_upper - current_lower) / current_middle * 100
             
