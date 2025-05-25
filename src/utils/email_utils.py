@@ -193,7 +193,7 @@ def get_all_sources_data(data, metric):
     return ", ".join(values) if values else "--"
 
 
-def generate_html_CNN_metrics_table(cnnMetricData):
+def generate_enhanced_html_cnn_metrics_table(cnnMetricData):
     """
     Generate an HTML table for CNN data metrics with columns: Metric, Score, Rating.
     Args:
@@ -201,48 +201,187 @@ def generate_html_CNN_metrics_table(cnnMetricData):
     Returns:
         str: HTML table as a string.
     """
-    # Define human-readable meanings for each metric
     metric_meanings = {
-        "fear_and_greed": "Composite gauge of  market sentiment, ranging from 0 (extreme fear) to 100 (extreme greed).<br> Excessive fear indicates a bearish market, while excessive greed indicates a bullish market.",
-        "fear_and_greed_historical": "Historical data of the Fear and Greed Index. ",
-
-        "market_momentum_sp500": "Market momentum (S&P 500). If S&P 500 stocks is well above their 125-day average <br> >50 indicates bullish sentiment and has strong momentum.",
-        "market_momentum_sp125":  "Market momentum (S&P 125 stocks above 125-day average). ",
-        "stock_price_strength": "Stock price strength (Ratio of stocks at 52-week highs vs lows). <br> >50 indicates more stocks at making 52 weeks highs compared to 52 weeks lows.",
-        "stock_price_breadth": "Stock price breadth (volume of advancing vs. declining stocks) <br> >50 indicates more volume in advancing stocks than declining.",
-        "put_call_options": "Measures ratio of bearish(put) to bullish (call) options (derivatives sentiment. <br> >50 indicates more call than put, bullish sentiment in market.",
-        "market_volatility_vix":  "Market volatility (VIX), higher VIX <br>  >50 indicates more volatility in the market, more fearful than greed." ,
-        "market_volatility_vix_50":"Market volatility (VIX vs. 50-day average)." ,
-        "junk_bond_demand":  "Measures spread between junk bond and investment grade yield.<br> >50 indicates tight spread, indicating more demand for junk bonds, higher risk appetite. Bullish sentiment.",
-        "safe_haven_demand": "Compares demand for stocks vs Treasuries.<br> >50 indicates higher demand for stocks than Treasuries, indicating bullish sentiment (Greed)."
+        "fear_and_greed": "Composite gauge of market sentiment, ranging from 0 (extreme fear) to 100 (extreme greed).<br>Excessive fear indicates a bearish market, while excessive greed indicates a bullish market.",
+        "fear_and_greed_historical": "Historical data of the Fear and Greed Index.",
+        "market_momentum_sp500": "Market momentum (S&P 500). If S&P 500 stocks is well above their 125-day average<br>>50 indicates bullish sentiment and has strong momentum.",
+        "market_momentum_sp125": "Market momentum (S&P 125 stocks above 125-day average).",
+        "stock_price_strength": "Stock price strength (Ratio of stocks at 52-week highs vs lows).<br>>50 indicates more stocks at making 52 weeks highs compared to 52 weeks lows.",
+        "stock_price_breadth": "Stock price breadth (volume of advancing vs. declining stocks)<br>>50 indicates more volume in advancing stocks than declining.",
+        "put_call_options": "Measures ratio of bearish(put) to bullish (call) options (derivatives sentiment.<br>>50 indicates more call than put, bullish sentiment in market.",
+        "market_volatility_vix": "Market volatility (VIX), higher VIX<br>>50 indicates more volatility in the market, more fearful than greed.",
+        "market_volatility_vix_50": "Market volatility (VIX vs. 50-day average).",
+        "junk_bond_demand": "Measures spread between junk bond and investment grade yield.<br>>50 indicates tight spread, indicating more demand for junk bonds, higher risk appetite. Bullish sentiment.",
+        "safe_haven_demand": "Compares demand for stocks vs Treasuries.<br>>50 indicates higher demand for stocks than Treasuries, indicating bullish sentiment (Greed)."
     }
 
+    def get_score_color(score_str):
+        """Get color based on score value."""
+        try:
+            score = float(score_str)
+            if score <= 25:
+                return "#e74c3c"  # Red for extreme fear
+            elif score <= 40:
+                return "#f39c12"  # Orange for fear
+            elif score <= 50:
+                return "#f1c40f"  # Yellow for neutral
+            elif score <= 70:
+                return "#27ae60"  # Green for greed
+            else:
+                return "#2ecc71"  # Bright green for extreme greed
+        except:
+            return "#95a5a6"  # Gray for unknown
+
+    def get_rating_badge(rating):
+        """Generate styled rating badge."""
+        color_map = {
+            "Extreme Fear": "#e74c3c",
+            "Fear": "#f39c12", 
+            "Neutral": "#f1c40f",
+            "Greed": "#27ae60",
+            "Extreme Greed": "#2ecc71"
+        }
+        color = color_map.get(rating, "#95a5a6")
+        return f'<span style="background-color: {color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">{rating}</span>'
+
     html = """
-    <table border="1" style="border-collapse: collapse; width: 80%; font-family: Arial, sans-serif;">
-        <thead>
-            <tr style="background-color: #4CAF50; color: white; font-weight: bold;">
-                <th style='padding: 8px;'>Metric</th>
-                <th style='padding: 8px;'>Interpretation</th>
-                <th style='padding: 8px;'>Score</th>
-                <th style='padding: 8px;'>Rating</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 24px;">📊 Market Sentiment Analysis</h3>
+        <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <table style="width: 100%; border-collapse: collapse; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white;">
+                        <th style="padding: 15px; text-align: left; font-weight: 600;">Metric</th>
+                        <th style="padding: 15px; text-align: left; font-weight: 600;">Interpretation</th>
+                        <th style="padding: 15px; text-align: center; font-weight: 600;">Score</th>
+                        <th style="padding: 15px; text-align: center; font-weight: 600;">Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
     """
-    row_color = ["#f2f2f2", "white"]
-    i = 0
-    for metric, values in cnnMetricData.items():
-        html += f"<tr style='background-color: {row_color[i % 2]};'>"
-        html += f"<td style='padding: 8px; font-weight: bold;'>{metric.replace('_', ' ').title()}</td>"
-        html += f"<td style='padding: 8px;'>{metric_meanings.get(metric, '--')}</td>"
-        html += f"<td style='padding: 8px;'>{values.get('score', '--')}</td>"
-        html += f"<td style='padding: 8px;'>{values.get('rating', '--')}</td>"
-        html += "</tr>"
-        i += 1
-    html += "</tbody></table>"
+    
+    for i, (metric, values) in enumerate(cnnMetricData.items()):
+        row_bg = "#f8f9fa" if i % 2 == 0 else "white"
+        score = values.get('score', '--')
+        rating = values.get('rating', '--')
+        score_color = get_score_color(score)
+        
+        html += f"""
+                    <tr style="background-color: {row_bg}; transition: background-color 0.3s ease;">
+                        <td style="padding: 15px; font-weight: 600; color: #2c3e50; border-bottom: 1px solid #ecf0f1;">
+                            {metric.replace('_', ' ').title()}
+                        </td>
+                        <td style="padding: 15px; color: #5d6d7e; font-size: 14px; border-bottom: 1px solid #ecf0f1;">
+                            {metric_meanings.get(metric, '--')}
+                        </td>
+                        <td style="padding: 15px; text-align: center; border-bottom: 1px solid #ecf0f1;">
+                            <span style="background-color: {score_color}; color: white; padding: 8px 15px; border-radius: 25px; font-weight: bold; font-size: 16px;">
+                                {score}
+                            </span>
+                        </td>
+                        <td style="padding: 15px; text-align: center; border-bottom: 1px solid #ecf0f1;">
+                            {get_rating_badge(rating)}
+                        </td>
+                    </tr>
+        """
+    
+    html += """
+                </tbody>
+            </table>
+        </div>
+    </div>
+    """
     return html
 
-def generate_html_metrics_table(all_data):
+
+def generate_enhanced_html_metrics_table(all_data):
+    """
+    Generate an enhanced HTML table for key metrics with modern styling and visual indicators.
+    """
+    key_metrics = ["Ticker", "Current Price", "Analyst Price Target", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
+    
+    def get_metric_color(metric, value_str):
+        """Get color coding for different metrics."""
+        try:
+            # Extract numeric value from string
+            import re
+            numbers = re.findall(r'-?\d+\.?\d*', value_str.replace('%', ''))
+            if not numbers:
+                return "#95a5a6"
+            
+            value = float(numbers[0])
+            
+            if "P/E" in metric:
+                if value < 15: return "#27ae60"  # Good
+                elif value < 25: return "#f39c12"  # Moderate
+                else: return "#e74c3c"  # High
+            elif "ROE" in metric or "Profit Margin" in metric:
+                if value > 15: return "#27ae60"  # Good
+                elif value > 5: return "#f39c12"  # Moderate
+                else: return "#e74c3c"  # Low
+            elif "PEG" in metric:
+                if value < 1: return "#27ae60"  # Good
+                elif value < 2: return "#f39c12"  # Moderate
+                else: return "#e74c3c"  # High
+        except:
+            pass
+        return "#34495e"  # Default
+
+    html = """
+    <div style="background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 24px;">📈 Key Financial Metrics</h3>
+        <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-width: 800px;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white;">
+    """
+    
+    for metric in key_metrics:
+        html += f'<th style="padding: 15px; text-align: left; font-weight: 600; white-space: nowrap;">{metric}</th>'
+    
+    html += """
+                        </tr>
+                    </thead>
+                    <tbody>
+    """
+    
+    for i, (ticker, data) in enumerate(all_data.items()):
+        row_bg = "#f8f9fa" if i % 2 == 0 else "white"
+        html += f'<tr style="background-color: {row_bg}; transition: background-color 0.3s ease;">'
+        
+        # Ticker column with special styling
+        html += f'''
+            <td style="padding: 15px; border-bottom: 1px solid #ecf0f1;">
+                <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">
+                    {ticker}
+                </span>
+            </td>
+        '''
+        
+        for metric in key_metrics[1:]:  # Skip ticker
+            value = get_all_sources_data(data, metric)
+            clean_value = value.replace(", ", "<br>")
+            color = get_metric_color(metric, value)
+            
+            html += f'''
+                <td style="padding: 15px; border-bottom: 1px solid #ecf0f1; color: {color}; font-weight: 500;">
+                    {clean_value if clean_value != "--" else '<span style="color: #95a5a6;">--</span>'}
+                </td>
+            '''
+        
+        html += "</tr>"
+    
+    html += """
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    """
+    return html
+
+def generate_enhanced_technical_analysis_section(all_data):
     """
     Generate an HTML table for key metrics.
     
@@ -297,10 +436,10 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
         bool: True if successful, False otherwise
     """
     subject = f"Stock Analysis Report: {', '.join(tickers)} - {datetime.now().strftime('%Y-%m-%d')}"
-    cnn_metrics_html = generate_html_CNN_metrics_table(cnnMetricData)
+    cnn_metrics_html = generate_enhanced_html_cnn_metrics_table(cnnMetricData)
     
     # Generate the HTML table for key metrics
-    metrics_table_html = generate_html_metrics_table(all_data)
+    metrics_table_html = generate_enhanced_html_metrics_table(all_data)
     
     # Create the HTML email body
     body = f"""
@@ -314,25 +453,100 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
             <p>For more details, visit: <a href="https://money.cnn.com/data/fear-and-greed/">CNN Fear and Greed Index</a></p>
             {cnn_metrics_html}
 
-            <h3>Key Metrics Summary</h3>
+            <h3>Fundamental Analysis Summary</h3>
             {metrics_table_html}
             
-            <h3>Individual Stock Highlights</h3>
+            <h3>Technical Analysis Summary</h3>
             <ul>
     """
     
     # Add individual stock highlights
     for ticker, data in all_data.items():
         body += f"<li><strong>{ticker}:</strong><ul>"
-        metrics = [
-            ("Sharpe Ratio","Sharpe Ratio"),
-            ("Sharpe Ratio Interpretation","Sharpe Ratio Interpretation"),
-            ("Sortino Ratio","Sortino Ratio"),
-            ("Sortino Ratio Interpretation", "Sortino Ratio Interpretation"),
-            ("Annualized Return","Annualized Return"),
-            ("Annualized Volatility","Annualized Volatility"),
-            ("Risk-Free Rate","Risk-Free Rate")
-            # ("Current Price", "Current Price")
+        metrics = [('BB Middle Band (Technical)', 'BB Middle Band (Technical)'),
+        ('BB Upper Band (Technical)', 'BB Upper Band (Technical)'),
+        ('BB Lower Band (Technical)', 'BB Lower Band (Technical)'),
+        ('BB Width (%) (Technical)', 'BB Width (%) (Technical)'),
+        ('BB %B (Technical)', 'BB %B (Technical)'),
+        ('BB Signal (Technical)', 'BB Signal (Technical)'),
+        ('MA10 (Technical)', 'MA10 (Technical)'),
+        ('MA20 (Technical)', 'MA20 (Technical)'),
+        ('MA50 (Technical)', 'MA50 (Technical)'),
+        ('MA100 (Technical)', 'MA100 (Technical)'),
+        ('EMA12 (Technical)', 'EMA12 (Technical)'),
+        ('EMA26 (Technical)', 'EMA26 (Technical)'),
+        ('EMA50 (Technical)', 'EMA50 (Technical)'),
+        ('MACD Line (Technical)', 'MACD Line (Technical)'),
+        ('MACD Signal (Technical)', 'MACD Signal (Technical)'),
+        ('MACD Histogram (Technical)', 'MACD Histogram (Technical)'),
+        ('MA10 Signal (Technical)', 'MA10 Signal (Technical)'),
+        ('MA20 Signal (Technical)', 'MA20 Signal (Technical)'),
+        ('MA50 Signal (Technical)', 'MA50 Signal (Technical)'),
+        ('MA100 Signal (Technical)', 'MA100 Signal (Technical)'),
+        ('Current Price (Technical)', 'Current Price (Technical)'),
+        ('RSI (14) (Technical)', 'RSI (14) (Technical)'),
+        ('RSI Signal (Technical)', 'RSI Signal (Technical)'),
+        ('Current Volume (Technical)', 'Current Volume (Technical)'),
+        ('OBV Trend (Technical)', 'OBV Trend (Technical)'),
+        ('Volume MA10 (Technical)', 'Volume MA10 (Technical)'),
+        ('Volume MA20 (Technical)', 'Volume MA20 (Technical)'),
+        ('Volume MA50 (Technical)', 'Volume MA50 (Technical)'),
+        ('Volume MA10 Signal (Technical)', 'Volume MA10 Signal (Technical)'),
+        ('Volume MA20 Signal (Technical)', 'Volume MA20 Signal (Technical)'),
+        ('Volume MA50 Signal (Technical)', 'Volume MA50 Signal (Technical)'),
+        ('Sharpe Ratio (Technical)', 'Sharpe Ratio (Technical)'),
+        ('Sortino Ratio (Technical)', 'Sortino Ratio (Technical)'),
+        ('Sortino Ratio Interpretation (Technical)',
+        'Sortino Ratio Interpretation (Technical)'),
+        ('Annualized Return (Technical)', 'Annualized Return (Technical)'),
+        ('Annualized Volatility (Technical)', 'Annualized Volatility (Technical)'),
+        ('Risk-Free Rate (Technical)', 'Risk-Free Rate (Technical)'),
+        ('Period (Technical)', 'Period (Technical)'),
+        ('Data Points (Technical)', 'Data Points (Technical)'),
+        ('Sharpe Ratio Interpretation (Technical)',
+        'Sharpe Ratio Interpretation (Technical)'),
+        ('BB Middle Band (Technical)', 'BB Middle Band (Technical)'),
+        ('BB Upper Band (Technical)', 'BB Upper Band (Technical)'),
+        ('BB Lower Band (Technical)', 'BB Lower Band (Technical)'),
+        ('BB Width (%) (Technical)', 'BB Width (%) (Technical)'),
+        ('BB %B (Technical)', 'BB %B (Technical)'),
+        ('BB Signal (Technical)', 'BB Signal (Technical)'),
+        ('MA10 (Technical)', 'MA10 (Technical)'),
+        ('MA20 (Technical)', 'MA20 (Technical)'),
+        ('MA50 (Technical)', 'MA50 (Technical)'),
+        ('MA100 (Technical)', 'MA100 (Technical)'),
+        ('EMA12 (Technical)', 'EMA12 (Technical)'),
+        ('EMA26 (Technical)', 'EMA26 (Technical)'),
+        ('EMA50 (Technical)', 'EMA50 (Technical)'),
+        ('MACD Line (Technical)', 'MACD Line (Technical)'),
+        ('MACD Signal (Technical)', 'MACD Signal (Technical)'),
+        ('MACD Histogram (Technical)', 'MACD Histogram (Technical)'),
+        ('MA10 Signal (Technical)', 'MA10 Signal (Technical)'),
+        ('MA20 Signal (Technical)', 'MA20 Signal (Technical)'),
+        ('MA50 Signal (Technical)', 'MA50 Signal (Technical)'),
+        ('MA100 Signal (Technical)', 'MA100 Signal (Technical)'),
+        ('Current Price (Technical)', 'Current Price (Technical)'),
+        ('RSI (14) (Technical)', 'RSI (14) (Technical)'),
+        ('RSI Signal (Technical)', 'RSI Signal (Technical)'),
+        ('Current Volume (Technical)', 'Current Volume (Technical)'),
+        ('OBV Trend (Technical)', 'OBV Trend (Technical)'),
+        ('Volume MA10 (Technical)', 'Volume MA10 (Technical)'),
+        ('Volume MA20 (Technical)', 'Volume MA20 (Technical)'),
+        ('Volume MA50 (Technical)', 'Volume MA50 (Technical)'),
+        ('Volume MA10 Signal (Technical)', 'Volume MA10 Signal (Technical)'),
+        ('Volume MA20 Signal (Technical)', 'Volume MA20 Signal (Technical)'),
+        ('Volume MA50 Signal (Technical)', 'Volume MA50 Signal (Technical)'),
+        ('Sharpe Ratio (Technical)', 'Sharpe Ratio (Technical)'),
+        ('Sortino Ratio (Technical)', 'Sortino Ratio (Technical)'),
+        ('Sortino Ratio Interpretation (Technical)',
+        'Sortino Ratio Interpretation (Technical)'),
+        ('Annualized Return (Technical)', 'Annualized Return (Technical)'),
+        ('Annualized Volatility (Technical)', 'Annualized Volatility (Technical)'),
+        ('Risk-Free Rate (Technical)', 'Risk-Free Rate (Technical)'),
+        ('Period (Technical)', 'Period (Technical)'),
+        ('Data Points (Technical)', 'Data Points (Technical)'),
+        ('Sharpe Ratio Interpretation (Technical)',
+        'Sharpe Ratio Interpretation (Technical)')
         ]
         for label, key_prefix in metrics:
             for data_key in data.keys():
