@@ -383,44 +383,188 @@ def generate_enhanced_html_metrics_table(all_data):
 
 def generate_enhanced_technical_analysis_section(all_data):
     """
-    Generate an HTML table for key metrics.
-    
-    Args:
-        all_data (dict): Dictionary with ticker symbols as keys and data dictionaries as values.
+    Generate enhanced technical analysis section with visual indicators.
+    """
+    def get_signal_badge(signal):
+        """Generate styled signal badge."""
+        if not signal or signal == "--" or signal == "":
+            return '<span style="color: #95a5a6;">--</span>'
         
-    Returns:
-        str: HTML table as a string.
-    """
-    # Define the key metrics to include in the summary
-    key_metrics = ["Ticker", "Analyst Price Target", "Current Price", "P/E Ratio", "Forward P/E", "PEG Ratio", "EPS", "ROE", "P/B Ratio", "P/S Ratio", "Profit Margin"]
-    
-    # Start the HTML table
+        signal_lower = str(signal).lower()
+        if "bullish" in signal_lower or "buy" in signal_lower:
+            color = "#27ae60"
+            icon = "📈"
+        elif "bearish" in signal_lower or "sell" in signal_lower:
+            color = "#e74c3c" 
+            icon = "📉"
+        elif "overbought" in signal_lower:
+            color = "#f39c12"
+            icon = "⚠️"
+        elif "oversold" in signal_lower:
+            color = "#3498db"
+            icon = "💡"
+        else:
+            color = "#95a5a6"
+            icon = "➖"
+        
+        return f'<span style="background-color: {color}; color: white; padding: 4px 8px; border-radius: 15px; font-size: 11px; font-weight: bold;">{icon} {signal}</span>'
+
+    def get_rsi_visual(rsi_value):
+        """Generate RSI visual indicator."""
+        try:
+            if rsi_value == "--" or rsi_value == "" or rsi_value is None:
+                return '<span style="color: #95a5a6;">No RSI Data Available</span>'
+            
+            rsi = float(rsi_value)
+            if rsi >= 70:
+                color = "#e74c3c"
+                status = "Overbought"
+            elif rsi <= 30:
+                color = "#3498db" 
+                status = "Oversold"
+            else:
+                color = "#27ae60"
+                status = "Normal"
+            
+            percentage = min(rsi, 100)
+            return f'''
+                <div style="background: #ecf0f1; border-radius: 10px; height: 20px; position: relative; margin: 5px 0;">
+                    <div style="background: {color}; height: 100%; width: {percentage}%; border-radius: 10px; position: relative;">
+                        <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 11px; font-weight: bold;">
+                            {rsi:.1f}
+                        </span>
+                    </div>
+                    <div style="text-align: center; font-size: 11px; color: {color}; font-weight: bold; margin-top: 2px;">
+                        {status}
+                    </div>
+                </div>
+            '''
+        except:
+            return f'<span style="color: #95a5a6;">Invalid RSI: {rsi_value}</span>'
+
+    def format_volume(volume_str):
+        """Format volume string with proper comma separation."""
+        try:
+            if volume_str == "--" or volume_str == "" or volume_str is None:
+                return "--"
+            # Remove any existing commas and convert to float, then to int
+            clean_volume = str(volume_str).replace(',', '').replace(' ', '')
+            volume_num = int(float(clean_volume))
+            return f"{volume_num:,}"
+        except (ValueError, TypeError):
+            return str(volume_str) if volume_str not in ["--", "", None] else "--"
+
+    def safe_get_data(data, key, default="--"):
+        """Safely get data from dictionary with fallback."""
+        return data.get(key, default) if data.get(key) not in [None, "", "--"] else default
+
+    def find_matching_key(data, patterns):
+        """Find the first key that matches any of the patterns."""
+        for pattern in patterns:
+            for key in data.keys():
+                if pattern.lower() in key.lower():
+                    return data[key]
+        return "--"
+
     html = """
-    <table border="1" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">
-        <thead>
-            <tr style="background-color: #4CAF50; color: white; font-weight: bold;">
+    <div style="background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%); padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 24px;">🔍 Technical Analysis Overview</h3>
     """
-    html += "<thead><tr>"
-    for metric in key_metrics:
-        html += f"<th style='padding: 8px; text-align: left; font-style: italic; font-weight: bold; text-decoration: underline;'>{metric}</th>"
-    html += "</tr></thead><tbody>"
     
-    # Add rows for each ticker
-    row_color = ["#f2f2f2", "white"]  # Alternating colors
-    for i, (ticker, data) in enumerate(all_data.items()):
-        html += f"<tr style='background-color: {row_color[i % 2]};'>"
-        html += f"<td style='padding: 8px;'>{ticker}</td>"
-        for metric in key_metrics[1:]:  # Skip "Ticker" as it's already added
-            value = get_all_sources_data(data,metric)
-            value = value.replace(", ", ",<br>")  # Replace commas with line breaks for better readability
-            html += f"<td style='padding: 8px;'>{value}</td>"
-        html += "</tr>"
+    # Debug: Print available keys for first ticker
+    if all_data:
+        first_ticker = list(all_data.keys())[0]
+        print(f"DEBUG: Available keys for {first_ticker}:")
+        for key in sorted(all_data[first_ticker].keys()):
+            print(f"  - {key}")
     
-    html += "</tbody></table>"
+    for ticker, data in all_data.items():
+        # Use flexible key matching to find the right data
+        current_price = find_matching_key(data, ['current price', 'price'])
+        rsi_value = find_matching_key(data, ['rsi (14)', 'rsi'])
+        rsi_signal = find_matching_key(data, ['rsi signal'])
+        volume = find_matching_key(data, ['current volume', 'volume'])
+        obv_trend = find_matching_key(data, ['obv trend', 'obv'])
+        
+        # Get moving average data
+        ma10_value = find_matching_key(data, ['ma10 (technical)', 'ma10'])
+        ma20_value = find_matching_key(data, ['ma20 (technical)', 'ma20'])
+        ma50_value = find_matching_key(data, ['ma50 (technical)', 'ma50'])
+        ma100_value = find_matching_key(data, ['ma100 (technical)', 'ma100'])
+        
+        ma10_signal = find_matching_key(data, ['ma10 signal'])
+        ma20_signal = find_matching_key(data, ['ma20 signal'])
+        ma50_signal = find_matching_key(data, ['ma50 signal'])
+        ma100_signal = find_matching_key(data, ['ma100 signal'])
+        
+        # Get additional technical indicators
+        sharpe_ratio = find_matching_key(data, ['sharpe ratio'])
+        sortino_ratio = find_matching_key(data, ['sortino ratio'])
+        annual_return = find_matching_key(data, ['annualized return', 'annual return'])
+        volatility = find_matching_key(data, ['annualized volatility', 'volatility'])
+        
+        html += f"""
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                <h4 style="color: #2c3e50; margin: 0; font-size: 20px;">
+                    <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 8px 15px; border-radius: 20px; font-size: 16px;">
+                        {ticker}
+                    </span>
+                </h4>
+                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">
+                    ${current_price}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h5 style="color: #34495e; margin: 0 0 10px 0;">📊 RSI Analysis</h5>
+                    {get_rsi_visual(rsi_value)}
+                    <div style="text-align: center; margin-top: 5px;">
+                        {get_signal_badge(rsi_signal)}
+                    </div>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h5 style="color: #34495e; margin: 0 0 10px 0;">📈 Volume & Momentum</h5>
+                    <div style="margin-bottom: 8px;">
+                        <strong>Volume:</strong> <span style="color: #3498db;">{format_volume(volume)}</span>
+                    </div>
+                    <div>
+                        <strong>OBV Trend:</strong> {get_signal_badge(obv_trend)}
+                    </div>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h5 style="color: #34495e; margin: 0 0 10px 0;">📉 Moving Averages</h5>
+                    <div style="font-size: 12px; line-height: 1.4;">
+                        <div><strong>MA10:</strong> ${ma10_value} {get_signal_badge(ma10_signal)}</div>
+                        <div><strong>MA20:</strong> ${ma20_value} {get_signal_badge(ma20_signal)}</div>
+                        <div><strong>MA50:</strong> ${ma50_value} {get_signal_badge(ma50_signal)}</div>
+                        <div><strong>MA100:</strong> ${ma100_value} {get_signal_badge(ma100_signal)}</div>
+                    </div>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h5 style="color: #34495e; margin: 0 0 10px 0;">🎯 Performance Metrics</h5>
+                    <div style="font-size: 12px; line-height: 1.4;">
+                        <div><strong>Sharpe Ratio:</strong> <span style="color: #27ae60;">{sharpe_ratio}</span></div>
+                        <div><strong>Sortino Ratio:</strong> <span style="color: #27ae60;">{sortino_ratio}</span></div>
+                        <div><strong>Annual Return:</strong> <span style="color: #e74c3c;">{annual_return}</span></div>
+                        <div><strong>Volatility:</strong> <span style="color: #f39c12;">{volatility}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+    
+    html += "</div>"
     return html
+
+# 
 def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None):
     """
-    Send a consolidated report email for multiple stocks using HTML formatting.
+    Send a visually enhanced consolidated report email for multiple stocks using modern HTML formatting.
     
     Args:
         tickers (list): List of ticker symbols
@@ -435,149 +579,139 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     Returns:
         bool: True if successful, False otherwise
     """
-    subject = f"Stock Analysis Report: {', '.join(tickers)} - {datetime.now().strftime('%Y-%m-%d')}"
+    subject = f"📊 Stock Analysis Report: {', '.join(tickers)} - {datetime.now().strftime('%Y-%m-%d')}"
+    
+    # Generate enhanced sections
     cnn_metrics_html = generate_enhanced_html_cnn_metrics_table(cnnMetricData)
-    
-    # Generate the HTML table for key metrics
     metrics_table_html = generate_enhanced_html_metrics_table(all_data)
+    technical_analysis_html = generate_enhanced_technical_analysis_section(all_data)
     
-    # Create the HTML email body
+    # Create the enhanced HTML email body
     body = f"""
+    <!DOCTYPE html>
     <html>
-        <body>
-            <h2>Stock Analysis Report</h2>
-            <p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p>This is an automated report from your Stock Data Scraper application.</p>
-            <h3>Below is the current market sentiment based on CNN's Fear and Greed Index:</p>
-            <p>Note: The score ranges from 0 to 100, where 0 indicates extreme fear, 50 indicates neutrality, and 100 indicates extreme greed.</p>
-            <p>For more details, visit: <a href="https://money.cnn.com/data/fear-and-greed/">CNN Fear and Greed Index</a></p>
-            {cnn_metrics_html}
-
-            <h3>Fundamental Analysis Summary</h3>
-            {metrics_table_html}
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Stock Analysis Report</title>
+        <style>
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 1200px;
+                margin: 0 auto;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                padding: 20px;
+            }}
+            .container {{
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                overflow: hidden;
+                margin: 20px 0;
+            }}
+            .header {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 40px 30px;
+                text-align: center;
+            }}
+            .header h1 {{
+                margin: 0;
+                font-size: 2.5rem;
+                font-weight: 700;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            }}
+            .header p {{
+                margin: 10px 0 0 0;
+                font-size: 1.2rem;
+                opacity: 0.9;
+            }}
+            .content {{
+                padding: 30px;
+            }}
+            .alert {{
+                background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+                text-align: center;
+            }}
+            .footer {{
+                background: #2c3e50;
+                color: white;
+                padding: 30px;
+                text-align: center;
+            }}
+            .footer a {{
+                color: #74b9ff;
+                text-decoration: none;
+            }}
+            @media (max-width: 768px) {{
+                body {{ padding: 10px; }}
+                .header {{ padding: 20px 15px; }}
+                .header h1 {{ font-size: 1.8rem; }}
+                .content {{ padding: 20px 15px; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📊 Stock Analysis Report</h1>
+                <p>Generated on {datetime.now().strftime('%B %d, %Y at %H:%M')}</p>
+                <p>Automated Financial Intelligence Dashboard</p>
+            </div>
             
-            <h3>Technical Analysis Summary</h3>
-            <ul>
-    """
-    
-    # Add individual stock highlights
-    for ticker, data in all_data.items():
-        body += f"<li><strong>{ticker}:</strong><ul>"
-        metrics = [('BB Middle Band (Technical)', 'BB Middle Band (Technical)'),
-        ('BB Upper Band (Technical)', 'BB Upper Band (Technical)'),
-        ('BB Lower Band (Technical)', 'BB Lower Band (Technical)'),
-        ('BB Width (%) (Technical)', 'BB Width (%) (Technical)'),
-        ('BB %B (Technical)', 'BB %B (Technical)'),
-        ('BB Signal (Technical)', 'BB Signal (Technical)'),
-        ('MA10 (Technical)', 'MA10 (Technical)'),
-        ('MA20 (Technical)', 'MA20 (Technical)'),
-        ('MA50 (Technical)', 'MA50 (Technical)'),
-        ('MA100 (Technical)', 'MA100 (Technical)'),
-        ('EMA12 (Technical)', 'EMA12 (Technical)'),
-        ('EMA26 (Technical)', 'EMA26 (Technical)'),
-        ('EMA50 (Technical)', 'EMA50 (Technical)'),
-        ('MACD Line (Technical)', 'MACD Line (Technical)'),
-        ('MACD Signal (Technical)', 'MACD Signal (Technical)'),
-        ('MACD Histogram (Technical)', 'MACD Histogram (Technical)'),
-        ('MA10 Signal (Technical)', 'MA10 Signal (Technical)'),
-        ('MA20 Signal (Technical)', 'MA20 Signal (Technical)'),
-        ('MA50 Signal (Technical)', 'MA50 Signal (Technical)'),
-        ('MA100 Signal (Technical)', 'MA100 Signal (Technical)'),
-        ('Current Price (Technical)', 'Current Price (Technical)'),
-        ('RSI (14) (Technical)', 'RSI (14) (Technical)'),
-        ('RSI Signal (Technical)', 'RSI Signal (Technical)'),
-        ('Current Volume (Technical)', 'Current Volume (Technical)'),
-        ('OBV Trend (Technical)', 'OBV Trend (Technical)'),
-        ('Volume MA10 (Technical)', 'Volume MA10 (Technical)'),
-        ('Volume MA20 (Technical)', 'Volume MA20 (Technical)'),
-        ('Volume MA50 (Technical)', 'Volume MA50 (Technical)'),
-        ('Volume MA10 Signal (Technical)', 'Volume MA10 Signal (Technical)'),
-        ('Volume MA20 Signal (Technical)', 'Volume MA20 Signal (Technical)'),
-        ('Volume MA50 Signal (Technical)', 'Volume MA50 Signal (Technical)'),
-        ('Sharpe Ratio (Technical)', 'Sharpe Ratio (Technical)'),
-        ('Sortino Ratio (Technical)', 'Sortino Ratio (Technical)'),
-        ('Sortino Ratio Interpretation (Technical)',
-        'Sortino Ratio Interpretation (Technical)'),
-        ('Annualized Return (Technical)', 'Annualized Return (Technical)'),
-        ('Annualized Volatility (Technical)', 'Annualized Volatility (Technical)'),
-        ('Risk-Free Rate (Technical)', 'Risk-Free Rate (Technical)'),
-        ('Period (Technical)', 'Period (Technical)'),
-        ('Data Points (Technical)', 'Data Points (Technical)'),
-        ('Sharpe Ratio Interpretation (Technical)',
-        'Sharpe Ratio Interpretation (Technical)'),
-        ('BB Middle Band (Technical)', 'BB Middle Band (Technical)'),
-        ('BB Upper Band (Technical)', 'BB Upper Band (Technical)'),
-        ('BB Lower Band (Technical)', 'BB Lower Band (Technical)'),
-        ('BB Width (%) (Technical)', 'BB Width (%) (Technical)'),
-        ('BB %B (Technical)', 'BB %B (Technical)'),
-        ('BB Signal (Technical)', 'BB Signal (Technical)'),
-        ('MA10 (Technical)', 'MA10 (Technical)'),
-        ('MA20 (Technical)', 'MA20 (Technical)'),
-        ('MA50 (Technical)', 'MA50 (Technical)'),
-        ('MA100 (Technical)', 'MA100 (Technical)'),
-        ('EMA12 (Technical)', 'EMA12 (Technical)'),
-        ('EMA26 (Technical)', 'EMA26 (Technical)'),
-        ('EMA50 (Technical)', 'EMA50 (Technical)'),
-        ('MACD Line (Technical)', 'MACD Line (Technical)'),
-        ('MACD Signal (Technical)', 'MACD Signal (Technical)'),
-        ('MACD Histogram (Technical)', 'MACD Histogram (Technical)'),
-        ('MA10 Signal (Technical)', 'MA10 Signal (Technical)'),
-        ('MA20 Signal (Technical)', 'MA20 Signal (Technical)'),
-        ('MA50 Signal (Technical)', 'MA50 Signal (Technical)'),
-        ('MA100 Signal (Technical)', 'MA100 Signal (Technical)'),
-        ('Current Price (Technical)', 'Current Price (Technical)'),
-        ('RSI (14) (Technical)', 'RSI (14) (Technical)'),
-        ('RSI Signal (Technical)', 'RSI Signal (Technical)'),
-        ('Current Volume (Technical)', 'Current Volume (Technical)'),
-        ('OBV Trend (Technical)', 'OBV Trend (Technical)'),
-        ('Volume MA10 (Technical)', 'Volume MA10 (Technical)'),
-        ('Volume MA20 (Technical)', 'Volume MA20 (Technical)'),
-        ('Volume MA50 (Technical)', 'Volume MA50 (Technical)'),
-        ('Volume MA10 Signal (Technical)', 'Volume MA10 Signal (Technical)'),
-        ('Volume MA20 Signal (Technical)', 'Volume MA20 Signal (Technical)'),
-        ('Volume MA50 Signal (Technical)', 'Volume MA50 Signal (Technical)'),
-        ('Sharpe Ratio (Technical)', 'Sharpe Ratio (Technical)'),
-        ('Sortino Ratio (Technical)', 'Sortino Ratio (Technical)'),
-        ('Sortino Ratio Interpretation (Technical)',
-        'Sortino Ratio Interpretation (Technical)'),
-        ('Annualized Return (Technical)', 'Annualized Return (Technical)'),
-        ('Annualized Volatility (Technical)', 'Annualized Volatility (Technical)'),
-        ('Risk-Free Rate (Technical)', 'Risk-Free Rate (Technical)'),
-        ('Period (Technical)', 'Period (Technical)'),
-        ('Data Points (Technical)', 'Data Points (Technical)'),
-        ('Sharpe Ratio Interpretation (Technical)',
-        'Sharpe Ratio Interpretation (Technical)')
-        ]
-        for label, key_prefix in metrics:
-            for data_key in data.keys():
-                if key_prefix in data_key:
-                    body += f"<li>{label}: {data[data_key]}</li>"
-                    break
-        body += "</ul></li>"
-    
-    body += """
-            </ul>
-            <p>Please find the detailed reports attached.</p>
-    """
-    
-    # Add note about summary report if available
-    if summary_path:
-        body += "<p>A summary comparison report is also attached.</p>"
-    
-    body += """
-            <p>--<br>Stock Data Scraper</p>
-        </body>
+            <div class="content">
+                <div class="alert">
+                    <h3 style="margin: 0 0 10px 0;">🚀 Market Intelligence Report Ready</h3>
+                    <p style="margin: 0;">This comprehensive analysis includes market sentiment, technical indicators, and financial metrics for informed investment decisions.</p>
+                </div>
+                
+                {cnn_metrics_html}
+                
+                {metrics_table_html}
+                
+                {technical_analysis_html}
+                
+                <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0; color: white; text-align: center;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 24px;">📎 Detailed Reports Attached</h3>
+                    <p style="margin: 0; font-size: 16px;">Individual stock analysis reports and summary comparisons are included as attachments for deeper insights.</p>
+                    {f'<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">📋 Summary comparison report included</p>' if summary_path else ''}
+                </div>
+                
+                <div style="background: #f8f9fa; border-left: 4px solid #6c5ce7; padding: 20px; margin: 20px 0;">
+                    <h4 style="color: #2c3e50; margin: 0 0 10px 0;">ℹ️ Important Notes:</h4>
+                    <ul style="color: #5d6d7e; margin: 0; padding-left: 20px;">
+                        <li>All technical indicators are calculated based on recent market data</li>
+                        <li>CNN Fear & Greed Index provides market sentiment context</li>
+                        <li>Consider multiple factors before making investment decisions</li>
+                        <li>Past performance does not guarantee future results</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <h3 style="margin: 0 0 10px 0;">📈 Stock Data Scraper Pro</h3>
+                <p style="margin: 0; opacity: 0.8;">Powered by advanced financial analytics • <a href="https://money.cnn.com/data/fear-and-greed/">CNN Fear & Greed Index</a></p>
+                <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.6;">This is an automated report. Please do not reply to this email.</p>
+            </div>
+        </div>
+    </body>
     </html>
     """
     
-    # Prepare attachments - include both individual reports and summary
+    # Prepare attachments
     attachments = list(report_paths.values())
     if summary_path:
         attachments.append(summary_path)
     
     # Debug info
-    print(f"Sending consolidated report with {len(attachments)} attachments")
-    print(f"Recipients: {recipients}")
+    print(f"📧 Sending enhanced consolidated report with {len(attachments)} attachments")
+    print(f"📬 Recipients: {recipients}")
     
     # Send email
     return send_email(
@@ -587,5 +721,5 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
         attachment_paths=attachments,
         cc=cc,
         bcc=bcc,
-        is_html=True  # Indicate that the email body is HTML
+        is_html=True
     )
