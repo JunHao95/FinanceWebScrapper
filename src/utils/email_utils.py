@@ -496,7 +496,21 @@ def generate_enhanced_technical_analysis_section(all_data):
         ma20_signal = find_matching_key(data, ['ma20 signal'])
         ma50_signal = find_matching_key(data, ['ma50 signal'])
         ma100_signal = find_matching_key(data, ['ma100 signal'])
+
         
+        # Get Exponential Moving Averages (EMA) if available. EMA is more responsive to recent price changes.
+        ema12_value = find_matching_key(data, ['ema12 (technical)', 'ema10'])
+        ema26_value = find_matching_key(data, ['ema26 (technical)', 'ema20'])
+        ema50_value = find_matching_key(data, ['ema50 (technical)', 'ema50'])
+        
+        # Get Bollinger Bands if available
+        bb_percentB_value = find_matching_key(data, ['BB %B (Technical)', 'BB %B']) # current price relative to the band
+        bb_lower_value = find_matching_key(data, ['BB Lower Band (Technical)', 'BB Lower']) # formula = middle band - K*Standard Deviation where k = 2 default multipler
+        bb_upper_value = find_matching_key(data, ['BB Upper Band (Technical)', 'BB Upper']) # formula = middle band + K*Standard Deviation where k = 2 default multipler
+        bb_middle_value = find_matching_key(data, ['BB Middle (Technical)', 'BB Middle']) # equivalent to the 20-day SMA
+        bb_signal_value = find_matching_key(data, ['BB Signal (Technical)', 'BB Signal']) # buy when price below lower band, sell when above upper band
+        bb_width_value = find_matching_key(data, ['BB Width (Technical)', 'BB Width']) # relative width of the bands, wider bands indicate higher volatility. Low volatility often precede a breakout
+
         # Get additional technical indicators
         sharpe_ratio = find_matching_key(data, ['sharpe ratio'])
         sortino_ratio = find_matching_key(data, ['sortino ratio'])
@@ -534,7 +548,25 @@ def generate_enhanced_technical_analysis_section(all_data):
                         <strong>OBV Trend:</strong> {get_signal_badge(obv_trend)}
                     </div>
                 </div>
-                
+                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h5 style="color: #34495e; margin: 0 0 10px 0;">📉 Exponential Moving Averages</h5>
+                    <div style="font-size: 12px; line-height: 1.4;">
+                        <div><strong>BB Percent B(current price relative to the band) (<0 : oversold) (>1 : overbought):</strong> ${bb_percentB_value}</div>
+                        <div><strong>BB Lower Band:</strong> ${bb_lower_value}</div>
+                        <div><strong>BB Upper Band:</strong> ${bb_upper_value}</div>
+                        <div><strong>BB Middle:</strong> ${bb_middle_value}</div>
+                        <div><strong>BB Signal:</strong> ${bb_signal_value}</div>
+                        <div><strong>BB Width:</strong> ${bb_width_value}</div>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h5 style="color: #34495e; margin: 0 0 10px 0;">📉 Exponential Moving Averages</h5>
+                    <div style="font-size: 12px; line-height: 1.4;">
+                        <div><strong>EMA12:</strong> ${ema12_value}</div>
+                        <div><strong>EMA26:</strong> ${ema26_value}</div>
+                        <div><strong>EMA50:</strong> ${ema50_value}</div>
+                    </div>
+                </div>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                     <h5 style="color: #34495e; margin: 0 0 10px 0;">📉 Moving Averages</h5>
                     <div style="font-size: 12px; line-height: 1.4;">
