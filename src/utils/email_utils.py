@@ -551,12 +551,12 @@ def generate_enhanced_technical_analysis_section(all_data):
                  <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                     <h5 style="color: #34495e; margin: 0 0 10px 0;">📉 Exponential Moving Averages</h5>
                     <div style="font-size: 12px; line-height: 1.4;">
-                        <div><strong>BB Percent B(current price relative to the band) (<0 : oversold) (>1 : overbought):</strong> ${bb_percentB_value}</div>
+                        <div><strong>BB Percent B(current price relative to the band) (<0 : oversold) (>100 : overbought):</strong> ${bb_percentB_value}</div>
                         <div><strong>BB Lower Band:</strong> ${bb_lower_value}</div>
                         <div><strong>BB Upper Band:</strong> ${bb_upper_value}</div>
                         <div><strong>BB Middle:</strong> ${bb_middle_value}</div>
-                        <div><strong>BB Signal:</strong> ${bb_signal_value}</div>
-                        <div><strong>BB Width:</strong> ${bb_width_value}</div>
+                        <div><strong>BB Signal:</strong> {bb_signal_value}</div>
+                        <div><strong>BB Width:</strong> {bb_width_value}</div>
                     </div>
                 </div>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
