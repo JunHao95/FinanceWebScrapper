@@ -48,17 +48,19 @@ class TechnicalIndicators:
         if not df.empty:
             return df
         self.logger.info("Alpha Vantage API failed to fetch historical data. Trying Finnhub API...")
+        print("DEBUGGG Alpha Vantage API failed to fetch historical data. Trying Finnhub API...")
         # Fallback to Finnhub API
         df = self._fetch_finnhub_data(ticker, days)
         if not df.empty:
             return df
         self.logger.info("FinnhubAPI failed to fetch historical data. Trying YahooFinance API...")
+        print("DEBUGGG FinnhubAPI failed to fetch historical data. Trying YahooFinance API...")
         # Fallback to Yahoo Finance API
         df = self._fetch_yahoo_finance_data(ticker, days)
         if not df.empty:
             return df
         self.logger.info("Yahoo Finance API failed to fetch historical data. Trying Google Finance API...")
-
+        print("DEBUGGG Yahoo Finance API failed to fetch historical data. Trying YahooFinance API...")
         # Fallback to Google Finance API
         df = self._fetch_google_finance_data(ticker, days)
         if not df.empty:
@@ -293,10 +295,10 @@ class TechnicalIndicators:
                 self.logger.warning("No valid Bollinger Band values found (all NaN).")
                 return {}
 
-            current_middle = middle_band.loc[valid_idx]
-            current_upper = upper_band.loc[valid_idx]
-            current_lower = lower_band.loc[valid_idx]
-            current_close = df['close'].loc[valid_idx]
+            current_middle = middle_band.loc[valid_idx].squeeze()
+            current_upper = upper_band.loc[valid_idx].squeeze()
+            current_lower = lower_band.loc[valid_idx].squeeze()
+            current_close = df['close'].loc[valid_idx].squeeze()
             # Calculate band width and %B
             band_width = (current_upper - current_lower) / current_middle * 100
             
@@ -322,7 +324,6 @@ class TechnicalIndicators:
                 "BB %B": round(percent_b, 2),
                 "BB Signal": signal
             }
-            
         except Exception as e:
             self.logger.error(f"Error calculating Bollinger Bands: {str(e)}")
             return {}
@@ -339,7 +340,7 @@ class TechnicalIndicators:
         """
         if df.empty:
             return {}
-        if df['close'].isnull().all():
+        if df['close'].isnull().all().item():
             self.logger.warning("No valid close price data available for Moving Averages.")
             return {}
         try:
@@ -352,7 +353,7 @@ class TechnicalIndicators:
                     ma = df['close'].rolling(window=window).mean()
                     last_valid_index = ma.last_valid_index()
                     if last_valid_index is not None:
-                        mas[f"MA{window}"] = round(ma.loc[last_valid_index], 2)
+                        mas[f"MA{window}"] = round(ma.loc[last_valid_index].squeeze(), 2)
                     else:
                         mas[f"MA{window}"] = np.nan
             
@@ -363,7 +364,8 @@ class TechnicalIndicators:
             for window in ema_windows:
                 if len(df) >= window:
                     ema = df['close'].ewm(span=window, adjust=False).mean()
-                    emas[f"EMA{window}"] = round(ema.iloc[0], 2)
+                    last_valid_index = ema.last_valid_index()
+                    emas[f"EMA{window}"] = round(ema.iloc[last_valid_index].squeeze(), 2)
             
             # Calculate MACD
             if len(df) >= 26:
@@ -383,7 +385,7 @@ class TechnicalIndicators:
             
             # Determine crossover signals
             signals = {}
-            current_close = df['close'].iloc[0]
+            current_close = df['close'].iloc[0].squeeze()
             
             for window in ma_windows:
                 if f"MA{window}" in mas:
@@ -417,7 +419,7 @@ class TechnicalIndicators:
         """
         if df.empty or len(df) < window + 1:
             return {}
-        if df['close'].isnull().all():
+        if df['close'].isnull().all().item():
             self.logger.warning("No valid close price data available for RSI.")
             return {}
             
@@ -447,8 +449,8 @@ class TechnicalIndicators:
             
             # Get the most recent valid RSI value
             last_valid = rsi.last_valid_index()
-            if last_valid is not None and not np.isnan(rsi.loc[last_valid]):
-                current_rsi = round(rsi.loc[last_valid], 2)
+            if last_valid is not None and not np.isnan(rsi.loc[last_valid].squeeze()):
+                current_rsi = round(rsi.loc[last_valid].squeeze(), 2)
             else:
                 current_rsi = np.nan
             
@@ -669,7 +671,7 @@ class TechnicalIndicators:
             
         try:
             # Ensure volume data is not NaN
-            if df['volume'].isnull().all():
+            if df['volume'].isnull().all().squeeze():
                 self.logger.warning("No volume data available")
                 return {"Volume Data": "Not Available"}
             
@@ -684,14 +686,14 @@ class TechnicalIndicators:
                 if len(df) >= window:
                     volume_ma = df['volume'].rolling(window=window).mean()
                     # Safely convert to int with NaN handling
-                    if not np.isnan(volume_ma.iloc[0]):
-                        volume_mas[f"Volume MA{window}"] = int(volume_ma.iloc[0])
+                    if not np.isnan(volume_ma.iloc[0].squeeze()):
+                        volume_mas[f"Volume MA{window}"] = int(volume_ma.iloc[0].squeeze())
                     else:
                         volume_mas[f"Volume MA{window}"] = 0
             
             # Current volume - safely get as int
             try:
-                current_volume = int(df['volume'].iloc[0])
+                current_volume = int(df['volume'].iloc[0].squeeze())
             except (TypeError, ValueError):
                 current_volume = 0
             
@@ -711,10 +713,10 @@ class TechnicalIndicators:
             # Start with zero OBV and add/subtract volume based on price movement
             obv = [0]
             for i in range(1, len(df)):
-                if df['close'].iloc[i] > df['close'].iloc[i-1]:
+                if df['close'].iloc[i].squeeze() > df['close'].iloc[i-1].squeeze():
                     obv.append(obv[-1] + safe_volume.iloc[i])
-                elif df['close'].iloc[i] < df['close'].iloc[i-1]:
-                    obv.append(obv[-1] - safe_volume.iloc[i])
+                elif df['close'].iloc[i].squeeze() < df['close'].iloc[i-1].squeeze():
+                    obv.append(obv[-1] - safe_volume.iloc[i].squeeze())
                 else:
                     obv.append(obv[-1])
             
@@ -727,9 +729,9 @@ class TechnicalIndicators:
             # Determine OBV trend
             obv_trend = "Neutral"
             if len(obv_series) > 5:
-                if obv_series.iloc[0] > obv_series.iloc[4]:
+                if obv_series.iloc[0] > obv_series.iloc[4].squeeze():
                     obv_trend = "Bullish"
-                elif obv_series.iloc[0] < obv_series.iloc[4]:
+                elif obv_series.iloc[0] < obv_series.iloc[4].squeeze():
                     obv_trend = "Bearish"
             
             # Add to results
