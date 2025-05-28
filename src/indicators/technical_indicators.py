@@ -360,16 +360,13 @@ class TechnicalIndicators:
             # Calculate exponential moving averages
             ema_windows = [12, 26, 50, 200]
             emas = {}
-            print(10*"DEBUGGGG Calculating EMAs")
             for window in ema_windows:
                 if len(df) >= window:
                     ema = df['close'].ewm(span=window, adjust=False).mean()
                     last_valid_index = ema.last_valid_index()
-                    # emas[f"EMA{window}"] = round(ema.iloc[last_valid_index].squeeze(), 2)
                     emas[f"EMA{window}"] = round(ema.loc[last_valid_index].squeeze(), 2)
             
             # Calculate MACD
-            print(10*"DEBUGGGG Calculating MACD")
             if len(df) >= 26:
                 ema12 = df['close'].ewm(span=12, adjust=False).mean()
                 ema26 = df['close'].ewm(span=26, adjust=False).mean()
@@ -387,7 +384,6 @@ class TechnicalIndicators:
                 macd_data = {}
             
             # Determine crossover signals
-            print(10*"DEBUGGGG Calculating Crossover Signals")
             signals = {}
             current_close = df['close'].iloc[0].squeeze()
             
@@ -397,7 +393,7 @@ class TechnicalIndicators:
                         signals[f"MA{window} Signal"] = "Bullish (Price > MA)"
                     else:
                         signals[f"MA{window} Signal"] = "Bearish (Price < MA)"
-            print(10*"DEBUGGGG Calculating EMA Crossover Signals")
+            
             # Add all data to result
             result = {**mas, **emas, **macd_data, **signals}
             
