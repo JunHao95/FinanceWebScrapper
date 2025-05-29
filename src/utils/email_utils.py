@@ -361,17 +361,23 @@ def generate_enhanced_html_metrics_table(all_data):
         
         for metric in key_metrics[1:]:  # Skip ticker
             value = get_all_sources_data(data, metric)
-            clean_value = value.replace(", ", "<br>")
+            # Add bullet points for each line
+            if value != "--":
+                # Split by ", " (which is replaced by <br>), then join with <br>• 
+                lines = value.split(", ")
+                if len(lines) > 1:
+                    clean_value = "• " + "<br>• ".join(lines)
+                else:
+                    clean_value = "• " + lines[0]
+            else:
+                clean_value = '<span style="color: #95a5a6;">--</span>'
             color = get_metric_color(metric, value)
             
             html += f'''
                 <td style="padding: 15px; border-bottom: 1px solid #ecf0f1; color: {color}; font-weight: 500;">
-                    {clean_value if clean_value != "--" else '<span style="color: #95a5a6;">--</span>'}
+                    {clean_value}
                 </td>
             '''
-        
-        html += "</tr>"
-    
     html += """
                     </tbody>
                 </table>
