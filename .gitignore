@@ -37,3 +37,6 @@ logs/*.log
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Configs
+config.json
