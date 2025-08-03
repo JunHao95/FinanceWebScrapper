@@ -24,7 +24,6 @@ from ..sentiment.sentiment_analyzer import EnhancedSentimentAnalyzer
 class EnhancedSentimentScraper(BaseScraper):
     """
     Enhanced sentiment scraper that integrates with the existing scraper architecture.
-    Clean, SOLID-compliant, and compatible with EnhancedSentimentAnalyzer.
     """
 
     def __init__(self, alpha_vantage_key: str = None, delay: int = 2):

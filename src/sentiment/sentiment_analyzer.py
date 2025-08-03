@@ -41,8 +41,6 @@ from newspaper import Article
 import newspaper
 import praw
 
-FINBERT_AVAILABLE = True # For sentiment analysis using FinBERT
-NLTK_AVAILABLE = True # For VADER sentiment analysis
 SKLEARN_AVAILABLE = True # For advanced text analysis using scikit-learn
 PYTRENDS_AVAILABLE = True # For Google Trends analysis
 FEEDPARSER_AVAILABLE = True # For RSS feed analysis
@@ -107,26 +105,25 @@ class NewsCollector:
 
     def get_news_sentiment(self, ticker: str, num_articles: int = 10) -> Dict[str, Any]:
         news_data = []
-        if FEEDPARSER_AVAILABLE:
-            news_sources = [
-                'https://feeds.finance.yahoo.com/rss/2.0/headline',
-                'https://feeds.marketwatch.com/marketwatch/topstories/',
-                'https://feeds.bloomberg.com/markets/news.rss'
-            ]
-            for source in news_sources:
-                try:
-                    feed = feedparser.parse(source)
-                    for entry in feed.entries[:num_articles//len(news_sources)]:
-                        if ticker.lower() in entry.title.lower() or ticker.lower() in entry.get('summary', '').lower():
-                            news_data.append({
-                                'title': entry.title,
-                                'summary': entry.get('summary', ''),
-                                'published': entry.get('published', ''),
-                                'link': entry.get('link', ''),
-                                'source': source
-                            })
-                except Exception as e:
-                    self.logger.warning("Error parsing RSS feed %s: %s", source, e)
+        news_sources = [
+            'https://feeds.finance.yahoo.com/rss/2.0/headline',
+            'https://feeds.marketwatch.com/marketwatch/topstories/',
+            'https://feeds.bloomberg.com/markets/news.rss'
+        ]
+        for source in news_sources:
+            try:
+                feed = feedparser.parse(source)
+                for entry in feed.entries[:num_articles//len(news_sources)]:
+                    if ticker.lower() in entry.title.lower() or ticker.lower() in entry.get('summary', '').lower():
+                        news_data.append({
+                            'title': entry.title,
+                            'summary': entry.get('summary', ''),
+                            'published': entry.get('published', ''),
+                            'link': entry.get('link', ''),
+                            'source': source
+                        })
+            except Exception as e:
+                self.logger.warning("Error parsing RSS feed %s: %s", source, e)
         sentiment_results = []
         for article in news_data:
             text = f"{article['title']} {article['summary']}"
@@ -166,22 +163,20 @@ class RedditCollector:
     def __init__(self, sentiment_analyzer: SentimentAnalyzer):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.sentiment_analyzer = sentiment_analyzer
-        if PRAW_AVAILABLE:
-            reddit_client_id = os.environ.get("REDDIT_CLIENT_ID")
-            reddit_client_secret = os.environ.get("REDDIT_CLIENT_SECRET")
-            reddit_user_agent = os.environ.get("REDDIT_USER_AGENT", "FinanceScraper/1.0")
-            if reddit_client_id and reddit_client_secret:
-                self.reddit = praw.Reddit(
-                    client_id=reddit_client_id,
-                    client_secret=reddit_client_secret,
-                    user_agent=reddit_user_agent
-                )
-                self.logger.info("Reddit collector initialized")
-            else:
-                self.reddit = None
-                self.logger.warning("Reddit credentials not found")
+        reddit_client_id = os.environ.get("REDDIT_CLIENT_ID")
+        reddit_client_secret = os.environ.get("REDDIT_CLIENT_SECRET")
+        reddit_user_agent = os.environ.get("REDDIT_USER_AGENT", "FinanceScraper/1.0")
+        if reddit_client_id and reddit_client_secret:
+            self.reddit = praw.Reddit(
+                client_id=reddit_client_id,
+                client_secret=reddit_client_secret,
+                user_agent=reddit_user_agent
+            )
+            self.logger.info("Reddit collector initialized")
         else:
             self.reddit = None
+            self.logger.warning("Reddit credentials not found")
+
 
     def get_reddit_sentiment(self, ticker: str, subreddits: List[str], limit: int = 50) -> Dict[str, Any]:
         if not self.reddit:
@@ -236,15 +231,13 @@ class GoogleTrendsCollector:
     """Collects Google Trends data for a ticker"""
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        if PYTRENDS_AVAILABLE:
-            try:
-                self.pytrends = TrendReq(hl='en-US', tz=360)
-                self.logger.info("Google Trends collector initialized")
-            except Exception as e:
-                self.logger.error("Error initializing Google Trends: %s", e)
-                self.pytrends = None
-        else:
+        try:
+            self.pytrends = TrendReq(hl='en-US', tz=360)
+            self.logger.info("Google Trends collector initialized")
+        except Exception as e:
+            self.logger.error("Error initializing Google Trends: %s", e)
             self.pytrends = None
+
 
     def get_google_trends_data(self, ticker: str, timeframe: str = 'today 6-m') -> Dict[str, Any]:
         if not self.pytrends:
@@ -280,15 +273,13 @@ class TopicAnalyzer:
     """Performs topic analysis on a collection of texts"""
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        if SKLEARN_AVAILABLE:
-            self.tfidf_vectorizer = TfidfVectorizer(
-                max_features=1000,
-                stop_words='english',
-                ngram_range=(1, 2)
-            )
-            self.logger.info("Text analyzers initialized")
-        else:
-            self.tfidf_vectorizer = None
+        self.tfidf_vectorizer = TfidfVectorizer(
+            max_features=1000,
+            stop_words='english',   
+            ngram_range=(1, 2)
+        )
+        self.logger.info("Text analyzers initialized")
+
 
     def perform_topic_analysis(self, texts: List[str], n_topics: int = 5) -> Dict[str, Any]:
         if not texts:

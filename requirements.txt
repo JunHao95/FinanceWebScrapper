@@ -12,3 +12,15 @@ python-dotenv>=1.0.0  # For loading environment variables
 pytest>=7.0.0
 black>=22.8.0
 flake8>=5.0.4
+
+
+# Enhanced sentiment analysis dependencies
+transformers>=4.21.0
+torch>=1.12.0
+pytrends>=4.9.0
+feedparser>=6.0.0
+newspaper3k>=0.2.8
+praw>=7.6.0
+scikit-learn>=1.1.0
+numpy>=1.21.0
+pandas>=1.4.0
