@@ -29,6 +29,7 @@ from src.utils.data_formatter import format_data_as_dataframe, save_to_csv, save
 from src.utils.display_formatter import print_grouped_metrics, save_formatted_report
 from src.utils.email_utils import send_consolidated_report, parse_email_list
 from src.config import setup_logging
+from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
 
 def create_temp_file(file_format: str) -> str:
     """
@@ -54,7 +55,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--ticker-file', type=str, help="File containing ticker symbols, one per line")
     parser.add_argument('--output-dir', type=str, default="output", help="Directory to save output files")
     parser.add_argument('--sources', type=str, nargs='+',
-                      choices=['yahoo', 'finviz', 'google', 'alphavantage', 'finhub', 'technical', 'all'],
+                      choices=['yahoo', 'finviz', 'google', 'alphavantage', 'finhub', 'technical', 'enhanced_sentiment', 'all'],
                       default=['all'], help="Data sources to scrape from")
     parser.add_argument('--format', type=str, choices=['csv', 'excel', 'text'],
                       default='csv', help="Output file format")
@@ -182,6 +183,12 @@ def run_scrapers(ticker: str, sources: list, logger: logging.Logger, alpha_key: 
         results.update(google_scraper.get_data(ticker))
         time.sleep(delay)  # Add delay to avoid rate limiting
     
+    # For sentiment analysis, we can use the EnhancedSentimentScraper
+    if 'all' in sources or 'enhanced_sentiment' in sources:
+        enhanced_scraper = EnhancedSentimentScraper(alpha_vantage_key=alpha_key, delay=delay)
+        enhanced_data = enhanced_scraper._scrape_data(ticker)
+        results.update(enhanced_data)
+
     # Alpha Vantage API (only if API key is available)
     if 'all' in sources or 'alphavantage' in sources:
         if logging_enabled: 
@@ -433,6 +440,12 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
             df = format_data_as_dataframe(data)
             with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
                 print(df.T)
+        # Print enhanced sentiment summary if available
+        enhanced_keys = [k for k in data.keys() if '(Enhanced)' in k]
+        if enhanced_keys:
+            print("\nEnhanced Sentiment Analysis:")
+            for k in enhanced_keys:
+                print(f"{k}: {data[k]}")
     else:
         df = format_data_as_dataframe(data)
         # Set display options to show more rows
@@ -440,9 +453,7 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
             print(df.T)  # Transpose for better display
     
     # Save report
-
     report_path = save_report(data, ticker, args.format, args.output_dir, save_enabled=save_reports_enabled)
-
     return (ticker, data, report_path)
 
 # Update this function in main.py to use consolidated email
@@ -506,7 +517,7 @@ def process_all_tickers(
                 print(f"Error processing ticker {ticker}: {str(e)}")
     
     # Create summary report if requested
-    summary_path: str = None
+    summary_path: Optional[str] = None
     if args.summary and len(all_data) > 1:
         summary_path = create_summary_report(all_data, CnnMetricData, args.output_dir, args.format, save_enabled=save_reports_enabled)
     

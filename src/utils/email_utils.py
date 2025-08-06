@@ -598,6 +598,49 @@ def generate_enhanced_technical_analysis_section(all_data):
     
     html += "</div>"
     return html
+# --- Enhanced Sentiment Section ---
+def generate_enhanced_sentiment_html_section(all_data):
+    """
+    Generate a visually styled HTML section for enhanced sentiment metrics for each ticker.
+    """
+    if not all_data:
+        return ""
+    html = """
+    <div style='background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0;'>
+        <h3 style='color: white; text-align: center; margin-bottom: 20px; font-size: 24px;'>🧠 Enhanced Sentiment Analysis</h3>
+        <div style='background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15);'>
+            <table style='width: 100%; border-collapse: collapse; font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;'>
+                <thead>
+                    <tr style='background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white;'>
+                        <th style='padding: 15px; text-align: left;'>Ticker</th>
+                        <th style='padding: 15px; text-align: left;'>Metric</th>
+                        <th style='padding: 15px; text-align: left;'>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+    """
+    for ticker, data in all_data.items():
+        enhanced_keys = [k for k in data.keys() if '(Enhanced)' in k]
+        if not enhanced_keys:
+            continue
+        for k in enhanced_keys:
+            value = data[k]
+            # Color code for sentiment label
+            if 'Label (Enhanced)' in k:
+                color = '#00b894' if value == 'Positive' else ('#d63031' if value == 'Negative' else '#636e72')
+                value_html = f"<span style='font-weight: bold; color: {color};'>{value}</span>"
+            elif 'Score (Enhanced)' in k or 'Confidence' in k or 'Avg Interest' in k or 'Document Similarity' in k:
+                value_html = f"<span style='font-weight: bold;'>{value}</span>"
+            else:
+                value_html = f"{value}"
+            html += f"<tr><td style='padding: 10px; font-weight: 600;'>{ticker}</td><td style='padding: 10px;'>{k}</td><td style='padding: 10px;'>{value_html}</td></tr>"
+    html += """
+                </tbody>
+            </table>
+        </div>
+    </div>
+    """
+    return html
 
 # 
 def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None):
@@ -623,8 +666,24 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     cnn_metrics_html = generate_enhanced_html_cnn_metrics_table(cnnMetricData)
     metrics_table_html = generate_enhanced_html_metrics_table(all_data)
     technical_analysis_html = generate_enhanced_technical_analysis_section(all_data)
-    
+    enhanced_sentiment_html = generate_enhanced_sentiment_html_section(all_data)
     # Create the enhanced HTML email body
+    
+    email_body = f"""
+    <html>
+    <body style='font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; background: #f6f8fa;'>
+        <div style='max-width: 900px; margin: auto; padding: 30px;'>
+            <h2 style='color: #222; text-align: center; margin-bottom: 30px;'>📊 Stock Analysis Report</h2>
+            {cnn_metrics_html}
+            {metrics_table_html}
+            {technical_analysis_html}
+            {enhanced_sentiment_html}
+        </div>
+    </body>
+    </html>
+    """
+    # ...existing code...
+
     body = f"""
     <!DOCTYPE html>
     <html>
@@ -714,6 +773,8 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
                 {metrics_table_html}
                 
                 {technical_analysis_html}
+
+                {enhanced_sentiment_html}
                 
                 <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0; color: white; text-align: center;">
                     <h3 style="margin: 0 0 15px 0; font-size: 24px;">📎 Detailed Reports Attached</h3>

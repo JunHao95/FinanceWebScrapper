@@ -14,6 +14,7 @@ from typing import Dict, List, Any
 import os
 import warnings
 warnings.filterwarnings('ignore')
+from typing import Dict, List, Any
 
 # Core sentiment analysis libraries
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -40,12 +41,6 @@ import feedparser
 from newspaper import Article
 import newspaper
 import praw
-
-SKLEARN_AVAILABLE = True # For advanced text analysis using scikit-learn
-PYTRENDS_AVAILABLE = True # For Google Trends analysis
-FEEDPARSER_AVAILABLE = True # For RSS feed analysis
-NEWSPAPER_AVAILABLE = True # For news article extraction
-PRAW_AVAILABLE = True # For Reddit sentiment analysis
 
 class SentimentAnalyzer:
     """Handles sentiment analysis using VADER and FinBERT"""
@@ -74,6 +69,7 @@ class SentimentAnalyzer:
     def analyze(self, text: str) -> Dict[str, Any]:
         results = {}
         if self.vader_analyzer:
+            self.logger.info("Analyzing text with VADER")
             try:
                 vader_scores = self.vader_analyzer.polarity_scores(text)
                 results.update({
@@ -85,6 +81,7 @@ class SentimentAnalyzer:
             except Exception as e:
                 self.logger.error("Error with VADER analysis: %s", e)
         if self.finbert_pipeline:
+            self.logger.info("Analyzing text with FinBERT")
             try:
                 text_truncated = text[:512] if len(text) > 512 else text
                 finbert_result = self.finbert_pipeline(text_truncated)[0]
@@ -105,25 +102,67 @@ class NewsCollector:
 
     def get_news_sentiment(self, ticker: str, num_articles: int = 10) -> Dict[str, Any]:
         news_data = []
+        # Map tickers to company names for better matching
+        company_names = {
+            "AAPL": "Apple",
+            "MSFT": "Microsoft",
+            "GOOGL": "Alphabet",
+            "AMZN": "Amazon",
+            "TSLA": "Tesla",
+            "META": "Meta",
+            "NVDA": "Nvidia",
+            # Add more as needed
+        }
+        search_terms = [ticker.lower()]
+        if ticker.upper() in company_names:
+            search_terms.append(company_names[ticker.upper()].lower())
+        # Expanded, reliable public news RSS feeds (general and business)
         news_sources = [
-            'https://feeds.finance.yahoo.com/rss/2.0/headline',
-            'https://feeds.marketwatch.com/marketwatch/topstories/',
-            'https://feeds.bloomberg.com/markets/news.rss'
+            'http://feeds.bbci.co.uk/news/business/rss.xml',  # BBC Business
+            'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',  # NYT Business
+            'https://feeds.a.dj.com/rss/RSSWorldNews.xml',  # WSJ World News
+            'https://www.npr.org/rss/rss.php?id=1006',  # NPR Business
+            'https://news.google.com/rss/search?q={}&hl=en-US&gl=US&ceid=US:en'.format(
+                '+'.join(search_terms)
+            ),  # Google News search for ticker/company
         ]
+        failed_feeds = []
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; NewsCollector/1.0; +https://github.com/JunHao95/FinanceWebScrapper)"}
         for source in news_sources:
             try:
-                feed = feedparser.parse(source)
-                for entry in feed.entries[:num_articles//len(news_sources)]:
-                    if ticker.lower() in entry.title.lower() or ticker.lower() in entry.get('summary', '').lower():
-                        news_data.append({
-                            'title': entry.title,
-                            'summary': entry.get('summary', ''),
-                            'published': entry.get('published', ''),
-                            'link': entry.get('link', ''),
-                            'source': source
-                        })
+                for attempt in range(2):  # Retry once on transient errors
+                    try:
+                        resp = requests.get(source, timeout=7, headers=headers)
+                        resp.raise_for_status()
+                        feed = feedparser.parse(resp.content)
+                        if not hasattr(feed, 'entries') or not feed.entries:
+                            raise ValueError("No entries found in feed")
+                        for entry in feed.entries[:max(1, num_articles//len(news_sources))]:
+                            title = str(getattr(entry, 'title', ''))
+                            summary = str(entry.get('summary', '')) if hasattr(entry, 'get') else ''
+                            text_to_search = (title + " " + summary).lower()
+                            if any(term in text_to_search for term in search_terms):
+                                news_data.append({
+                                    'title': title,
+                                    'summary': summary,
+                                    'published': str(entry.get('published', '')) if hasattr(entry, 'get') else '',
+                                    'link': str(entry.get('link', '')) if hasattr(entry, 'get') else '',
+                                    'source': source
+                                })
+                        break  # Success, break retry loop
+                    except requests.exceptions.HTTPError as he:
+                        code = he.response.status_code if he.response else None
+                        # Skip known forbidden/unauthorized feeds
+                        if code in [401, 403, 404, 429, 500, 400]:
+                            failed_feeds.append({"source": source, "error": f"HTTP {code}: {he}"})
+                            break
+                        elif attempt == 1:
+                            failed_feeds.append({"source": source, "error": str(he)})
+                    except Exception as e:
+                        if attempt == 1:
+                            failed_feeds.append({"source": source, "error": str(e)})
             except Exception as e:
-                self.logger.warning("Error parsing RSS feed %s: %s", source, e)
+                failed_feeds.append({"source": source, "error": str(e)})
         sentiment_results = []
         for article in news_data:
             text = f"{article['title']} {article['summary']}"
@@ -152,10 +191,13 @@ class NewsCollector:
                 "negative_articles": 0,
                 "neutral_articles": 0
             }
-        return {
+        result = {
             "overall_sentiment": overall_sentiment,
             "articles": sentiment_results[:10]
         }
+        if failed_feeds:
+            result["failed_feeds"] = failed_feeds
+        return result
 
 
 class RedditCollector:
@@ -173,7 +215,9 @@ class RedditCollector:
                 user_agent=reddit_user_agent
             )
             self.logger.info("Reddit collector initialized")
+            print("Reddit collector initialized")
         else:
+            print("Reddit credentials not found. Reddit sentiment analysis will be unavailable.")
             self.reddit = None
             self.logger.warning("Reddit credentials not found")
 
@@ -239,7 +283,7 @@ class GoogleTrendsCollector:
             self.pytrends = None
 
 
-    def get_google_trends_data(self, ticker: str, timeframe: str = 'today 6-m') -> Dict[str, Any]:
+    def get_google_trends_data(self, ticker: str, timeframe: str = 'today 1-m', geo='', gprop='') -> Dict[str, Any]:
         if not self.pytrends:
             return {"error": "Google Trends not available"}
         try:
@@ -285,6 +329,7 @@ class TopicAnalyzer:
         if not texts:
             return {"error": "No texts provided"}
         try:
+            print("Performing topic analysis on provided texts...", texts)
             tfidf_matrix = self.tfidf_vectorizer.fit_transform(texts)
             nmf = NMF(n_components=n_topics, random_state=42)
             nmf.fit(tfidf_matrix)
@@ -324,14 +369,14 @@ class EnhancedSentimentAnalyzer:
         self.google_trends_collector = GoogleTrendsCollector()
         self.topic_analyzer = TopicAnalyzer()
 
-    def get_google_trends_data(self, ticker: str, timeframe: str = 'today 6-m') -> Dict[str, Any]:
+    def get_google_trends_data(self, ticker: str, timeframe: str = 'today 1-m') -> Dict[str, Any]:
         return self.google_trends_collector.get_google_trends_data(ticker, timeframe)
 
     def get_news_sentiment(self, ticker: str, num_articles: int = 10) -> Dict[str, Any]:
         return self.news_collector.get_news_sentiment(ticker, num_articles)
 
-    def get_reddit_sentiment(self, ticker: str, subreddits: List[str] = None, limit: int = 50) -> Dict[str, Any]:
-        if subreddits is None:
+    def get_reddit_sentiment(self, ticker: str, subreddits: List[str] = [], limit: int = 50) -> Dict[str, Any]:
+        if not subreddits:
             subreddits = ['stocks', 'SecurityAnalysis', 'ValueInvesting', 'StockMarket', 'WallStreetBets', 'CryptoCurrency']
         return self.reddit_collector.get_reddit_sentiment(ticker, subreddits, limit)
 
@@ -349,22 +394,28 @@ class EnhancedSentimentAnalyzer:
         }
         print(f"Analyzing Google Trends for {ticker}...")
         trends_data = self.get_google_trends_data(ticker)
+        print(f"debugging trends_data: {trends_data}")
         results["data_sources"]["google_trends"] = trends_data
         print(f"Analyzing news sentiment for {ticker}...")
         news_sentiment = self.get_news_sentiment(ticker)
         results["data_sources"]["news_sentiment"] = news_sentiment
+        print(f"debugging news_sentiment: {news_sentiment}")
         print(f"Analyzing Reddit sentiment for {ticker}...")
         reddit_sentiment = self.get_reddit_sentiment(ticker)
+        print(f"debugging reddit_sentiment: {reddit_sentiment}")
         results["data_sources"]["reddit_sentiment"] = reddit_sentiment
         all_texts = []
-        if "articles" in news_sentiment:
+        if news_sentiment.get('articles'):
+            print("There are articles in news_sentiment")
             for article in news_sentiment["articles"]:
                 all_texts.append(f"{article.get('title', '')} {article.get('summary', '')}")
-        if "posts" in reddit_sentiment:
+        if reddit_sentiment.get('posts'):
+            print("There are posts in reddit_sentiment")
             for post in reddit_sentiment["posts"]:
                 all_texts.append(f"{post.get('title', '')} {post.get('text', '')}")
         if all_texts:
             print(f"Performing topic analysis for {ticker}...")
+            print(f"debugging all_texts: {all_texts}")
             topic_analysis = self.perform_topic_analysis(all_texts)
             results["data_sources"]["topic_analysis"] = topic_analysis
         sentiment_scores = []
