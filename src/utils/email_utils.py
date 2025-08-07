@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 import pandas as pd
 from dotenv import load_dotenv
+# from .enhanced_email_utils import generate_enhanced_sentiment_html_section
 from tabulate import tabulate
 # Load environment variables
 load_dotenv()
@@ -599,49 +600,242 @@ def generate_enhanced_technical_analysis_section(all_data):
     html += "</div>"
     return html
 # --- Enhanced Sentiment Section ---
+
 def generate_enhanced_sentiment_html_section(all_data):
     """
-    Generate a visually styled HTML section for enhanced sentiment metrics for each ticker.
+    Generate a visually styled HTML section for enhanced sentiment metrics matching Technical Analysis format.
+    Each ticker gets its own card with condensed, actionable information.
     """
     if not all_data:
         return ""
-    html = """
-    <div style='background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0;'>
-        <h3 style='color: white; text-align: center; margin-bottom: 20px; font-size: 24px;'>🧠 Enhanced Sentiment Analysis</h3>
-        <div style='background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15);'>
-            <table style='width: 100%; border-collapse: collapse; font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;'>
-                <thead>
-                    <tr style='background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white;'>
-                        <th style='padding: 15px; text-align: left;'>Ticker</th>
-                        <th style='padding: 15px; text-align: left;'>Metric</th>
-                        <th style='padding: 15px; text-align: left;'>Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-    """
-    for ticker, data in all_data.items():
-        enhanced_keys = [k for k in data.keys() if '(Enhanced)' in k]
-        if not enhanced_keys:
-            continue
-        for k in enhanced_keys:
-            value = data[k]
-            # Color code for sentiment label
-            if 'Label (Enhanced)' in k:
-                color = '#00b894' if value == 'Positive' else ('#d63031' if value == 'Negative' else '#636e72')
-                value_html = f"<span style='font-weight: bold; color: {color};'>{value}</span>"
-            elif 'Score (Enhanced)' in k or 'Confidence' in k or 'Avg Interest' in k or 'Document Similarity' in k:
-                value_html = f"<span style='font-weight: bold;'>{value}</span>"
+    
+    def get_sentiment_color(score):
+        """Get color based on sentiment score."""
+        try:
+            score_float = float(str(score).replace('%', '').replace('--', '0'))
+            if score_float > 0.1:
+                return "#27ae60"  # Green for positive
+            elif score_float < -0.1:
+                return "#e74c3c"  # Red for negative
             else:
-                value_html = f"{value}"
-            html += f"<tr><td style='padding: 10px; font-weight: 600;'>{ticker}</td><td style='padding: 10px;'>{k}</td><td style='padding: 10px;'>{value_html}</td></tr>"
-    html += """
-                </tbody>
-            </table>
-        </div>
-    </div>
+                return "#f39c12"  # Orange for neutral
+        except:
+            return "#95a5a6"  # Gray for invalid
+    
+    def get_sentiment_emoji(label):
+        """Get emoji based on sentiment label."""
+        if "Positive" in str(label):
+            return "😊"
+        elif "Negative" in str(label):
+            return "😟"
+        else:
+            return "😐"
+    
+    def get_trend_arrow(direction):
+        """Get arrow based on trend direction."""
+        if "Increasing" in str(direction):
+            return "📈"
+        elif "Decreasing" in str(direction):
+            return "📉"
+        else:
+            return "➖"
+    
+    def safe_get_enhanced_value(data, patterns, default="--"):
+        """Safely get enhanced sentiment data from dictionary."""
+        for pattern in patterns:
+            for key, value in data.items():
+                if pattern.lower() in key.lower() and "enhanced" in key.lower():
+                    return value
+        return default
+    
+    def format_score(value, decimals=2):
+        """Format score value with proper decimal places."""
+        try:
+            if value == "--" or value is None:
+                return "--"
+            return f"{float(value):.{decimals}f}"
+        except:
+            return str(value)
+    
+    html = """
+    <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 24px;">🧠 Enhanced Sentiment Analysis</h3>
     """
+    
+    for ticker, data in all_data.items():
+        # Extract all enhanced sentiment data
+        overall_score = safe_get_enhanced_value(data, ['overall sentiment score'])
+        overall_label = safe_get_enhanced_value(data, ['overall sentiment label'])
+        confidence = safe_get_enhanced_value(data, ['sentiment confidence'])
+        
+        # Google Trends
+        trends_interest = safe_get_enhanced_value(data, ['google trends interest'])
+        trends_direction = safe_get_enhanced_value(data, ['trends direction'])
+        avg_interest = safe_get_enhanced_value(data, ['avg interest'])
+        
+        # News Analysis
+        news_articles = safe_get_enhanced_value(data, ['news articles analyzed'])
+        news_sentiment = safe_get_enhanced_value(data, ['news sentiment score'])
+        positive_news = safe_get_enhanced_value(data, ['positive news articles'])
+        negative_news = safe_get_enhanced_value(data, ['negative news articles'])
+        finbert_score = safe_get_enhanced_value(data, ['finbert news score'])
+        
+        # Reddit Analysis
+        reddit_posts = safe_get_enhanced_value(data, ['reddit posts analyzed'])
+        reddit_sentiment = safe_get_enhanced_value(data, ['reddit sentiment score'])
+        reddit_score = safe_get_enhanced_value(data, ['reddit avg score'])
+        reddit_comments = safe_get_enhanced_value(data, ['reddit avg comments'])
+        
+        # Topic Analysis
+        topic1 = safe_get_enhanced_value(data, ['top topic 1 keywords'])
+        topic2 = safe_get_enhanced_value(data, ['top topic 2 keywords'])
+        doc_similarity = safe_get_enhanced_value(data, ['document similarity'])
+        
+        # Calculate sentiment strength
+        sentiment_strength = "Strong" if abs(float(overall_score) if overall_score != "--" else 0) > 0.5 else "Moderate" if abs(float(overall_score) if overall_score != "--" else 0) > 0.1 else "Weak"
+        
+        # Format topics for display
+        def format_topics(topic_str):
+            if topic_str == "--" or not topic_str:
+                return "No data"
+            topics = str(topic_str).split(", ")
+            return ", ".join(topics[:3]) if len(topics) > 3 else topic_str
+        
+        html += f"""
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            <!-- Header with Ticker and Overall Sentiment -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                <h4 style="color: #2c3e50; margin: 0; font-size: 20px;">
+                    <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 8px 15px; border-radius: 20px; font-size: 16px;">
+                        {ticker}
+                    </span>
+                </h4>
+                <div style="text-align: right;">
+                    <div style="font-size: 28px; margin-bottom: 5px;">
+                        {get_sentiment_emoji(overall_label)}
+                    </div>
+                    <span style="background-color: {get_sentiment_color(overall_score)}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+                        {overall_label} ({format_score(overall_score, 3)})
+                    </span>
+                    <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">
+                        Confidence: {format_score(confidence, 3)} | Strength: {sentiment_strength}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                
+                <!-- Trends Analysis -->
+                <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
+                    <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px; display: flex; align-items: center;">
+                        📊 Market Trends
+                        <span style="margin-left: auto; font-size: 18px;">{get_trend_arrow(trends_direction)}</span>
+                    </h5>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="color: #7f8c8d; font-size: 12px;">Interest Level:</span>
+                        <span style="color: #2c3e50; font-weight: bold; font-size: 20px;">{trends_interest}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #95a5a6;">
+                        Avg: {format_score(avg_interest, 1)} | {trends_direction}
+                    </div>
+                </div>
+                
+                <!-- News Sentiment -->
+                <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #9b59b6;">
+                    <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">
+                        📰 News Sentiment
+                    </h5>
+                    <div style="margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #7f8c8d; font-size: 12px;">Articles:</span>
+                            <span style="color: #2c3e50; font-weight: bold;">{news_articles}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: {get_sentiment_color(news_sentiment)}; font-weight: bold; font-size: 13px;">
+                            Score: {format_score(news_sentiment, 3)}
+                        </span>
+                        <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold; font-size: 13px;">
+                            FinBERT: {format_score(finbert_score, 3)}
+                        </span>
+                    </div>
+                    <div style="font-size: 11px; color: #95a5a6;">
+                        <span style="color: #27ae60;">✓ {positive_news}</span> | 
+                        <span style="color: #e74c3c;">✗ {negative_news}</span>
+                    </div>
+                </div>
+                
+                <!-- Reddit Sentiment -->
+                <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                    <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">
+                        🔴 Reddit Analysis
+                    </h5>
+                    <div style="margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #7f8c8d; font-size: 12px;">Posts:</span>
+                            <span style="color: #2c3e50; font-weight: bold;">{reddit_posts}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: {get_sentiment_color(reddit_sentiment)}; font-weight: bold; font-size: 13px;">
+                            Sentiment: {format_score(reddit_sentiment, 3)}
+                        </span>
+                    </div>
+                    <div style="font-size: 11px; color: #95a5a6;">
+                        Avg Score: {format_score(reddit_score, 1)} | Comments: {format_score(reddit_comments, 1)}
+                    </div>
+                </div>
+                
+                <!-- Key Topics -->
+                <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #f39c12;">
+                    <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">
+                        🏷️ Key Topics
+                    </h5>
+                    <div style="font-size: 11px; line-height: 1.6;">
+                        <div style="margin-bottom: 5px;">
+                            <strong style="color: #2c3e50;">Topic 1:</strong>
+                            <div style="color: #5d6d7e; margin-top: 2px;">{format_topics(topic1)}</div>
+                        </div>
+                        <div>
+                            <strong style="color: #2c3e50;">Topic 2:</strong>
+                            <div style="color: #5d6d7e; margin-top: 2px;">{format_topics(topic2)}</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: #95a5a6; margin-top: 5px;">
+                        Similarity: {format_score(doc_similarity, 3)}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Summary Bar -->
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ecf0f1;">
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Data Sources</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #2c3e50;">
+                            {sum(1 for x in [trends_interest, news_articles, reddit_posts] if x != "--" and x != "0")} Active
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Total Coverage</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #2c3e50;">
+                            {int(news_articles) + int(reddit_posts) if news_articles != "--" and reddit_posts != "--" else "--"} Items
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Trend Status</div>
+                        <div style="font-size: 14px; font-weight: bold; color: {get_sentiment_color(trends_direction)};">
+                            {trends_direction}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+    
+    html += "</div>"
     return html
-
 # 
 def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None):
     """

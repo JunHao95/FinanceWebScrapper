@@ -69,7 +69,6 @@ class SentimentAnalyzer:
     def analyze(self, text: str) -> Dict[str, Any]:
         results = {}
         if self.vader_analyzer:
-            self.logger.info("Analyzing text with VADER")
             try:
                 vader_scores = self.vader_analyzer.polarity_scores(text)
                 results.update({
@@ -81,7 +80,6 @@ class SentimentAnalyzer:
             except Exception as e:
                 self.logger.error("Error with VADER analysis: %s", e)
         if self.finbert_pipeline:
-            self.logger.info("Analyzing text with FinBERT")
             try:
                 text_truncated = text[:512] if len(text) > 512 else text
                 finbert_result = self.finbert_pipeline(text_truncated)[0]
@@ -215,9 +213,7 @@ class RedditCollector:
                 user_agent=reddit_user_agent
             )
             self.logger.info("Reddit collector initialized")
-            print("Reddit collector initialized")
         else:
-            print("Reddit credentials not found. Reddit sentiment analysis will be unavailable.")
             self.reddit = None
             self.logger.warning("Reddit credentials not found")
 
@@ -329,7 +325,6 @@ class TopicAnalyzer:
         if not texts:
             return {"error": "No texts provided"}
         try:
-            print("Performing topic analysis on provided texts...", texts)
             tfidf_matrix = self.tfidf_vectorizer.fit_transform(texts)
             nmf = NMF(n_components=n_topics, random_state=42)
             nmf.fit(tfidf_matrix)
@@ -399,23 +394,18 @@ class EnhancedSentimentAnalyzer:
         print(f"Analyzing news sentiment for {ticker}...")
         news_sentiment = self.get_news_sentiment(ticker)
         results["data_sources"]["news_sentiment"] = news_sentiment
-        print(f"debugging news_sentiment: {news_sentiment}")
         print(f"Analyzing Reddit sentiment for {ticker}...")
         reddit_sentiment = self.get_reddit_sentiment(ticker)
-        print(f"debugging reddit_sentiment: {reddit_sentiment}")
         results["data_sources"]["reddit_sentiment"] = reddit_sentiment
         all_texts = []
         if news_sentiment.get('articles'):
-            print("There are articles in news_sentiment")
             for article in news_sentiment["articles"]:
                 all_texts.append(f"{article.get('title', '')} {article.get('summary', '')}")
         if reddit_sentiment.get('posts'):
-            print("There are posts in reddit_sentiment")
             for post in reddit_sentiment["posts"]:
                 all_texts.append(f"{post.get('title', '')} {post.get('text', '')}")
         if all_texts:
             print(f"Performing topic analysis for {ticker}...")
-            print(f"debugging all_texts: {all_texts}")
             topic_analysis = self.perform_topic_analysis(all_texts)
             results["data_sources"]["topic_analysis"] = topic_analysis
         sentiment_scores = []
