@@ -292,6 +292,7 @@ class GoogleTrendsCollector:
                 avg_interest = interest_over_time[ticker].mean() if ticker in interest_over_time.columns else 0
                 trend_direction = "Increasing" if latest_interest > avg_interest else "Decreasing"
             else:
+                self.logger.warning("No interest data found for the specified timeframe.")
                 latest_interest = avg_interest = 0
                 trend_direction = "No data"
             return {
@@ -381,6 +382,7 @@ class EnhancedSentimentAnalyzer:
     def perform_topic_analysis(self, texts: List[str], n_topics: int = 5) -> Dict[str, Any]:
         return self.topic_analyzer.perform_topic_analysis(texts, n_topics)
 
+    
     def get_comprehensive_sentiment_analysis(self, ticker: str) -> Dict[str, Any]:
         results = {
             "ticker": ticker,
@@ -424,10 +426,45 @@ class EnhancedSentimentAnalyzer:
         else:
             overall_sentiment_score = 0
             overall_sentiment_label = "No Data"
+
+        """
+        Sentiment vs Confidence 
+        Sentiment: 
+            - Measures the emotional tone/opinion of the stock
+            - Ranges from -1 (very negative) to +1 (very positive)
+        Confidence:
+            - Measures the certainty of the sentiment analysis
+            - Ranges from 0 (no confidence) to 1 (full confidence)
+        
+        Confidence Calculation:
+            - Based on agreement between sources (news and Reddit)
+            - Agreement between different models (VADER and FinBERT)
+               * VADER : General purpose sentiment analysis, especially in informal or social media contexts
+               * FinBERT : Financial sentiment analysis, tailored for financial texts with high contextual accuracy
+            - Factors in data volume (number of articles/posts analyzed)
+            - Final confidence is the average of agreement and volume confidence
+        """
+        confidence_factors = []
+
+        # Check if sources (news and reddit) agree
+        if news_sentiment.get("overall_sentiment") and reddit_sentiment.get("overall_sentiment"):
+            news_score = news_sentiment["overall_sentiment"].get("vader_avg_sentiment", 0)
+            reddit_score = reddit_sentiment["overall_sentiment"].get("avg_sentiment", 0)
+            agreement = 1 - min(abs(news_score - reddit_score), 1)
+            confidence_factors.append(agreement)
+
+        # Factor in data volume
+        total_items = (news_sentiment.get("overall_sentiment", {}).get("total_articles", 0) + 
+                    reddit_sentiment.get("overall_sentiment", {}).get("total_posts", 0))
+        volume_confidence = min(total_items / 50, 1.0)  # 50 items = full confidence
+        confidence_factors.append(volume_confidence)
+
+        # Calculate final confidence
+        confidence = np.mean(confidence_factors) if confidence_factors else 0.5
         results["overall_sentiment"] = {
             "score": overall_sentiment_score,
             "label": overall_sentiment_label,
-            "confidence": abs(overall_sentiment_score),
+            "confidence": confidence,
             "data_sources_count": len([k for k, v in results["data_sources"].items() if not v.get("error")])
         }
         return results

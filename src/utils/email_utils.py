@@ -729,7 +729,7 @@ def generate_enhanced_sentiment_html_section(all_data):
                 <!-- Trends Analysis -->
                 <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
                     <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px; display: flex; align-items: center;">
-                        📊 Market Trends
+                        📊 Market Trends <span style="font-size: 10px; color: #7f8c8d; margin-left: 5px;">(0-100)</span>
                         <span style="margin-left: auto; font-size: 18px;">{get_trend_arrow(trends_direction)}</span>
                     </h5>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -739,58 +739,70 @@ def generate_enhanced_sentiment_html_section(all_data):
                     <div style="font-size: 11px; color: #95a5a6;">
                         Avg: {format_score(avg_interest, 1)} | {trends_direction}
                     </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px; font-style: italic;">
+                        📌 Higher = more search interest. >50 = above avg attention
+                    </div>
                 </div>
                 
                 <!-- News Sentiment -->
                 <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #9b59b6;">
                     <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">
-                        📰 News Sentiment
+                        📰 News Sentiment <span style="font-size: 10px; color: #7f8c8d;"></span>
                     </h5>
                     <div style="margin-bottom: 5px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #7f8c8d; font-size: 12px;">Articles:</span>
+                            <span style="color: #7f8c8d; font-size: 12px;">No of Articles:</span>
                             <span style="color: #2c3e50; font-weight: bold;">{news_articles}</span>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="color: {get_sentiment_color(news_sentiment)}; font-weight: bold; font-size: 13px;">
-                            Score: {format_score(news_sentiment, 3)}
+                            VADER (-1 to +1): {format_score(news_sentiment, 3)}
                         </span>
                         <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold; font-size: 13px;">
-                            FinBERT: {format_score(finbert_score, 3)}
+                            FinBERT (highest prob label): {format_score(finbert_score, 3)}
                         </span>
                     </div>
                     <div style="font-size: 11px; color: #95a5a6;">
                         <span style="color: #27ae60;">✓ {positive_news}</span> | 
                         <span style="color: #e74c3c;">✗ {negative_news}</span>
                     </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px; font-style: italic;">
+                        📌 VADER: General sentiment | FinBERT: Financial-specific <br>
+                        VADER: >0.05 = Positive | <-0.05 = Negative | Between = Neutral <br>
+                        FinBERT classify into Positive, Negative, Neutral and select the highest probability label
+                    </div>
                 </div>
                 
                 <!-- Reddit Sentiment -->
                 <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #e74c3c;">
                     <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">
-                        🔴 Reddit Analysis
+                        🔴 Reddit Analysis <span style="font-size: 10px; color: #7f8c8d;"></span>
                     </h5>
                     <div style="margin-bottom: 5px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #7f8c8d; font-size: 12px;">Posts:</span>
+                            <span style="color: #7f8c8d; font-size: 12px;">Posts Count:</span>
                             <span style="color: #2c3e50; font-weight: bold;">{reddit_posts}</span>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="color: {get_sentiment_color(reddit_sentiment)}; font-weight: bold; font-size: 13px;">
-                            Sentiment: {format_score(reddit_sentiment, 3)}
+                            Sentiment (-1 to +1): {format_score(reddit_sentiment, 3)}
                         </span>
                     </div>
                     <div style="font-size: 11px; color: #95a5a6;">
-                        Avg Score: {format_score(reddit_score, 1)} | Comments: {format_score(reddit_comments, 1)}
+                        Upvotes: {format_score(reddit_score, 1)} | Comments: {format_score(reddit_comments, 1)}
+                    </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px; font-style: italic;">
+                        📌 upvotes : >1000 = viral) | >100 = Popular| <100 = Discussion |Comments = engagement<br>
+                        Sentiment >0.3 = Very Bullish | <-0.2 = Bearish | (-0.1, 0.1) = Neutral
                     </div>
                 </div>
                 
                 <!-- Key Topics -->
                 <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 15px; border-radius: 8px; border-left: 4px solid #f39c12;">
                     <h5 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">
-                        🏷️ Key Topics
+                        🏷️ Key Topics <span style="font-size: 10px; color: #7f8c8d;">(AI-detected themes)</span>
                     </h5>
                     <div style="font-size: 11px; line-height: 1.6;">
                         <div style="margin-bottom: 5px;">
@@ -803,7 +815,12 @@ def generate_enhanced_sentiment_html_section(all_data):
                         </div>
                     </div>
                     <div style="font-size: 10px; color: #95a5a6; margin-top: 5px;">
-                        Similarity: {format_score(doc_similarity, 3)}
+                        Doc Similarity (0-1): {format_score(doc_similarity, 3)}
+                    </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px; font-style: italic;">
+                        📌 Topics help identify key drivers of sentiment<br>
+                        Document Similarity: Measures how similar topics are to each other<br>
+                        Interpretation: Higher similarity = more related topics<br>                     
                     </div>
                 </div>
             </div>
