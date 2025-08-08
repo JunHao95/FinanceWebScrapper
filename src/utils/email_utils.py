@@ -757,18 +757,20 @@ def generate_enhanced_sentiment_html_section(all_data):
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span style="color: {get_sentiment_color(news_sentiment)}; font-weight: bold; font-size: 13px;">
-                            VADER (-1 to +1): {format_score(news_sentiment, 3)}
-                        </span>
-                        <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold; font-size: 13px;">
-                            FinBERT (highest prob label): {format_score(finbert_score, 3)}
-                        </span>
+                            VADER: {format_score(news_sentiment, 3)}
+                        </span>                        
                     </div>
+                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold; font-size: 13px;">
+                            FinBERT: {format_score(finbert_score, 3)}
+                        </span>                       
+                    </div>           
                     <div style="font-size: 11px; color: #95a5a6;">
                         <span style="color: #27ae60;">✓ {positive_news}</span> | 
                         <span style="color: #e74c3c;">✗ {negative_news}</span>
                     </div>
                     <div style="font-size: 10px; color: #7f8c8d; margin-top: 5px; font-style: italic;">
-                        📌 VADER: General sentiment | FinBERT: Financial-specific <br>
+                        📌 VADER (-1 to +1) : General sentiment | FinBERT: Financial-specific <br>
                         VADER: >0.05 = Positive | <-0.05 = Negative | Between = Neutral <br>
                         FinBERT classify into Positive, Negative, Neutral and select the highest probability label
                     </div>
