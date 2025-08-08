@@ -603,165 +603,171 @@ def generate_combined_analysis_section(all_data):
         doc_similarity = safe_get_enhanced_value(data, ['document similarity'])
 
         html += f"""
-        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+        <div style="background: white; border-radius: 15px; padding: 0; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden;">
             <!-- Header with Ticker -->
-            <div style="text-align: center; margin-bottom: 25px;">
-                <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 12px 25px; border-radius: 30px; font-size: 20px; font-weight: bold; box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);">
+            <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f8f9fa, white);">
+                <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 12px 30px; border-radius: 30px; font-size: 22px; font-weight: bold; box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3); display: inline-block;">
                     {ticker} - ${current_price}
                 </span>
             </div>
             
-            <!-- Container for side-by-side layout - Full Width -->
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <!-- Container for side-by-side layout - TRUE 50/50 Split -->
+            <div style="display: flex; width: 100%; margin: 0;">
                 
-                <!-- Technical Analysis Section (Left) -->
-                <div style="flex: 1; min-width: 350px; background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%); padding: 15px; border-radius: 10px;">
-                    <h4 style="color: white; margin: 0 0 15px 0; text-align: center;">🔍 Technical Analysis</h4>
-                    
-                    <div style="background: white; border-radius: 8px; padding: 15px; max-height: 600px; overflow-y: auto;">
-                        <!-- RSI Analysis -->
-                        <div style="margin-bottom: 15px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📊 RSI Analysis</h5>
-                            {get_rsi_visual(rsi_value)}
-                            <div style="text-align: center; margin-top: 5px;">
-                                {get_signal_badge(rsi_signal)}
-                            </div>
-                        </div>
+                <!-- Technical Analysis Section (Left - Exactly 50%) -->
+                <div style="width: 50%; box-sizing: border-box;">
+                    <div style="background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%); padding: 20px; height: 100%;">
+                        <h4 style="color: white; margin: 0 0 20px 0; text-align: center; font-size: 18px; font-weight: bold;">
+                            🔍 Technical Analysis
+                        </h4>
                         
-                        <!-- Volume & Momentum -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📈 Volume & Momentum</h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>Volume: <strong style="color: #3498db;">{format_volume(volume)}</strong></div>
-                                <div>OBV Trend: {get_signal_badge(obv_trend)}</div>
+                        <div style="background: white; border-radius: 8px; padding: 15px; max-height: 650px; overflow-y: auto;">
+                            <!-- RSI Analysis -->
+                            <div style="margin-bottom: 15px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📊 RSI Analysis</h5>
+                                {get_rsi_visual(rsi_value)}
+                                <div style="text-align: center; margin-top: 5px;">
+                                    {get_signal_badge(rsi_signal)}
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Bollinger Bands -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">🎯 Bollinger Bands</h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>BB %B: <strong>{bb_percentB_value}</strong> {bb_percentB_value != '--' and float(bb_percentB_value) < 0 and '(Oversold)' or bb_percentB_value != '--' and float(bb_percentB_value) > 100 and '(Overbought)' or ''}</div>
-                                <div>BB Lower: <strong>${bb_lower_value}</strong></div>
-                                <div>BB Upper: <strong>${bb_upper_value}</strong></div>
-                                <div>BB Middle: <strong>${bb_middle_value}</strong></div>
-                                <div>BB Signal: {get_signal_badge(bb_signal_value)}</div>
-                                <div>BB Width: <strong>{bb_width_value}%</strong></div>
+                            
+                            <!-- Volume & Momentum -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📈 Volume & Momentum</h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>Volume: <strong style="color: #3498db;">{format_volume(volume)}</strong></div>
+                                    <div>OBV Trend: {get_signal_badge(obv_trend)}</div>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Exponential Moving Averages -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">⚡ Exponential Moving Averages</h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>EMA12: <strong>${ema12_value}</strong></div>
-                                <div>EMA26: <strong>${ema26_value}</strong></div>
-                                <div>EMA50: <strong>${ema50_value}</strong></div>
+                            
+                            <!-- Bollinger Bands -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">🎯 Bollinger Bands</h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>BB %B: <strong>{bb_percentB_value}</strong></div>
+                                    <div>BB Lower: <strong>${bb_lower_value}</strong></div>
+                                    <div>BB Upper: <strong>${bb_upper_value}</strong></div>
+                                    <div>BB Middle: <strong>${bb_middle_value}</strong></div>
+                                    <div>BB Signal: {get_signal_badge(bb_signal_value)}</div>
+                                    <div>BB Width: <strong>{bb_width_value}%</strong></div>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Simple Moving Averages -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📉 Moving Averages</h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>MA10: <strong>${ma10_value}</strong> {get_signal_badge(ma10_signal)}</div>
-                                <div>MA20: <strong>${ma20_value}</strong> {get_signal_badge(ma20_signal)}</div>
-                                <div>MA50: <strong>${ma50_value}</strong> {get_signal_badge(ma50_signal)}</div>
-                                <div>MA100: <strong>${ma100_value}</strong> {get_signal_badge(ma100_signal)}</div>
+                            
+                            <!-- Exponential Moving Averages -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">⚡ Exponential Moving Averages</h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>EMA12: <strong>${ema12_value}</strong></div>
+                                    <div>EMA26: <strong>${ema26_value}</strong></div>
+                                    <div>EMA50: <strong>${ema50_value}</strong></div>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Performance Metrics -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">🎯 Performance Metrics</h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>Sharpe Ratio: <strong style="color: #27ae60;">{sharpe_ratio}</strong></div>
-                                <div>Sortino Ratio: <strong style="color: #27ae60;">{sortino_ratio}</strong></div>
-                                <div>Annual Return: <strong style="color: #e74c3c;">{annual_return}</strong></div>
-                                <div>Volatility: <strong style="color: #f39c12;">{volatility}</strong></div>
+                            
+                            <!-- Simple Moving Averages -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📉 Moving Averages</h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>MA10: <strong>${ma10_value}</strong> {get_signal_badge(ma10_signal)}</div>
+                                    <div>MA20: <strong>${ma20_value}</strong> {get_signal_badge(ma20_signal)}</div>
+                                    <div>MA50: <strong>${ma50_value}</strong> {get_signal_badge(ma50_signal)}</div>
+                                    <div>MA100: <strong>${ma100_value}</strong> {get_signal_badge(ma100_signal)}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Performance Metrics -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">🎯 Performance Metrics</h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>Sharpe Ratio: <strong style="color: #27ae60;">{sharpe_ratio}</strong></div>
+                                    <div>Sortino Ratio: <strong style="color: #27ae60;">{sortino_ratio}</strong></div>
+                                    <div>Annual Return: <strong style="color: #e74c3c;">{annual_return}</strong></div>
+                                    <div>Volatility: <strong style="color: #f39c12;">{volatility}</strong></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Sentiment Analysis Section (Right) -->
-                <div style="flex: 1; min-width: 350px; background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 15px; border-radius: 10px;">
-                    <h4 style="color: white; margin: 0 0 15px 0; text-align: center;">
-                        🧠 Sentiment Analysis {get_sentiment_emoji(overall_label)}
-                    </h4>
-                    
-                    <div style="background: white; border-radius: 8px; padding: 15px; max-height: 600px; overflow-y: auto;">
-                        <!-- Overall Sentiment -->
-                        <div style="margin-bottom: 15px; text-align: center; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <span style="background-color: {get_sentiment_color(overall_score)}; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold;">
-                                {overall_label} ({format_score(overall_score, 3)})
-                            </span>
-                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 8px;">
-                                Confidence: {format_score(confidence, 3)} | Strength: {sentiment_strength}
-                            </div>
-                        </div>
+                <!-- Sentiment Analysis Section (Right - Exactly 50%) -->
+                <div style="width: 50%; box-sizing: border-box;">
+                    <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 20px; height: 100%;">
+                        <h4 style="color: white; margin: 0 0 20px 0; text-align: center; font-size: 18px; font-weight: bold;">
+                            🧠 Sentiment Analysis {get_sentiment_emoji(overall_label)}
+                        </h4>
                         
-                        <!-- Market Trends -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
-                                📊 Market Trends (0-100) {get_trend_arrow(trends_direction)}
-                            </h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>Interest Level: <strong style="font-size: 16px; color: #2c3e50;">{trends_interest}</strong></div>
-                                <div>Average: <strong>{format_score(avg_interest, 1)}</strong> | Direction: <strong>{trends_direction}</strong></div>
-                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
-                                    📌 >50 = above avg attention
+                        <div style="background: white; border-radius: 8px; padding: 15px; max-height: 650px; overflow-y: auto;">
+                            <!-- Overall Sentiment -->
+                            <div style="margin-bottom: 15px; text-align: center; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <span style="background-color: {get_sentiment_color(overall_score)}; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+                                    {overall_label} ({format_score(overall_score, 3)})
+                                </span>
+                                <div style="font-size: 11px; color: #7f8c8d; margin-top: 8px;">
+                                    Confidence: {format_score(confidence, 3)} | Strength: {sentiment_strength}
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- News Sentiment -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
-                                📰 News Sentiment (-1 to +1)
-                            </h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>Articles Analyzed: <strong>{news_articles}</strong></div>
-                                <div>VADER: <span style="color: {get_sentiment_color(news_sentiment)}; font-weight: bold;">{format_score(news_sentiment, 3)}</span></div>
-                                <div>FinBERT: <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold;">{format_score(finbert_score, 3)}</span></div>
-                                <div style="margin-top: 5px;">
-                                    <span style="color: #27ae60;">✓ {positive_news}</span> | 
-                                    <span style="color: #e74c3c;">✗ {negative_news}</span>
-                                </div>
-                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
-                                    📌 VADER: General | FinBERT: Financial AI<br>
-                                    >0.05 = Positive | <-0.05 = Negative
+                            
+                            <!-- Market Trends -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                    📊 Market Trends (0-100) {get_trend_arrow(trends_direction)}
+                                </h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>Interest Level: <strong style="font-size: 16px; color: #2c3e50;">{trends_interest}</strong></div>
+                                    <div>Average: <strong>{format_score(avg_interest, 1)}</strong> | Direction: <strong>{trends_direction}</strong></div>
+                                    <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                        📌 >50 = above avg attention
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Reddit Analysis -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
-                                🔴 Reddit Analysis (-1 to +1)
-                            </h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div>Posts Analyzed: <strong>{reddit_posts}</strong></div>
-                                <div>Sentiment: <span style="color: {get_sentiment_color(reddit_sentiment)}; font-weight: bold;">{format_score(reddit_sentiment, 3)}</span></div>
-                                <div>Avg Upvotes: <strong>{format_score(reddit_score, 1)}</strong> | Comments: <strong>{format_score(reddit_comments, 1)}</strong></div>
-                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
-                                    📌 Upvotes: >1000=viral, 100-1000=popular<br>
-                                    Sentiment: >0.3=Very Bullish | <-0.1=Bearish
+                            
+                            <!-- News Sentiment -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                    📰 News Sentiment (-1 to +1)
+                                </h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>Articles Analyzed: <strong>{news_articles}</strong></div>
+                                    <div>VADER: <span style="color: {get_sentiment_color(news_sentiment)}; font-weight: bold;">{format_score(news_sentiment, 3)}</span></div>
+                                    <div>FinBERT: <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold;">{format_score(finbert_score, 3)}</span></div>
+                                    <div style="margin-top: 5px;">
+                                        <span style="color: #27ae60;">✓ {positive_news}</span> | 
+                                        <span style="color: #e74c3c;">✗ {negative_news}</span>
+                                    </div>
+                                    <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                        📌 VADER: General | FinBERT: Financial AI<br>
+                                        >0.05 = Positive | <-0.05 = Negative
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Key Topics -->
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
-                                🏷️ Key Topics (AI-detected)
-                            </h5>
-                            <div style="font-size: 11px; line-height: 1.8;">
-                                <div><strong>Topic 1:</strong> {format_topics(topic1)}</div>
-                                <div><strong>Topic 2:</strong> {format_topics(topic2)}</div>
-                                <div>Doc Similarity: <strong>{format_score(doc_similarity, 3)}</strong></div>
-                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
-                                    📌 Shows current discussion themes
+                            
+                            <!-- Reddit Analysis -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                    🔴 Reddit Analysis (-1 to +1)
+                                </h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div>Posts Analyzed: <strong>{reddit_posts}</strong></div>
+                                    <div>Sentiment: <span style="color: {get_sentiment_color(reddit_sentiment)}; font-weight: bold;">{format_score(reddit_sentiment, 3)}</span></div>
+                                    <div>Avg Upvotes: <strong>{format_score(reddit_score, 1)}</strong> | Comments: <strong>{format_score(reddit_comments, 1)}</strong></div>
+                                    <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                        📌 Upvotes: >1000=viral, 100-1000=popular<br>
+                                        Sentiment: >0.3=Very Bullish | <-0.1=Bearish
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Key Topics -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                    🏷️ Key Topics (AI-detected)
+                                </h5>
+                                <div style="font-size: 11px; line-height: 1.8;">
+                                    <div><strong>Topic 1:</strong> {format_topics(topic1)}</div>
+                                    <div><strong>Topic 2:</strong> {format_topics(topic2)}</div>
+                                    <div>Doc Similarity: <strong>{format_score(doc_similarity, 3)}</strong></div>
+                                    <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                        📌 Shows current discussion themes
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -769,30 +775,30 @@ def generate_combined_analysis_section(all_data):
                 </div>
             </div>
             
-            <!-- Summary Bar at Bottom -->
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ecf0f1;">
-                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px; text-align: center;">
-                    <div>
-                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Technical Signal</div>
-                        <div style="font-size: 14px; font-weight: bold; color: #2c3e50;">
+            <!-- Summary Bar at Bottom - Full Width -->
+            <div style="padding: 20px; background: linear-gradient(to bottom, #f8f9fa, white); border-top: 2px solid #ecf0f1;">
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; text-align: center;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 11px; color: #95a5a6; text-transform: uppercase; font-weight: 600;">Technical Signal</div>
+                        <div style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-top: 5px;">
                             {rsi_signal if rsi_signal != "--" else "Neutral"}
                         </div>
                     </div>
-                    <div>
-                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Sentiment Signal</div>
-                        <div style="font-size: 14px; font-weight: bold; color: {get_sentiment_color(overall_score)};">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 11px; color: #95a5a6; text-transform: uppercase; font-weight: 600;">Sentiment Signal</div>
+                        <div style="font-size: 15px; font-weight: bold; color: {get_sentiment_color(overall_score)}; margin-top: 5px;">
                             {overall_label}
                         </div>
                     </div>
-                    <div>
-                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Market Trend</div>
-                        <div style="font-size: 14px; font-weight: bold; color: #2c3e50;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <div style="font-size: 11px; color: #95a5a6; text-transform: uppercase; font-weight: 600;">Market Trend</div>
+                        <div style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-top: 5px;">
                             {trends_direction}
                         </div>
                     </div>
-                    <div>
-                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Combined Signal</div>
-                        <div style="font-size: 14px; font-weight: bold; color: {'#27ae60' if overall_label == 'Positive' and 'Bullish' in str(rsi_signal) else '#e74c3c' if overall_label == 'Negative' and 'Bearish' in str(rsi_signal) else '#f39c12'};">
+                    <div style="flex: 1; min-width: 150px;">
+                        <div style="font-size: 11px; color: #95a5a6; text-transform: uppercase; font-weight: 600;">Combined Signal</div>
+                        <div style="font-size: 15px; font-weight: bold; margin-top: 5px; padding: 5px 10px; border-radius: 20px; background: {'linear-gradient(135deg, #27ae60, #2ecc71)' if overall_label == 'Positive' and 'Bullish' in str(rsi_signal) else 'linear-gradient(135deg, #e74c3c, #c0392b)' if overall_label == 'Negative' and 'Bearish' in str(rsi_signal) else 'linear-gradient(135deg, #f39c12, #f1c40f)'}; color: white; display: inline-block;">
                             {'Strong Buy' if overall_label == 'Positive' and 'Bullish' in str(rsi_signal) else 'Strong Sell' if overall_label == 'Negative' and 'Bearish' in str(rsi_signal) else 'Hold/Mixed'}
                         </div>
                     </div>
@@ -801,17 +807,16 @@ def generate_combined_analysis_section(all_data):
         </div>
         """
     
-    html += "</div>"
-    
-    # Add responsive CSS
     html += """
+    </div>
+    
     <style>
-        @media (max-width: 740px) {
-            div[style*="display: flex"][style*="gap: 20px"] {
+        @media (max-width: 900px) {
+            div[style*="display: flex"][style*="width: 100%"] {
                 flex-direction: column !important;
             }
-            div[style*="min-width: 300px"] {
-                min-width: 100% !important;
+            div[style*="width: 50%"] {
+                width: 100% !important;
             }
         }
     </style>
