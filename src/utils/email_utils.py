@@ -11,7 +11,6 @@ import logging
 from datetime import datetime
 import pandas as pd
 from dotenv import load_dotenv
-# from .enhanced_email_utils import generate_enhanced_sentiment_html_section
 from tabulate import tabulate
 # Load environment variables
 load_dotenv()
@@ -386,6 +385,438 @@ def generate_enhanced_html_metrics_table(all_data):
         </div>
     </div>
     """
+    return html
+
+def generate_combined_analysis_section(all_data):
+    """
+    Generate a combined Technical and Sentiment Analysis section with side-by-side layout.
+    Responsive design: side-by-side on wide screens, stacked on mobile.
+    """
+    if not all_data:
+        return ""
+    
+    # Helper functions for Technical Analysis
+    def get_signal_badge(signal):
+        """Generate styled signal badge."""
+        if not signal or signal == "--" or signal == "":
+            return '<span style="color: #95a5a6;">--</span>'
+        
+        signal_lower = str(signal).lower()
+        if "bullish" in signal_lower or "buy" in signal_lower:
+            color = "#27ae60"
+            icon = "📈"
+        elif "bearish" in signal_lower or "sell" in signal_lower:
+            color = "#e74c3c" 
+            icon = "📉"
+        elif "overbought" in signal_lower:
+            color = "#f39c12"
+            icon = "⚠️"
+        elif "oversold" in signal_lower:
+            color = "#3498db"
+            icon = "💡"
+        else:
+            color = "#95a5a6"
+            icon = "➖"
+        
+        return f'<span style="background-color: {color}; color: white; padding: 4px 8px; border-radius: 15px; font-size: 11px; font-weight: bold;">{icon} {signal}</span>'
+    
+    def get_rsi_visual(rsi_value):
+        """Generate RSI visual indicator."""
+        try:
+            if rsi_value == "--" or rsi_value == "" or rsi_value is None:
+                return '<span style="color: #95a5a6;">No RSI Data Available</span>'
+            
+            rsi = float(rsi_value)
+            if rsi >= 70:
+                color = "#e74c3c"
+                status = "Overbought"
+            elif rsi <= 30:
+                color = "#3498db" 
+                status = "Oversold"
+            else:
+                color = "#27ae60"
+                status = "Normal"
+            
+            percentage = min(rsi, 100)
+            return f'''
+                <div style="background: #ecf0f1; border-radius: 10px; height: 20px; position: relative; margin: 5px 0;">
+                    <div style="background: {color}; height: 100%; width: {percentage}%; border-radius: 10px; position: relative;">
+                        <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 11px; font-weight: bold;">
+                            {rsi:.1f}
+                        </span>
+                    </div>
+                    <div style="text-align: center; font-size: 11px; color: {color}; font-weight: bold; margin-top: 2px;">
+                        {status}
+                    </div>
+                </div>
+            '''
+        except:
+            return f'<span style="color: #95a5a6;">Invalid RSI: {rsi_value}</span>'
+    
+    def find_matching_key(data, patterns):
+        """Find the first key that matches any of the patterns."""
+        for pattern in patterns:
+            for key in data.keys():
+                if pattern.lower() in key.lower():
+                    return data[key]
+        return "--"
+    
+    # Helper functions for Sentiment Analysis
+    def get_sentiment_color(score):
+        """Get color based on sentiment score."""
+        try:
+            score_float = float(str(score).replace('%', '').replace('--', '0'))
+            if score_float > 0.1:
+                return "#27ae60"  # Green for positive
+            elif score_float < -0.1:
+                return "#e74c3c"  # Red for negative
+            else:
+                return "#f39c12"  # Orange for neutral
+        except:
+            return "#95a5a6"  # Gray for invalid
+    
+    def get_sentiment_emoji(label):
+        """Get emoji based on sentiment label."""
+        if "Positive" in str(label):
+            return "😊"
+        elif "Negative" in str(label):
+            return "😟"
+        else:
+            return "😐"
+    
+    def get_trend_arrow(direction):
+        """Get arrow based on trend direction."""
+        if "Increasing" in str(direction):
+            return "📈"
+        elif "Decreasing" in str(direction):
+            return "📉"
+        else:
+            return "➖"
+    
+    def safe_get_enhanced_value(data, patterns, default="--"):
+        """Safely get enhanced sentiment data from dictionary."""
+        for pattern in patterns:
+            for key, value in data.items():
+                if pattern.lower() in key.lower() and "enhanced" in key.lower():
+                    return value
+        return default
+    
+    def format_score(value, decimals=2):
+        """Format score value with proper decimal places."""
+        try:
+            if value == "--" or value is None:
+                return "--"
+            return f"{float(value):.{decimals}f}"
+        except:
+            return str(value)
+    
+    def format_topics(topic_str):
+        """Format topics for display."""
+        if topic_str == "--" or not topic_str:
+            return "No data"
+        topics = str(topic_str).split(", ")
+        return ", ".join(topics[:3]) if len(topics) > 3 else topic_str
+    
+    # Helper function for formatting volume
+    def format_volume(volume_str):
+        try:
+            if volume_str == "--" or volume_str == "" or volume_str is None:
+                return "--"
+            clean_volume = str(volume_str).replace(',', '').replace(' ', '')
+            volume_num = int(float(clean_volume))
+            return f"{volume_num:,}"
+        except (ValueError, TypeError):
+            return str(volume_str) if volume_str not in ["--", "", None] else "--"
+    
+    # Start building the HTML
+    html = """
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 24px;">📊 Comprehensive Market Analysis</h3>
+    """
+    
+    for ticker, data in all_data.items():
+        # Extract Technical Analysis data
+        current_price = find_matching_key(data, ['current price', 'price'])
+        rsi_value = find_matching_key(data, ['rsi (14)', 'rsi'])
+        rsi_signal = find_matching_key(data, ['rsi signal'])
+        volume = find_matching_key(data, ['current volume', 'volume'])
+        obv_trend = find_matching_key(data, ['obv trend', 'obv'])
+        
+        # Moving averages with signals
+        ma10_value = find_matching_key(data, ['ma10 (technical)', 'ma10'])
+        ma20_value = find_matching_key(data, ['ma20 (technical)', 'ma20'])
+        ma50_value = find_matching_key(data, ['ma50 (technical)', 'ma50'])
+        ma100_value = find_matching_key(data, ['ma100 (technical)', 'ma100'])
+
+        ma10_signal = find_matching_key(data, ['ma10 signal'])
+        ma20_signal = find_matching_key(data, ['ma20 signal'])
+        ma50_signal = find_matching_key(data, ['ma50 signal'])
+        ma100_signal = find_matching_key(data, ['ma100 signal'])
+
+        # Exponential Moving Averages
+        ema12_value = find_matching_key(data, ['ema12 (technical)', 'ema12'])
+        ema26_value = find_matching_key(data, ['ema26 (technical)', 'ema26'])
+        ema50_value = find_matching_key(data, ['ema50 (technical)', 'ema50'])
+        
+        # Bollinger Bands
+        bb_percentB_value = find_matching_key(data, ['BB %B (Technical)', 'BB %B'])
+        bb_lower_value = find_matching_key(data, ['BB Lower Band (Technical)', 'BB Lower'])
+        bb_upper_value = find_matching_key(data, ['BB Upper Band (Technical)', 'BB Upper'])
+        bb_middle_value = find_matching_key(data, ['BB Middle Band (Technical)', 'BB Middle'])
+        bb_signal_value = find_matching_key(data, ['BB Signal (Technical)', 'BB Signal'])
+        bb_width_value = find_matching_key(data, ['BB Width (%) (Technical)', 'BB Width'])
+        
+        # Performance metrics
+        sharpe_ratio = find_matching_key(data, ['sharpe ratio'])
+        sortino_ratio = find_matching_key(data, ['sortino ratio'])
+        annual_return = find_matching_key(data, ['annualized return', 'annual return'])
+        volatility = find_matching_key(data, ['annualized volatility', 'volatility'])
+        
+        # Extract Sentiment Analysis data
+        overall_score = safe_get_enhanced_value(data, ['overall sentiment score'])
+        overall_label = safe_get_enhanced_value(data, ['overall sentiment label'])
+        confidence = safe_get_enhanced_value(data, ['sentiment confidence'])
+        sentiment_strength = "Strong" if abs(float(overall_score) if overall_score != "--" else 0) > 0.5 else "Moderate" if abs(float(overall_score) if overall_score != "--" else 0) > 0.1 else "Weak"
+        
+        # Google Trends
+        trends_interest = safe_get_enhanced_value(data, ['google trends interest'])
+        trends_direction = safe_get_enhanced_value(data, ['trends direction'])
+        avg_interest = safe_get_enhanced_value(data, ['avg interest'])
+        
+        # News Analysis
+        news_articles = safe_get_enhanced_value(data, ['news articles analyzed'])
+        news_sentiment = safe_get_enhanced_value(data, ['news sentiment score'])
+        positive_news = safe_get_enhanced_value(data, ['positive news articles'])
+        negative_news = safe_get_enhanced_value(data, ['negative news articles'])
+        finbert_score = safe_get_enhanced_value(data, ['finbert news score'])
+        
+        # Reddit Analysis
+        reddit_posts = safe_get_enhanced_value(data, ['reddit posts analyzed'])
+        reddit_sentiment = safe_get_enhanced_value(data, ['reddit sentiment score'])
+        reddit_score = safe_get_enhanced_value(data, ['reddit avg score'])
+        reddit_comments = safe_get_enhanced_value(data, ['reddit avg comments'])
+        positive_reddit = safe_get_enhanced_value(data, ['positive reddit posts'])
+        
+        # Topic Analysis
+        topic1 = safe_get_enhanced_value(data, ['top topic 1 keywords'])
+        topic2 = safe_get_enhanced_value(data, ['top topic 2 keywords'])
+        doc_similarity = safe_get_enhanced_value(data, ['document similarity'])
+
+        html += f"""
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            <!-- Header with Ticker -->
+            <div style="text-align: center; margin-bottom: 25px;">
+                <span style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 12px 25px; border-radius: 30px; font-size: 20px; font-weight: bold; box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);">
+                    {ticker} - ${current_price}
+                </span>
+            </div>
+            
+            <!-- Container for side-by-side layout - Full Width -->
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                
+                <!-- Technical Analysis Section (Left) -->
+                <div style="flex: 1; min-width: 350px; background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%); padding: 15px; border-radius: 10px;">
+                    <h4 style="color: white; margin: 0 0 15px 0; text-align: center;">🔍 Technical Analysis</h4>
+                    
+                    <div style="background: white; border-radius: 8px; padding: 15px; max-height: 600px; overflow-y: auto;">
+                        <!-- RSI Analysis -->
+                        <div style="margin-bottom: 15px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📊 RSI Analysis</h5>
+                            {get_rsi_visual(rsi_value)}
+                            <div style="text-align: center; margin-top: 5px;">
+                                {get_signal_badge(rsi_signal)}
+                            </div>
+                        </div>
+                        
+                        <!-- Volume & Momentum -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📈 Volume & Momentum</h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>Volume: <strong style="color: #3498db;">{format_volume(volume)}</strong></div>
+                                <div>OBV Trend: {get_signal_badge(obv_trend)}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bollinger Bands -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">🎯 Bollinger Bands</h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>BB %B: <strong>{bb_percentB_value}</strong> {bb_percentB_value != '--' and float(bb_percentB_value) < 0 and '(Oversold)' or bb_percentB_value != '--' and float(bb_percentB_value) > 100 and '(Overbought)' or ''}</div>
+                                <div>BB Lower: <strong>${bb_lower_value}</strong></div>
+                                <div>BB Upper: <strong>${bb_upper_value}</strong></div>
+                                <div>BB Middle: <strong>${bb_middle_value}</strong></div>
+                                <div>BB Signal: {get_signal_badge(bb_signal_value)}</div>
+                                <div>BB Width: <strong>{bb_width_value}%</strong></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Exponential Moving Averages -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">⚡ Exponential Moving Averages</h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>EMA12: <strong>${ema12_value}</strong></div>
+                                <div>EMA26: <strong>${ema26_value}</strong></div>
+                                <div>EMA50: <strong>${ema50_value}</strong></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Simple Moving Averages -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">📉 Moving Averages</h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>MA10: <strong>${ma10_value}</strong> {get_signal_badge(ma10_signal)}</div>
+                                <div>MA20: <strong>${ma20_value}</strong> {get_signal_badge(ma20_signal)}</div>
+                                <div>MA50: <strong>${ma50_value}</strong> {get_signal_badge(ma50_signal)}</div>
+                                <div>MA100: <strong>${ma100_value}</strong> {get_signal_badge(ma100_signal)}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Performance Metrics -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">🎯 Performance Metrics</h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>Sharpe Ratio: <strong style="color: #27ae60;">{sharpe_ratio}</strong></div>
+                                <div>Sortino Ratio: <strong style="color: #27ae60;">{sortino_ratio}</strong></div>
+                                <div>Annual Return: <strong style="color: #e74c3c;">{annual_return}</strong></div>
+                                <div>Volatility: <strong style="color: #f39c12;">{volatility}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sentiment Analysis Section (Right) -->
+                <div style="flex: 1; min-width: 350px; background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 15px; border-radius: 10px;">
+                    <h4 style="color: white; margin: 0 0 15px 0; text-align: center;">
+                        🧠 Sentiment Analysis {get_sentiment_emoji(overall_label)}
+                    </h4>
+                    
+                    <div style="background: white; border-radius: 8px; padding: 15px; max-height: 600px; overflow-y: auto;">
+                        <!-- Overall Sentiment -->
+                        <div style="margin-bottom: 15px; text-align: center; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <span style="background-color: {get_sentiment_color(overall_score)}; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+                                {overall_label} ({format_score(overall_score, 3)})
+                            </span>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 8px;">
+                                Confidence: {format_score(confidence, 3)} | Strength: {sentiment_strength}
+                            </div>
+                        </div>
+                        
+                        <!-- Market Trends -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                📊 Market Trends (0-100) {get_trend_arrow(trends_direction)}
+                            </h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>Interest Level: <strong style="font-size: 16px; color: #2c3e50;">{trends_interest}</strong></div>
+                                <div>Average: <strong>{format_score(avg_interest, 1)}</strong> | Direction: <strong>{trends_direction}</strong></div>
+                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                    📌 >50 = above avg attention
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- News Sentiment -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                📰 News Sentiment (-1 to +1)
+                            </h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>Articles Analyzed: <strong>{news_articles}</strong></div>
+                                <div>VADER: <span style="color: {get_sentiment_color(news_sentiment)}; font-weight: bold;">{format_score(news_sentiment, 3)}</span></div>
+                                <div>FinBERT: <span style="color: {get_sentiment_color(finbert_score)}; font-weight: bold;">{format_score(finbert_score, 3)}</span></div>
+                                <div style="margin-top: 5px;">
+                                    <span style="color: #27ae60;">✓ {positive_news}</span> | 
+                                    <span style="color: #e74c3c;">✗ {negative_news}</span>
+                                </div>
+                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                    📌 VADER: General | FinBERT: Financial AI<br>
+                                    >0.05 = Positive | <-0.05 = Negative
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Reddit Analysis -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                🔴 Reddit Analysis (-1 to +1)
+                            </h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div>Posts Analyzed: <strong>{reddit_posts}</strong></div>
+                                <div>Sentiment: <span style="color: {get_sentiment_color(reddit_sentiment)}; font-weight: bold;">{format_score(reddit_sentiment, 3)}</span></div>
+                                <div>Avg Upvotes: <strong>{format_score(reddit_score, 1)}</strong> | Comments: <strong>{format_score(reddit_comments, 1)}</strong></div>
+                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                    📌 Upvotes: >1000=viral, 100-1000=popular<br>
+                                    Sentiment: >0.3=Very Bullish | <-0.1=Bearish
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Key Topics -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 13px;">
+                                🏷️ Key Topics (AI-detected)
+                            </h5>
+                            <div style="font-size: 11px; line-height: 1.8;">
+                                <div><strong>Topic 1:</strong> {format_topics(topic1)}</div>
+                                <div><strong>Topic 2:</strong> {format_topics(topic2)}</div>
+                                <div>Doc Similarity: <strong>{format_score(doc_similarity, 3)}</strong></div>
+                                <div style="color: #7f8c8d; font-style: italic; margin-top: 5px;">
+                                    📌 Shows current discussion themes
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Summary Bar at Bottom -->
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ecf0f1;">
+                <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px; text-align: center;">
+                    <div>
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Technical Signal</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #2c3e50;">
+                            {rsi_signal if rsi_signal != "--" else "Neutral"}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Sentiment Signal</div>
+                        <div style="font-size: 14px; font-weight: bold; color: {get_sentiment_color(overall_score)};">
+                            {overall_label}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Market Trend</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #2c3e50;">
+                            {trends_direction}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #95a5a6; text-transform: uppercase;">Combined Signal</div>
+                        <div style="font-size: 14px; font-weight: bold; color: {'#27ae60' if overall_label == 'Positive' and 'Bullish' in str(rsi_signal) else '#e74c3c' if overall_label == 'Negative' and 'Bearish' in str(rsi_signal) else '#f39c12'};">
+                            {'Strong Buy' if overall_label == 'Positive' and 'Bullish' in str(rsi_signal) else 'Strong Sell' if overall_label == 'Negative' and 'Bearish' in str(rsi_signal) else 'Hold/Mixed'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
+    
+    html += "</div>"
+    
+    # Add responsive CSS
+    html += """
+    <style>
+        @media (max-width: 740px) {
+            div[style*="display: flex"][style*="gap: 20px"] {
+                flex-direction: column !important;
+            }
+            div[style*="min-width: 300px"] {
+                min-width: 100% !important;
+            }
+        }
+    </style>
+    """
+    
     return html
 
 def generate_enhanced_technical_analysis_section(all_data):
@@ -878,26 +1309,13 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     # Generate enhanced sections
     cnn_metrics_html = generate_enhanced_html_cnn_metrics_table(cnnMetricData)
     metrics_table_html = generate_enhanced_html_metrics_table(all_data)
-    technical_analysis_html = generate_enhanced_technical_analysis_section(all_data)
-    enhanced_sentiment_html = generate_enhanced_sentiment_html_section(all_data)
+    # technical_analysis_html = generate_enhanced_technical_analysis_section(all_data)
+    # enhanced_sentiment_html = generate_enhanced_sentiment_html_section(all_data)
+    # Use the new combined analysis section instead of separate technical and sentiment
+    combined_analysis_html = generate_combined_analysis_section(all_data)
     # Create the enhanced HTML email body
-    
+        
     email_body = f"""
-    <html>
-    <body style='font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; background: #f6f8fa;'>
-        <div style='max-width: 900px; margin: auto; padding: 30px;'>
-            <h2 style='color: #222; text-align: center; margin-bottom: 30px;'>📊 Stock Analysis Report</h2>
-            {cnn_metrics_html}
-            {metrics_table_html}
-            {technical_analysis_html}
-            {enhanced_sentiment_html}
-        </div>
-    </body>
-    </html>
-    """
-    # ...existing code...
-
-    body = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -941,23 +1359,11 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
             .content {{
                 padding: 30px;
             }}
-            .alert {{
-                background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-                color: white;
-                padding: 20px;
-                border-radius: 10px;
-                margin: 20px 0;
-                text-align: center;
-            }}
             .footer {{
                 background: #2c3e50;
                 color: white;
                 padding: 30px;
                 text-align: center;
-            }}
-            .footer a {{
-                color: #74b9ff;
-                text-decoration: none;
             }}
             @media (max-width: 768px) {{
                 body {{ padding: 10px; }}
@@ -976,39 +1382,22 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
             </div>
             
             <div class="content">
-                <div class="alert">
-                    <h3 style="margin: 0 0 10px 0;">🚀 Market Intelligence Report Ready</h3>
-                    <p style="margin: 0;">This comprehensive analysis includes market sentiment, technical indicators, and financial metrics for informed investment decisions.</p>
-                </div>
-                
                 {cnn_metrics_html}
                 
                 {metrics_table_html}
                 
-                {technical_analysis_html}
-
-                {enhanced_sentiment_html}
+                <!-- Combined Technical and Sentiment Analysis -->
+                {combined_analysis_html}
                 
                 <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0; color: white; text-align: center;">
                     <h3 style="margin: 0 0 15px 0; font-size: 24px;">📎 Detailed Reports Attached</h3>
                     <p style="margin: 0; font-size: 16px;">Individual stock analysis reports and summary comparisons are included as attachments for deeper insights.</p>
-                    {f'<p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">📋 Summary comparison report included</p>' if summary_path else ''}
-                </div>
-                
-                <div style="background: #f8f9fa; border-left: 4px solid #6c5ce7; padding: 20px; margin: 20px 0;">
-                    <h4 style="color: #2c3e50; margin: 0 0 10px 0;">ℹ️ Important Notes:</h4>
-                    <ul style="color: #5d6d7e; margin: 0; padding-left: 20px;">
-                        <li>All technical indicators are calculated based on recent market data</li>
-                        <li>CNN Fear & Greed Index provides market sentiment context</li>
-                        <li>Consider multiple factors before making investment decisions</li>
-                        <li>Past performance does not guarantee future results</li>
-                    </ul>
                 </div>
             </div>
             
             <div class="footer">
                 <h3 style="margin: 0 0 10px 0;">📈 Stock Data Scraper Pro</h3>
-                <p style="margin: 0; opacity: 0.8;">Powered by advanced financial analytics • <a href="https://money.cnn.com/data/fear-and-greed/">CNN Fear & Greed Index</a></p>
+                <p style="margin: 0; opacity: 0.8;">Powered by advanced financial analytics</p>
                 <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.6;">This is an automated report. Please do not reply to this email.</p>
             </div>
         </div>
@@ -1029,7 +1418,7 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     return send_email(
         recipients=recipients,
         subject=subject,
-        body=body,
+        body=email_body,
         attachment_paths=attachments,
         cc=cc,
         bcc=bcc,
