@@ -15,6 +15,8 @@ import os
 import warnings
 warnings.filterwarnings('ignore')
 from typing import Dict, List, Any
+import random
+from functools import wraps
 
 # Core sentiment analysis libraries
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -267,18 +269,41 @@ class RedditCollector:
         }
 
 
+def rate_limit_handler(func):
+    """Decorator to handle rate limiting"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        max_retries = 2
+        base_delay = 0.05
+        
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if "429" in str(e) or "rate" in str(e).lower():
+                    # Exponential backoff with jitter
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 3)
+                    print(f"Rate limited. Waiting {delay:.1f} seconds...")
+                    time.sleep(delay)
+                else:
+                    raise
+        return None
+    return wrapper
+
 class GoogleTrendsCollector:
     """Collects Google Trends data for a ticker"""
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         try:
             self.pytrends = TrendReq(hl='en-US', tz=360)
+            self.last_request_time = 0
+            self.min_request_interval = 2 
             self.logger.info("Google Trends collector initialized")
         except Exception as e:
             self.logger.error("Error initializing Google Trends: %s", e)
             self.pytrends = None
 
-
+    @rate_limit_handler
     def get_google_trends_data(self, ticker: str, timeframe: str = 'today 1-m', geo='', gprop='') -> Dict[str, Any]:
         if not self.pytrends:
             return {"error": "Google Trends not available"}
