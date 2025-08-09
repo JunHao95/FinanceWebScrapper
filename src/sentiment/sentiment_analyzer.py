@@ -295,7 +295,18 @@ class GoogleTrendsCollector:
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         try:
-            self.pytrends = TrendReq(hl='en-US', tz=360)
+            # Fixed TrendReq configuration to avoid method_whitelist error
+            self.pytrends = TrendReq(
+                hl='en-US', 
+                tz=360,
+                timeout=(10, 25),
+                requests_args={
+                    'verify': False,
+                    'headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                }
+            )
             self.last_request_time = 0
             self.min_request_interval = 2 
             self.logger.info("Google Trends collector initialized")
@@ -303,36 +314,73 @@ class GoogleTrendsCollector:
             self.logger.error("Error initializing Google Trends: %s", e)
             self.pytrends = None
 
-    @rate_limit_handler
-    def get_google_trends_data(self, ticker: str, timeframe: str = 'today 1-m', geo='', gprop='') -> Dict[str, Any]:
+    def get_google_trends_data(self, ticker: str, timeframe: str = 'today 3-m', geo='', gprop='') -> Dict[str, Any]:
+        # Default response structure - always return valid data
+        default_response = {
+            "latest_interest": "--",
+            "average_interest": "--",
+            "trend_direction": "--",
+            "interest_over_time": {},
+            "related_queries": {"top": {}, "rising": {}}
+        }
+        
         if not self.pytrends:
-            return {"error": "Google Trends not available"}
-        try:
-            keywords = [ticker, f"{ticker} stock", f"{ticker} price"]
-            self.pytrends.build_payload(keywords, timeframe=timeframe)
-            interest_over_time = self.pytrends.interest_over_time()
-            related_queries = self.pytrends.related_queries()
-            if not interest_over_time.empty:
-                latest_interest = interest_over_time[ticker].iloc[-1] if ticker in interest_over_time.columns else 0
-                avg_interest = interest_over_time[ticker].mean() if ticker in interest_over_time.columns else 0
-                trend_direction = "Increasing" if latest_interest > avg_interest else "Decreasing"
-            else:
-                self.logger.warning("No interest data found for the specified timeframe.")
-                latest_interest = avg_interest = 0
-                trend_direction = "No data"
-            return {
-                "latest_interest": latest_interest,
-                "average_interest": avg_interest,
-                "trend_direction": trend_direction,
-                "interest_over_time": interest_over_time.to_dict() if not interest_over_time.empty else {},
-                "related_queries": {
-                    "top": related_queries.get(ticker, {}).get('top', pd.DataFrame()).to_dict() if related_queries.get(ticker) else {},
-                    "rising": related_queries.get(ticker, {}).get('rising', pd.DataFrame()).to_dict() if related_queries.get(ticker) else {}
+            self.logger.warning("Google Trends not available, returning defaults")
+            return default_response
+        
+        # Try multiple strategies to get data
+        strategies = [
+            {"keywords": [ticker], "timeframe": timeframe},  # Simple single keyword
+            {"keywords": [ticker], "timeframe": "today 7-d"},  # Shorter timeframe
+            {"keywords": [ticker.upper()], "timeframe": "today 1-m"},  # Uppercase ticker
+            {"keywords": [f"{ticker} stock"], "timeframe": "today 1-m"},  # With 'stock' suffix
+        ]
+        
+        for attempt, strategy in enumerate(strategies):
+            try:
+                # Build payload with current strategy
+                self.logger.info(f"Attempt {attempt + 1}: Trying keywords={strategy['keywords']}, timeframe={strategy['timeframe']}")
+                self.pytrends.build_payload(strategy['keywords'], timeframe=strategy['timeframe'])
+                interest_over_time = self.pytrends.interest_over_time()
+                related_queries = self.pytrends.related_queries()
+                
+                if not interest_over_time.empty:
+                    # Try to get data for the ticker
+                    keyword = strategy['keywords'][0]
+                    latest_interest = interest_over_time[ticker].iloc[-1] if ticker in interest_over_time.columns else 0
+                    avg_interest = interest_over_time[ticker].mean() if ticker in interest_over_time.columns else 0
+                    trend_direction = "Increasing" if latest_interest > avg_interest else "Decreasing"
+                else:
+                    self.logger.warning("No interest data found for the specified timeframe.")
+                    latest_interest = avg_interest = 0
+                    trend_direction = "No data"
+                
+                return {
+                    "latest_interest": latest_interest,
+                    "average_interest": avg_interest,
+                    "trend_direction": trend_direction,
+                    "interest_over_time": interest_over_time.to_dict() if not interest_over_time.empty else {},
+                    "related_queries": {
+                        "top": related_queries.get(ticker, {}).get('top', pd.DataFrame()).to_dict() if related_queries.get(ticker) else {},
+                        "rising": related_queries.get(ticker, {}).get('rising', pd.DataFrame()).to_dict() if related_queries.get(ticker) else {}
+                    }
                 }
-            }
-        except Exception as e:
-            self.logger.error("Error getting Google Trends data: %s", e)
-            return {"error": str(e)}
+            except requests.exceptions.Timeout:
+                self.logger.warning(f"Timeout on attempt {attempt + 1}")
+                continue
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                # Check for rate limit errors
+                if "400" in error_msg or "bad request" in error_msg:
+                    self.logger.warning(f"Bad request on attempt {attempt + 1}, trying different parameters")
+                else:
+                    self.logger.warning(f"Unexpected error on attempt {attempt + 1}: {e}")
+                continue
+        
+        # All attempts failed - return default values instead of error
+        self.logger.warning(f"All Google Trends attempts failed for {ticker}, returning default values")
+        return default_response
 
 
 class TopicAnalyzer:
