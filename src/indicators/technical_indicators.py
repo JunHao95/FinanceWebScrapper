@@ -30,7 +30,7 @@ class TechnicalIndicators:
     
     def get_historical_data(self, ticker: str, days: int = 100) -> pd.DataFrame:
         """
-        Retrieve historical price data for a ticker.
+        Retrieve historical price data for a ticker with optimized fallback strategy.
 
         Args:
             ticker (str): Stock ticker symbol.
@@ -43,30 +43,26 @@ class TechnicalIndicators:
             self.logger.error("Alpha Vantage API key not available. Cannot fetch historical data.")
             return pd.DataFrame()
 
-        # Try Alpha Vantage API
+            
+        # 1. Try Alpha Vantage
+        self.logger.info("Yahoo Finance failed, trying Alpha Vantage API...")
         df = self._fetch_alpha_vantage_data(ticker, days)
         if not df.empty:
             return df
-        self.logger.info("Alpha Vantage API failed to fetch historical data. Trying Finnhub API...")
-        print("DEBUGGG Alpha Vantage API failed to fetch historical data. Trying Finnhub API...")
-        # Fallback to Finnhub API
-        df = self._fetch_finnhub_data(ticker, days)
-        if not df.empty:
-            return df
-        self.logger.info("FinnhubAPI failed to fetch historical data. Trying YahooFinance API...")
-        print("DEBUGGG FinnhubAPI failed to fetch historical data. Trying YahooFinance API...")
-        # Fallback to Yahoo Finance API
+        
+        # 2. Try Yahoo Finance if Alpha Vantage does not work
         df = self._fetch_yahoo_finance_data(ticker, days)
         if not df.empty:
             return df
-        self.logger.info("Yahoo Finance API failed to fetch historical data. Trying Google Finance API...")
-        print("DEBUGGG Yahoo Finance API failed to fetch historical data. Trying YahooFinance API...")
-        # Fallback to Google Finance API
-        df = self._fetch_google_finance_data(ticker, days)
+        
+        # 3. Try Finnhub as last backup
+        self.logger.info("Alpha Vantage failed, trying Finnhub API...")
+        df = self._fetch_finnhub_data(ticker, days)
         if not df.empty:
             return df
-        # If both APIs fail
-        self.logger.error("All APIS failed. Unable to fetch historical data.")
+            
+        # If all APIs fail
+        self.logger.error("All APIs failed. Unable to fetch historical data.")
         return pd.DataFrame()
 
     def _fetch_alpha_vantage_data(self, ticker: str, days: int) -> pd.DataFrame:

@@ -268,34 +268,13 @@ class RedditCollector:
             "posts": reddit_posts[:10]
         }
 
-
-def rate_limit_handler(func):
-    """Decorator to handle rate limiting"""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        max_retries = 2
-        base_delay = 0.05
-        
-        for attempt in range(max_retries):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                if "429" in str(e) or "rate" in str(e).lower():
-                    # Exponential backoff with jitter
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 3)
-                    print(f"Rate limited. Waiting {delay:.1f} seconds...")
-                    time.sleep(delay)
-                else:
-                    raise
-        return None
-    return wrapper
-
 class GoogleTrendsCollector:
     """Collects Google Trends data for a ticker"""
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         try:
             # Fixed TrendReq configuration to avoid method_whitelist error
+            # Exclude the use of deprecated parameters that caused 'method_whitelist' 
             self.pytrends = TrendReq(
                 hl='en-US', 
                 tz=360,
@@ -308,7 +287,9 @@ class GoogleTrendsCollector:
                 }
             )
             self.last_request_time = 0
-            self.min_request_interval = 2 
+            self.min_request_interval = 5  # Increased from 2 to 5 seconds to avoid rate limits
+            self.cache = {}  # Simple cache to avoid repeated requests
+            self.cache_ttl = 3600  # Cache for 1 hour 
             self.logger.info("Google Trends collector initialized")
         except Exception as e:
             self.logger.error("Error initializing Google Trends: %s", e)
@@ -328,7 +309,28 @@ class GoogleTrendsCollector:
             self.logger.warning("Google Trends not available, returning defaults")
             return default_response
         
-        # Try multiple strategies to get data
+        # Check cache first
+        cache_key = f"{ticker}_{timeframe}_{geo}_{gprop}"
+        current_time = time.time()
+        
+        if cache_key in self.cache:
+            cache_entry = self.cache[cache_key]
+            # Use shorter TTL for failed requests (10 minutes vs 1 hour)
+            ttl = 600 if cache_entry.get('failed', False) else self.cache_ttl
+            if current_time - cache_entry['timestamp'] < ttl:
+                self.logger.info(f"Using cached Google Trends data for {ticker}")
+                return cache_entry['data']
+        
+        # Implement rate limiting with exponential backoff
+        current_time = time.time()
+        time_since_last_request = current_time - self.last_request_time
+        
+        if time_since_last_request < self.min_request_interval:
+            sleep_time = self.min_request_interval - time_since_last_request
+            self.logger.info(f"Rate limiting: sleeping for {sleep_time:.2f} seconds")
+            time.sleep(sleep_time)
+        
+        # Try multiple strategies to get data with increasing delays
         strategies = [
             {"keywords": [ticker], "timeframe": timeframe},  # Simple single keyword
             {"keywords": [ticker], "timeframe": "today 7-d"},  # Shorter timeframe
@@ -338,9 +340,22 @@ class GoogleTrendsCollector:
         
         for attempt, strategy in enumerate(strategies):
             try:
+                # Exponential backoff for retries
+                if attempt > 0:
+                    backoff_delay = min(2 ** attempt, 30)  # Cap at 30 seconds
+                    self.logger.info(f"Backing off for {backoff_delay} seconds before attempt {attempt + 1}")
+                    time.sleep(backoff_delay)
+                
+                # Update last request time
+                self.last_request_time = time.time()
+                
                 # Build payload with current strategy
                 self.logger.info(f"Attempt {attempt + 1}: Trying keywords={strategy['keywords']}, timeframe={strategy['timeframe']}")
                 self.pytrends.build_payload(strategy['keywords'], timeframe=strategy['timeframe'])
+
+                # Add small delay after build_payload
+                time.sleep(1)
+                
                 interest_over_time = self.pytrends.interest_over_time()
                 related_queries = self.pytrends.related_queries()
                 
@@ -355,7 +370,7 @@ class GoogleTrendsCollector:
                     latest_interest = avg_interest = 0
                     trend_direction = "No data"
                 
-                return {
+                result = {
                     "latest_interest": latest_interest,
                     "average_interest": avg_interest,
                     "trend_direction": trend_direction,
@@ -365,14 +380,27 @@ class GoogleTrendsCollector:
                         "rising": related_queries.get(ticker, {}).get('rising', pd.DataFrame()).to_dict() if related_queries.get(ticker) else {}
                     }
                 }
+                
+                # Cache the successful result
+                self.cache[cache_key] = {
+                    'data': result,
+                    'timestamp': time.time(),
+                    'failed': False
+                }
+                
+                return result
+                
             except requests.exceptions.Timeout:
                 self.logger.warning(f"Timeout on attempt {attempt + 1}")
                 continue
             except Exception as e:
                 error_msg = str(e).lower()
                 
-                # Check for rate limit errors
-                if "400" in error_msg or "bad request" in error_msg:
+                # Check for rate limit errors (429) - more specific handling
+                if "429" in error_msg or "too many requests" in error_msg:
+                    self.logger.warning(f"Rate limit hit on attempt {attempt + 1}, will retry with longer delay")
+                    # Don't continue immediately - let the backoff handle the delay
+                elif "400" in error_msg or "bad request" in error_msg:
                     self.logger.warning(f"Bad request on attempt {attempt + 1}, trying different parameters")
                 else:
                     self.logger.warning(f"Unexpected error on attempt {attempt + 1}: {e}")
@@ -380,6 +408,14 @@ class GoogleTrendsCollector:
         
         # All attempts failed - return default values instead of error
         self.logger.warning(f"All Google Trends attempts failed for {ticker}, returning default values")
+        print(f"debugging trends_data: {default_response}")
+        
+        # Cache the failed result for a shorter time to avoid repeated requests
+        self.cache[cache_key] = {
+            'data': default_response,
+            'timestamp': time.time(),
+            'failed': True  # Mark as failed for shorter cache time
+        }        
         return default_response
 
 

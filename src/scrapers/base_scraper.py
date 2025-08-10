@@ -34,8 +34,9 @@ class BaseScraper(ABC):
         Returns:
             dict: Dictionary containing scraped data
         """
-        # Add delay to avoid being blocked
-        time.sleep(self.delay)
+        # Only add delay for web scraping, not API calls (APIs handle their own rate limiting)
+        if self.delay > 0 and hasattr(self, '_is_web_scraper'):
+            time.sleep(self.delay)
         
         # Implement scraping logic in the derived class
         try:

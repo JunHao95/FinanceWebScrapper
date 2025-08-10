@@ -47,7 +47,7 @@ class AlphaVantageAPIScraper(BaseScraper):
             self.logger.info(f"Fetching company overview from Alpha Vantage for {ticker}")
             overview_url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={self.api_key}"
             
-            response = requests.get(overview_url, timeout=10)
+            response = requests.get(overview_url, timeout=5)  # Reduced timeout for faster failure
             response.raise_for_status()
             
             result = response.json()
@@ -97,15 +97,16 @@ class AlphaVantageAPIScraper(BaseScraper):
             if "Industry" in result:
                 data["Industry (AlphaVantage)"] = result["Industry"]
             
-            # Wait before next API call (if needed)
-            time.sleep(self.delay)
+            # Wait before next API call (if needed) - reduced delay for parallel processing
+            if self.delay > 0:
+                time.sleep(min(self.delay, 0.5))  # Cap delay at 0.5 seconds
             
             # Get additional cash flow data
             try:
                 self.logger.info(f"Fetching cash flow data from Alpha Vantage for {ticker}")
                 cash_flow_url = f"https://www.alphavantage.co/query?function=CASH_FLOW&symbol={ticker}&apikey={self.api_key}"
                 
-                cf_response = requests.get(cash_flow_url, timeout=10)
+                cf_response = requests.get(cash_flow_url, timeout=5)  # Reduced timeout
                 cf_response.raise_for_status()
                 
                 cf_result = cf_response.json()
@@ -178,7 +179,7 @@ class FinhubAPIScraper(BaseScraper):
             self.logger.info(f"Fetching metrics from Finhub for {ticker}")
             metrics_url = f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={self.api_key}"
             
-            response = requests.get(metrics_url, timeout=10)
+            response = requests.get(metrics_url, timeout=5)  # Reduced timeout
             response.raise_for_status()
             
             result = response.json()
@@ -220,7 +221,7 @@ class FinhubAPIScraper(BaseScraper):
             try:
                 profile_url = f"https://finnhub.io/api/v1/stock/profile2?symbol={ticker}&token={self.api_key}"
                 
-                profile_response = requests.get(profile_url, timeout=10)
+                profile_response = requests.get(profile_url, timeout=5)  # Reduced timeout
                 profile_response.raise_for_status()
                 
                 profile = profile_response.json()
@@ -240,7 +241,7 @@ class FinhubAPIScraper(BaseScraper):
                 self.logger.info(f"Fetching analyst price target from Finhub for {ticker}")
                 price_target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker}&token={self.api_key}"
                 
-                response = requests.get(price_target_url, timeout=10)
+                response = requests.get(price_target_url, timeout=5)  # Reduced timeout
                 response.raise_for_status()
                 
                 result = response.json()
