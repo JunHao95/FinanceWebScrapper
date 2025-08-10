@@ -63,9 +63,13 @@ class EnhancedSentimentScraper(BaseScraper):
             # Google Trends data
             trends = sentiment_data.get("data_sources", {}).get("google_trends", {})
             if not trends.get("error"):
-                formatted_data["Google Trends Interest (Enhanced)"] = trends.get('latest_interest', 0)
+                latest_interest = trends.get('latest_interest', 0)
+                avg_interest = trends.get('average_interest', 0)
+                
+                # Handle string values from Google Trends (like '--')
+                formatted_data["Google Trends Interest (Enhanced)"] = latest_interest if isinstance(latest_interest, (int, float)) else latest_interest
                 formatted_data["Trends Direction (Enhanced)"] = trends.get('trend_direction', 'No Data')
-                formatted_data["Avg Interest (Enhanced)"] = f"{trends.get('average_interest', 0):.1f}"
+                formatted_data["Avg Interest (Enhanced)"] = f"{avg_interest:.1f}" if isinstance(avg_interest, (int, float)) else str(avg_interest)
 
             # News sentiment data
             news = sentiment_data.get("data_sources", {}).get("news_sentiment", {})

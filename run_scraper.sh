@@ -17,7 +17,7 @@ SUMMARY=$(jq -r '.summary' config.json)
 SAVEREPORT=$(jq -r '.saveReports' config.json)
 
 # Build command based on config
-CMD="python main.py --tickers $TICKERS --sources $SOURCES --format $FORMAT --output-dir $OUTPUT_DIR --email $EMAIL --saveReports $SAVEREPORT  --cc $CC --bcc $BCC" # for testing
+CMD="python main.py --tickers $TICKERS --sources $SOURCES --format $FORMAT --output-dir $OUTPUT_DIR --email $EMAIL --saveReports $SAVEREPORT  --cc $CC --bcc $BCC --fast-mode" # for testing
 
 # Add optional flags
 if [ "$SUMMARY" = "true" ]; then
