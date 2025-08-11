@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta
 import yfinance as yf
 from pandas_datareader import data as pdr
+from ..utils.request_handler import make_request
 
 class TechnicalIndicators:
     """
@@ -80,8 +81,7 @@ class TechnicalIndicators:
         self.logger.info(f"Fetching data from Alpha Vantage: {url}")
 
         try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
+            response = make_request(url, timeout=10)
             data = response.json()
 
             if "Error Message" in data:
@@ -117,8 +117,7 @@ class TechnicalIndicators:
         self.logger.info(f"Fetching data from Finnhub: {url}")
 
         try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
+            response = make_request(url, timeout=10)
             data = response.json()
 
             if "error" in data:

@@ -17,6 +17,7 @@ warnings.filterwarnings('ignore')
 from typing import Dict, List, Any
 import random
 from functools import wraps
+from ..utils.request_handler import make_request
 
 # Core sentiment analysis libraries
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -132,8 +133,7 @@ class NewsCollector:
             try:
                 for attempt in range(2):  # Retry once on transient errors
                     try:
-                        resp = requests.get(source, timeout=7, headers=headers)
-                        resp.raise_for_status()
+                        resp = make_request(source, timeout=7, headers=headers)
                         feed = feedparser.parse(resp.content)
                         if not hasattr(feed, 'entries') or not feed.entries:
                             raise ValueError("No entries found in feed")

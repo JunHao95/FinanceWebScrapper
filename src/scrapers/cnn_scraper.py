@@ -1,8 +1,8 @@
 """
 CNN Fear and Greed Index Scraper
 """
-import requests
 from bs4 import BeautifulSoup
+from ..utils.request_handler import make_request
 
 
 class CNNFearGreedScraper:
@@ -36,8 +36,7 @@ class CNNFearGreedScraper:
             dict: Dictionary containing score and rating for each metric.
         """
         try:
-            response = requests.get(self.url, headers=self.headers, timeout=10)
-            response.raise_for_status()
+            response = make_request(self.url, headers=self.headers, timeout=10)
             data = response.json()
 
             results = {}

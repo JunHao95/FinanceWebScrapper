@@ -6,6 +6,7 @@ import requests
 import time
 import logging
 from .base_scraper import BaseScraper
+from ..utils.request_handler import make_request
 
 class AlphaVantageAPIScraper(BaseScraper):
     """Scraper for Alpha Vantage Financial API"""
@@ -47,9 +48,7 @@ class AlphaVantageAPIScraper(BaseScraper):
             self.logger.info(f"Fetching company overview from Alpha Vantage for {ticker}")
             overview_url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={ticker}&apikey={self.api_key}"
             
-            response = requests.get(overview_url, timeout=5)  # Reduced timeout for faster failure
-            response.raise_for_status()
-            
+            response = make_request(overview_url, timeout=5)
             result = response.json()
             
             # Check if we have actual data or an error
@@ -106,9 +105,7 @@ class AlphaVantageAPIScraper(BaseScraper):
                 self.logger.info(f"Fetching cash flow data from Alpha Vantage for {ticker}")
                 cash_flow_url = f"https://www.alphavantage.co/query?function=CASH_FLOW&symbol={ticker}&apikey={self.api_key}"
                 
-                cf_response = requests.get(cash_flow_url, timeout=5)  # Reduced timeout
-                cf_response.raise_for_status()
-                
+                cf_response = make_request(cash_flow_url, timeout=5)
                 cf_result = cf_response.json()
                 
                 if "annualReports" in cf_result and cf_result["annualReports"]:
@@ -179,9 +176,7 @@ class FinhubAPIScraper(BaseScraper):
             self.logger.info(f"Fetching metrics from Finhub for {ticker}")
             metrics_url = f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={self.api_key}"
             
-            response = requests.get(metrics_url, timeout=5)  # Reduced timeout
-            response.raise_for_status()
-            
+            response = make_request(metrics_url, timeout=5)
             result = response.json()
             
             if "metric" not in result:
@@ -221,9 +216,7 @@ class FinhubAPIScraper(BaseScraper):
             try:
                 profile_url = f"https://finnhub.io/api/v1/stock/profile2?symbol={ticker}&token={self.api_key}"
                 
-                profile_response = requests.get(profile_url, timeout=5)  # Reduced timeout
-                profile_response.raise_for_status()
-                
+                profile_response = make_request(profile_url, timeout=5)
                 profile = profile_response.json()
                 
                 if profile:
@@ -241,9 +234,7 @@ class FinhubAPIScraper(BaseScraper):
                 self.logger.info(f"Fetching analyst price target from Finhub for {ticker}")
                 price_target_url = f"https://finnhub.io/api/v1/stock/price-target?symbol={ticker}&token={self.api_key}"
                 
-                response = requests.get(price_target_url, timeout=5)  # Reduced timeout
-                response.raise_for_status()
-                
+                response = make_request(price_target_url, timeout=5)
                 result = response.json()
                 print(10*"###")
                 print(f"DEbUG result of finhub price target: {result}")

@@ -37,8 +37,7 @@ class YahooFinanceScraper(BaseScraper):
         }
         try:
             self.logger.info(f"Fetching statistics from Yahoo Finance for {ticker}")
-            response = requests.get(statistics_url, headers=self.headers, timeout=10)
-            response.raise_for_status()  # Raise an exception for HTTP errors
+            response = make_request(statistics_url, headers=self.headers, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Parse valuation ratios from tables
