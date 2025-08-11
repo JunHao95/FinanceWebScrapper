@@ -812,6 +812,14 @@ def main() -> None:
     # Process all tickers
     process_all_tickers(tickers, cnnMetricData, args, logger)
     
+    # Clean up connection pool after everything is completed
+    try:
+        from src.utils.request_handler import close_session
+        close_session()
+        logger.info("Connection pool cleaned up successfully")
+    except ImportError:
+        pass  # Graceful fallback if import fails
+    
     print("\nAll processing complete!")
 
 if __name__ == "__main__":

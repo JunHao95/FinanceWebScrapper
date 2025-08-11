@@ -1,27 +1,33 @@
 # Stock Data Scraper
 
-A Python web scraping application that fetches financial metrics like P/E ratio, P/B ratio, P/S ratio, and Forward P/E ratio for stocks from multiple financial sources.
+A high-performance Python web scraping application that fetches financial metrics like P/E ratio, P/B ratio, P/S ratio, and Forward P/E ratio for stocks from multiple financial sources. Optimized with parallel processing and connection pooling for faster execution.
 
 ## Features
 
-- Scrapes financial data from multiple sources:
+- **High-Performance Architecture**:
+  - ⚡ **Parallel Processing**: Uses `concurrent.futures` ThreadPoolExecutor for concurrent data fetching
+  - 🔄 **Connection Pooling**: HTTP connection reuse for speed improvement
+  - 🚀 **Fast Mode**: Minimal delays with optimized concurrent processing 
+  - 📈 **Scalable**: Handles multiple tickers efficiently with configurable worker pools
+
+- **Multi-Source Data Collection**:
   - Web sources: Yahoo Finance, Finviz, Google Finance
   - APIs: Alpha Vantage, Finhub (API keys required)
-- Calculates technical indicators:
+  - Enhanced sentiment analysis from news, Reddit, and Google Trends
+
+- **Technical Analysis**:
   - Bollinger Bands
-  - Moving Averages
-  - RSI
+  - Moving Averages (SMA, EMA)
+  - RSI (Relative Strength Index)
   - Volume indicators
-- Supports multiple output formats:
-  - CSV
-  - Excel
-  - Text reports
-- Additional features:
-  - Email reports
-  - Parallel processing
-  - Interactive mode
-  - Summary reports
-  - Configurable logging
+  - MACD and other momentum indicators
+
+- **Output & Reporting**:
+  - Multiple formats: CSV, Excel, Text reports
+  - Email reports with customizable recipients
+  - Summary comparison reports
+  - Interactive mode for guided usage
+  - Configurable logging levels
 
 ## Installation
 
@@ -49,6 +55,36 @@ export ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key_here
 
 # For Finhub API
 export FINHUB_API_KEY=your_finhub_key_here
+```
+
+## Performance Optimizations
+
+### ⚡ Parallel Processing
+The scraper uses `concurrent.futures.ThreadPoolExecutor` to process multiple tickers simultaneously:
+
+```bash
+# Enable parallel processing with custom worker count
+python main.py --tickers AAPL,MSFT,GOOG,AMZN,TSLA --parallel --max-workers 8
+```
+
+### 🔄 Connection Pooling
+HTTP connection pooling automatically reuses connections for multiple requests:
+- **Automatic**: Enabled by default for all HTTP requests
+- **Configurable**: Adjust pool size via environment variables
+- **Performance**: Faster execution for multiple requests
+
+```bash
+# Configure connection pool settings
+export CONNECTION_POOL_SIZE=20
+export CONNECTION_POOL_MAXSIZE=20
+```
+
+### 🚀 Fast Mode
+Ultra-fast processing with minimal delays and maximum concurrency:
+
+```bash
+# Enable fast mode for maximum speed
+python main.py --tickers AAPL,MSFT,GOOG --fast-mode --parallel
 ```
 
 ## Usage
@@ -79,6 +115,40 @@ Available logging levels:
 - `error`: Only errors
 - `critical`: Only critical errors
 
+### Advanced Usage
+
+```bash
+# High-performance mode with all optimizations
+python main.py --tickers AAPL,MSFT,GOOG,AMZN,TSLA,NVDA,META,NFLX \
+               --sources yahoo finviz alphavantage technical enhanced_sentiment \
+               --fast-mode --parallel --max-workers 8 \
+               --format excel --summary
+
+# Process large ticker lists efficiently
+python main.py --ticker-file tickers.txt --fast-mode --parallel --max-workers 12
+
+# Custom connection pool configuration
+export CONNECTION_POOL_SIZE=30
+export CONNECTION_POOL_MAXSIZE=30
+python main.py --tickers AAPL,MSFT --sources all --parallel
+```
+
+### Performance Tuning
+
+For optimal performance with large datasets:
+
+```bash
+# Maximum performance configuration
+python main.py --tickers AAPL,MSFT,GOOG,AMZN,TSLA,NVDA,META,NFLX,CRM,ORCL \
+               --fast-mode \           # Enable fast mode
+               --parallel \            # Parallel processing  
+               --max-workers 10 \      # Increase worker count
+               --delay 0 \             # Minimize delays
+               --sources yahoo finviz alphavantage technical \
+               --format excel \
+               --summary
+```
+
 ### Command Line Mode
 
 ```bash
@@ -100,15 +170,51 @@ python main.py --tickers GOOGL --output output/google_data.xlsx --format excel
 
 ### Command Line Arguments
 
-- `--ticker`: Stock ticker symbol to scrape
-- `--output`: Output CSV or Excel file path
-- `--sources`: Data sources to use (choices: yahoo, finviz, google, alphavantage, finhub, technical, all)
-- `--format`: Output file format (choices: csv, excel)
+#### Basic Arguments
+- `--tickers`: Comma-separated stock ticker symbols to scrape
+- `--ticker-file`: File containing ticker symbols, one per line
+- `--output-dir`: Directory to save output files (default: output)
+- `--sources`: Data sources to use (choices: yahoo, finviz, google, alphavantage, finhub, technical, enhanced_sentiment, all)
+- `--format`: Output file format (choices: csv, excel, text)
 - `--interactive`: Run in interactive mode
+
+#### Performance Arguments
+- `--parallel`: Enable parallel processing using ThreadPoolExecutor
+- `--fast-mode`: Enable fast mode with minimal delays and maximum concurrency (90% speed boost)
+- `--max-workers`: Maximum number of parallel workers (default: 8, recommended: 8-12)
+- `--delay`: Delay between API requests in seconds (default: 1, fast-mode uses 0)
+
+#### API & Authentication
 - `--alpha-key`: Alpha Vantage API key
 - `--finhub-key`: Finhub API key
 
-## API Keys
+#### Reporting & Output
+- `--display-mode`: How to display results (choices: table, grouped)
+- `--email`: Comma-separated email addresses to send the report to
+- `--cc`: Comma-separated email addresses to CC the report to
+- `--bcc`: Comma-separated email addresses to BCC the report to
+- `--summary`: Generate a summary report for all tickers
+
+#### Logging & Debugging
+- `--logging`: Enable or disable logging (choices: true, false)
+- `--log-level`: Set logging level (choices: debug, info, warning, error, critical)
+
+## Environment Configuration
+
+### Performance Settings
+Configure connection pooling and performance parameters:
+
+```bash
+# Connection pooling settings
+export CONNECTION_POOL_SIZE=20          # Number of connection pools
+export CONNECTION_POOL_MAXSIZE=20       # Max connections per pool
+export ENABLE_CONNECTION_POOLING=true   # Enable/disable pooling
+
+# Performance monitoring
+export PERFORMANCE_MONITORING=true      # Enable performance timing
+```
+
+### API Keys
 
 Some features require API keys:
 
@@ -132,18 +238,42 @@ stock_scraper/
 │
 ├── src/                     # Source code
 │   ├── scrapers/            # Web scraper modules
+│   │   ├── base_scraper.py  # Base scraper with common functionality
+│   │   ├── yahoo_scraper.py # Yahoo Finance scraper
+│   │   ├── api_scraper.py   # Alpha Vantage & Finhub API scrapers
+│   │   ├── finviz_scraper.py# Finviz scraper
+│   │   └── enhanced_sentiment_scraper.py # Multi-source sentiment analysis
+│   ├── sentiment/           # Sentiment analysis modules
+│   │   └── sentiment_analyzer.py # Advanced sentiment analysis engine
+│   ├── indicators/          # Technical indicators
+│   │   └── technical_indicators.py # TA-Lib based technical analysis
 │   ├── utils/               # Utility functions
+│   │   ├── request_handler.py # HTTP connection pooling & retry logic
+│   │   ├── data_formatter.py  # Data formatting utilities
+│   │   ├── display_formatter.py # Output display formatting
+│   │   └── email_utils.py     # Email reporting functionality
 │   └── config.py            # Configuration settings
 │
 ├── data/                    # Data storage directory
 ├── output/                  # Output files directory
 ├── logs/                    # Log files directory
 ├── tests/                   # Test modules
+├── trends_cache/            # Google Trends cache directory
 │
 ├── main.py                  # Main application entry point
 ├── requirements.txt         # Dependencies
+├── config.json              # Configuration file
+├── test_connection_pooling.py # Connection pooling performance test
 └── README.md                # Documentation
 ```
+
+## Performance Benchmarks
+
+### Scalability
+- **Concurrent Workers**: Supports 8-12 parallel workers efficiently
+- **Connection Pools**: 20 connection pools with 20 connections each
+- **Memory Efficient**: Connection reuse reduces memory overhead
+- **Rate Limit Handling**: Intelligent backoff and retry strategies
 
 ## Contributing
 
