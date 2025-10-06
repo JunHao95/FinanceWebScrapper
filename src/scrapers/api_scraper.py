@@ -236,8 +236,6 @@ class FinhubAPIScraper(BaseScraper):
                 
                 response = make_request(price_target_url, timeout=5)
                 result = response.json()
-                print(10*"###")
-                print(f"DEbUG result of finhub price target: {result}")
                 if "targetHigh" in result and "targetLow" in result and "targetMean" in result:
                     data["Analyst Price Target High (Finhub)"] = f"{result['targetHigh']:.2f}"
                     data["Analyst Price Target Low (Finhub)"] = f"{result['targetLow']:.2f}"

@@ -92,8 +92,11 @@ def make_request(url, headers=None, timeout=10, retries=3, use_session=True):
     
     while attempts < retries:
         try:
-            # Call the appropriate request function (session or direct requests)
-            response = request_func(url, headers=headers, timeout=timeout)
+            if use_session:
+                # Merge headers with session headers
+                response = request_func(url, headers=headers, timeout=timeout)
+            else:
+                response = request_func(url, headers=headers, timeout=timeout)
             
             # Check if the request was successful
             if response.status_code == 200:
