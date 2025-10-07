@@ -28,7 +28,7 @@ from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe, save_to_csv, save_to_excel
 from src.utils.display_formatter import print_grouped_metrics, save_formatted_report
 from src.utils.email_utils import send_consolidated_report, parse_email_list
-from src.config import setup_logging
+from src.config import setup_logging, load_config
 from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
 
 def create_temp_file(file_format: str) -> str:
@@ -142,7 +142,7 @@ def load_tickers_from_file(file_path: str) -> List[str]:
         print(f"Error reading ticker file: {str(e)}")
         sys.exit(1)
 
-def run_scrapers_concurrent(ticker: str, sources: list, logger: logging.Logger, alpha_key: str | None = None, finhub_key: str | None = None, delay: int = 1) -> dict:
+def run_scrapers_concurrent(ticker: str, sources: list, logger: logging.Logger, alpha_key: str | None = None, finhub_key: str | None = None, delay: int = 1, config: dict | None = None) -> dict:
     """Run scrapers concurrently for maximum performance
 
     Args:
@@ -208,7 +208,7 @@ def run_scrapers_concurrent(ticker: str, sources: list, logger: logging.Logger, 
     
     if ('all' in sources or 'technical' in sources) and (alpha_key or os.environ.get("ALPHA_VANTAGE_API_KEY")):
         def get_technical_data():
-            tech_indicators = TechnicalIndicators(api_key=alpha_key)
+            tech_indicators = TechnicalIndicators(api_key=alpha_key, config=config or {})
             indicator_data = tech_indicators.get_all_indicators(ticker)
             if "error" not in indicator_data:
                 # Format the indicator data with source labels
@@ -237,17 +237,17 @@ def run_scrapers_concurrent(ticker: str, sources: list, logger: logging.Logger, 
     
     return results
 
-def run_scrapers(ticker: str, sources: list, logger: logging.Logger, alpha_key: str | None = None, finhub_key: str | None = None, delay: int = 1) -> dict:
+def run_scrapers(ticker: str, sources: list, logger: logging.Logger, alpha_key: str | None = None, finhub_key: str | None = None, delay: int = 1, config: dict | None = None) -> dict:
     """Optimized scraper runner with fallback to sequential processing"""
     try:
         # Try concurrent processing first
-        return run_scrapers_concurrent(ticker, sources, logger, alpha_key, finhub_key, delay)
+        return run_scrapers_concurrent(ticker, sources, logger, alpha_key, finhub_key, delay, config)
     except Exception as e:
         # Fallback to sequential processing if concurrent fails
         logger.warning(f"Concurrent processing failed for {ticker}, falling back to sequential: {e}")
-        return run_scrapers_sequential(ticker, sources, logger, alpha_key, finhub_key, delay)
+        return run_scrapers_sequential(ticker, sources, logger, alpha_key, finhub_key, delay, config)
 
-def run_scrapers_sequential(ticker: str, sources: list, logger: logging.Logger, alpha_key: str | None = None, finhub_key: str | None = None, delay: int = 1) -> dict:
+def run_scrapers_sequential(ticker: str, sources: list, logger: logging.Logger, alpha_key: str | None = None, finhub_key: str | None = None, delay: int = 1, config: dict | None = None) -> dict:
     """Original sequential scraper as fallback with optimized delays"""
     results = {"Ticker": ticker, "Data Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     logging_enabled = logger.level <= logging.CRITICAL
@@ -314,7 +314,7 @@ def run_scrapers_sequential(ticker: str, sources: list, logger: logging.Logger, 
         if logging_enabled: 
             logger.info(f"Calculating technical indicators for {ticker}...")
         print(f"Calculating technical indicators for {ticker}...")
-        tech_indicators = TechnicalIndicators(api_key=alpha_key)
+        tech_indicators = TechnicalIndicators(api_key=alpha_key, config=config or {})
         indicator_data = tech_indicators.get_all_indicators(ticker)
         if "error" not in indicator_data:
             formatted_indicators = {}
@@ -482,7 +482,7 @@ def create_summary_report(all_data: dict, cnnMetricData: dict, output_dir: str, 
     print(f"Summary report saved to: {filename}")
     return filename
 
-def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger) -> tuple:
+def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger, config: dict | None = None) -> tuple:
     """
     Process a single ticker with optimizations
     
@@ -510,7 +510,8 @@ def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger
     data = run_scrapers(ticker, args.sources, logger, 
                      alpha_key=args.alpha_key, 
                      finhub_key=args.finhub_key,
-                     delay=delay)
+                     delay=delay,
+                     config=config)
     
     # Skip detailed display in fast mode to save time
     if not (hasattr(args, 'fast_mode') and args.fast_mode):
@@ -551,7 +552,8 @@ def process_all_tickers(
     tickers: List[str],
     CnnMetricData: Dict[str, Any],
     args: argparse.Namespace,
-    logger: logging.Logger
+    logger: logging.Logger,
+    config: dict | None = None
 ) -> Dict[str, Dict[str, Any]]:
     """
     Process all tickers, either sequentially or in parallel
@@ -589,7 +591,7 @@ def process_all_tickers(
         # Process tickers in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all tasks
-            future_to_ticker = {executor.submit(process_ticker, ticker, args, logger): ticker for ticker in tickers}
+            future_to_ticker = {executor.submit(process_ticker, ticker, args, logger, config): ticker for ticker in tickers}
             
             # Process results as they complete with progress tracking
             completed = 0
@@ -616,7 +618,7 @@ def process_all_tickers(
         for i, ticker in enumerate(tickers, 1):
             try:
                 print(f"  📊 Processing {i}/{len(tickers)}: {ticker}")
-                ticker, data, report_path = process_ticker(ticker, args, logger)
+                ticker, data, report_path = process_ticker(ticker, args, logger, config)
                 all_data[ticker] = data
                 all_reports[ticker] = report_path
                 print(f"  ✅ Completed {i}/{len(tickers)}: {ticker}")
@@ -670,6 +672,9 @@ def main() -> None:
     Returns:
         None
     """
+    # Load configuration
+    config = load_config()
+    
     # Setup logging
     logger = setup_logging()
     
@@ -681,6 +686,15 @@ def main() -> None:
     print("  - APIs: Alpha Vantage, Finhub (API keys required)")
     print("  - Technical indicators: Bollinger Bands, Moving Averages, RSI, Volume indicators")
     print("Added metrics: EV/EBITDA, PEG ratio, ROE, ROIC, EPS, and more!")
+    
+    # Display Alpha Vantage configuration if available
+    if config.get('alpha_vantage'):
+        av_config = config['alpha_vantage']
+        print(f"\nAlpha Vantage Configuration:")
+        print(f"  - Mode: {av_config.get('mode', 'time_series_daily')}")
+        print(f"  - Fallback to Yahoo: {av_config.get('fallback_to_yahoo', True)}")
+        print(f"  - Batch size: {av_config.get('batch_size', 100)}")
+        print(f"  - Retry on rate limit: {av_config.get('enable_retry_on_rate_limit', True)}")
     
     args = parse_arguments()
     
@@ -737,7 +751,7 @@ def main() -> None:
         
         for ticker in tickers:
             try:
-                ticker, data, report_path = process_ticker(ticker, args, logger)
+                ticker, data, report_path = process_ticker(ticker, args, logger, config)
                 all_data[ticker] = data
                 all_reports[ticker] = report_path
             except Exception as e:
@@ -810,7 +824,7 @@ def main() -> None:
     print(f"\nAnalyzing {len(tickers)} ticker(s): {', '.join(tickers)}")
     
     # Process all tickers
-    process_all_tickers(tickers, cnnMetricData, args, logger)
+    process_all_tickers(tickers, cnnMetricData, args, logger, config)
     
     # Clean up connection pool after everything is completed
     try:

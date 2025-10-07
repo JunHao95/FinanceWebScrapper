@@ -1,11 +1,35 @@
 """
 Technical Indicators Module for Stock Analysis
+
+This module supports two Alpha Vantage API modes for fetching stock data:
+
+1. TIME_SERIES_DAILY (Free Tier):
+   - Uses Alpha Vantage's TIME_SERIES_DAILY endpoint
+   - Available with free API keys (25 requests/day, 5 requests/minute)
+   - Provides historical daily OHLCV data
+   - Recommended for most users
+
+2. REALTIME_BULK_QUOTES (Premium):
+   - Uses Alpha Vantage's REALTIME_BULK_QUOTES endpoint
+   - Requires premium subscription (600+ requests/minute plans)
+   - Supports up to 100 symbols per request
+   - Provides real-time quote data
+   - Falls back to Yahoo Finance for historical data
+
+Configuration:
+- Set mode in config.json under alpha_vantage.mode
+- Always enable fallback_to_yahoo for reliability
+- Yahoo Finance and Finnhub serve as fallback data sources
+
+Note: The old BATCH_STOCK_QUOTES endpoint referenced in some documentation
+does not exist in Alpha Vantage's API. Use REALTIME_BULK_QUOTES instead.
 """
 import numpy as np
 import pandas as pd
 import requests
 import os
 import logging
+import time
 from datetime import datetime, timedelta
 import yfinance as yf
 from pandas_datareader import data as pdr
@@ -16,22 +40,47 @@ class TechnicalIndicators:
     Class to calculate and retrieve technical indicators for stocks
     """
     
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None, config=None):
         """
         Initialize the technical indicators module
         
         Args:
             api_key (str): Alpha Vantage API key. If None, will try to get from ALPHA_VANTAGE_API_KEY environment variable
+            config (dict): Configuration options for Alpha Vantage mode and settings
         """
         self.api_key = api_key or os.environ.get("ALPHA_VANTAGE_API_KEY")
         self.logger = logging.getLogger(self.__class__.__name__)
         
+        # Load configuration with defaults
+        self.config = config or {}
+        self.alpha_vantage_config = self.config.get('alpha_vantage', {})
+        
+        # Configuration options
+        self.mode = self.alpha_vantage_config.get('mode', 'time_series_daily')
+        self.fallback_to_yahoo = self.alpha_vantage_config.get('fallback_to_yahoo', True)
+        self.batch_size = self.alpha_vantage_config.get('batch_size', 100)
+        self.enable_retry_on_rate_limit = self.alpha_vantage_config.get('enable_retry_on_rate_limit', True)
+        
         if not self.api_key:
             self.logger.warning("Alpha Vantage API key not provided. Set ALPHA_VANTAGE_API_KEY environment variable.")
+            
+        self.logger.info(f"Initialized with mode: {self.mode}, fallback_to_yahoo: {self.fallback_to_yahoo}")
+        
+        # Mode validation and helpful error messages
+        valid_modes = ['realtime_bulk_quotes', 'time_series_daily']
+        if self.mode not in valid_modes:
+            self.logger.warning(f"Invalid mode '{self.mode}'. Using 'time_series_daily' as default.")
+            self.mode = 'time_series_daily'
+        
+        # Provide helpful information about API modes
+        if self.mode == 'realtime_bulk_quotes':
+            self.logger.info("Using REALTIME_BULK_QUOTES mode - requires premium Alpha Vantage subscription")
+        else:
+            self.logger.info("Using TIME_SERIES_DAILY mode - available with free Alpha Vantage tier")
     
     def get_historical_data(self, ticker: str, days: int = 100) -> pd.DataFrame:
         """
-        Retrieve historical price data for a ticker with optimized fallback strategy.
+        Retrieve historical price data for a ticker with configurable Alpha Vantage mode.
 
         Args:
             ticker (str): Stock ticker symbol.
@@ -40,24 +89,35 @@ class TechnicalIndicators:
         Returns:
             pandas.DataFrame: DataFrame containing the historical data.
         """
-        if not self.api_key:
-            self.logger.error("Alpha Vantage API key not available. Cannot fetch historical data.")
-            return pd.DataFrame()
-
+        # Choose strategy based on configuration
+        if self.mode == 'realtime_bulk_quotes' and self.api_key:
+            self.logger.info(f"Using realtime bulk quotes mode for {ticker}")
+            df = self._fetch_with_realtime_bulk_quotes(ticker, days)
+            if not df.empty:
+                return df
             
-        # 1. Try Alpha Vantage
-        self.logger.info("Yahoo Finance failed, trying Alpha Vantage API...")
-        df = self._fetch_alpha_vantage_data(ticker, days)
-        if not df.empty:
-            return df
+            # If bulk quotes fail and fallback is enabled, try time series
+            if self.fallback_to_yahoo:
+                self.logger.info(f"Realtime bulk quotes failed for {ticker}, falling back to time series")
+                df = self._fetch_with_time_series(ticker, days)
+                if not df.empty:
+                    return df
         
-        # 2. Try Yahoo Finance if Alpha Vantage does not work
-        df = self._fetch_yahoo_finance_data(ticker, days)
-        if not df.empty:
-            return df
+        elif self.mode == 'time_series_daily' and self.api_key:
+            self.logger.info(f"Using time series daily mode for {ticker}")
+            df = self._fetch_with_time_series(ticker, days)
+            if not df.empty:
+                return df
         
-        # 3. Try Finnhub as last backup
-        self.logger.info("Alpha Vantage failed, trying Finnhub API...")
+        # Fallback to Yahoo Finance if Alpha Vantage fails or no API key
+        if self.fallback_to_yahoo:
+            self.logger.info(f"Alpha Vantage failed or not configured, trying Yahoo Finance for {ticker}")
+            df = self._fetch_yahoo_finance_data(ticker, days)
+            if not df.empty:
+                return df
+        
+        # Try Finnhub as last backup
+        self.logger.info("Yahoo Finance failed, trying Finnhub API...")
         df = self._fetch_finnhub_data(ticker, days)
         if not df.empty:
             return df
@@ -65,38 +125,218 @@ class TechnicalIndicators:
         # If all APIs fail
         self.logger.error("All APIs failed. Unable to fetch historical data.")
         return pd.DataFrame()
-
-    def _fetch_alpha_vantage_data(self, ticker: str, days: int) -> pd.DataFrame:
+    
+    def _fetch_with_realtime_bulk_quotes(self, ticker: str, days: int) -> pd.DataFrame:
         """
-        Fetch historical data from Alpha Vantage API.
-
+        Fetch data using Alpha Vantage realtime bulk quotes (current data only).
+        For historical data, will supplement with Yahoo Finance.
+        
+        Args:
+            ticker (str): Stock ticker symbol.
+            days (int): Number of days (used for fallback to Yahoo Finance).
+            
+        Returns:
+            pandas.DataFrame: DataFrame containing the data.
+        """
+        # Get current quote via realtime bulk API
+        bulk_data = self.fetch_realtime_bulk_alpha_vantage_quotes([ticker])
+        
+        if bulk_data and ticker in bulk_data:
+            current_quote = bulk_data[ticker]
+            
+            # For technical analysis, we need historical data
+            # Use Yahoo Finance to get historical data and update latest price
+            self.logger.info(f"Got current quote for {ticker}, fetching historical data from Yahoo Finance")
+            df = self._fetch_yahoo_finance_data(ticker, days)
+            
+            if not df.empty:
+                # Update the most recent price with Alpha Vantage data
+                latest_date = df.index[0]
+                df.loc[latest_date, 'close'] = current_quote['price']
+                df.loc[latest_date, 'volume'] = current_quote['volume']
+                # Keep other OHLC values from Yahoo Finance for historical context
+                
+                self.logger.info(f"Successfully combined Alpha Vantage current price with Yahoo Finance historical data for {ticker}")
+                return df
+        
+        return pd.DataFrame()
+    
+    def _fetch_with_time_series(self, ticker: str, days: int) -> pd.DataFrame:
+        """
+        Fetch data using Alpha Vantage time series daily.
+        
         Args:
             ticker (str): Stock ticker symbol.
             days (int): Number of days of historical data to fetch.
-
+            
         Returns:
-            pandas.DataFrame: DataFrame containing the historical data.
+            pandas.DataFrame: DataFrame containing the data.
         """
-        url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={self.api_key}"
-        self.logger.info(f"Fetching data from Alpha Vantage: {url}")
-
         try:
-            response = make_request(url, timeout=10)
+            url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={self.api_key}"
+            self.logger.info(f"Fetching time series data from Alpha Vantage for {ticker}")
+            
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
             data = response.json()
-
-            if "Error Message" in data:
-                self.logger.error(f"Alpha Vantage API error: {data['Error Message']}")
-                return pd.DataFrame()
-
-            if "Time Series (Daily)" not in data:
+            
+            # Check for rate limit message
+            if 'Note' in data and 'rate limit' in data['Note'].lower():
+                self.logger.warning(f"Alpha Vantage rate limit hit for {ticker}")
+                if self.enable_retry_on_rate_limit:
+                    self.logger.info(f"Rate limit detected, checking if reset occurred...")
+                    time.sleep(2)  # Brief pause
+                    response = requests.get(url, timeout=30)
+                    data = response.json()
+                    if 'Time Series (Daily)' not in data:
+                        self.logger.error(f"Rate limit still active for {ticker}")
+                        return pd.DataFrame()
+                else:
+                    return pd.DataFrame()
+            
+            if 'Time Series (Daily)' in data:
+                time_series = data['Time Series (Daily)']
+                df_data = []
+                for date_str, values in time_series.items():
+                    df_data.append({
+                        'Date': pd.to_datetime(date_str),
+                        'open': float(values['1. open']),
+                        'high': float(values['2. high']),
+                        'low': float(values['3. low']),
+                        'close': float(values['4. close']),
+                        'volume': int(values['5. volume'])
+                    })
+                
+                df = pd.DataFrame(df_data)
+                df.set_index('Date', inplace=True)
+                df.sort_index(ascending=False, inplace=True)
+                
+                # Limit to requested days
+                df = df.head(days)
+                
+                return df if len(df) > 0 else pd.DataFrame()
+            
+            else:
                 self.logger.error(f"No time series data returned from Alpha Vantage. Response: {data}")
                 return pd.DataFrame()
-
-            return self._convert_alpha_vantage_to_dataframe(data["Time Series (Daily)"], days)
-
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Alpha Vantage API request failed: {str(e)}")
+                
+        except Exception as e:
+            self.logger.error(f"Alpha Vantage time series API error: {str(e)}")
             return pd.DataFrame()
+
+    def fetch_realtime_bulk_alpha_vantage_quotes(self, symbols):
+        """Fetch current quotes for multiple symbols using the realtime bulk quotes API"""
+        try:
+            # Join symbols with commas (max 100 symbols)
+            symbol_list = ','.join(symbols[:100])  # Limit to 100 symbols
+            url = f"https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol={symbol_list}&apikey={self.api_key}"
+            
+            self.logger.info(f"Fetching realtime bulk quotes from Alpha Vantage for {len(symbols)} symbols")
+            
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Check for rate limit
+            if 'Note' in data and 'rate limit' in data['Note'].lower():
+                self.logger.error(f"Alpha Vantage rate limit hit for realtime bulk request")
+                return None
+            
+            # Check for premium function error
+            if 'Error Message' in data and 'premium' in data['Error Message'].lower():
+                self.logger.error(f"REALTIME_BULK_QUOTES requires premium subscription: {data['Error Message']}")
+                return None
+            
+            # Check for function error
+            if 'Error Message' in data:
+                self.logger.error(f"Alpha Vantage API error: {data['Error Message']}")
+                return None
+            
+            if 'data' in data:
+                quotes_data = {}
+                for quote in data['data']:
+                    symbol = quote['symbol']
+                    quotes_data[symbol] = {
+                        'price': float(quote['price']),
+                        'volume': int(quote['volume']) if quote['volume'] and quote['volume'] != 'N/A' else 0,
+                        'timestamp': quote['timestamp']
+                    }
+                self.logger.info(f"Successfully fetched realtime bulk quotes for {len(quotes_data)} symbols")
+                return quotes_data
+            else:
+                self.logger.error(f"No realtime bulk quotes returned. Response: {data}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Alpha Vantage realtime bulk API error: {str(e)}")
+            return None
+
+    def get_bulk_data_for_multiple_symbols(self, symbols):
+        """
+        Fetch data for multiple symbols using the configured mode.
+        
+        Args:
+            symbols (list): List of stock ticker symbols.
+            
+        Returns:
+            dict: Dictionary with symbol as key and DataFrame as value.
+        """
+        results = {}
+        
+        if self.mode == 'realtime_bulk_quotes' and self.api_key:
+            self.logger.info(f"Fetching bulk data for {len(symbols)} symbols using realtime bulk quotes")
+            
+            # Split symbols into batches
+            batches = [symbols[i:i + self.batch_size] for i in range(0, len(symbols), self.batch_size)]
+            
+            for batch in batches:
+                bulk_data = self.fetch_realtime_bulk_alpha_vantage_quotes(batch)
+                
+                if bulk_data:
+                    # For each symbol in the batch, get historical data and update with current price
+                    for symbol in batch:
+                        if symbol in bulk_data:
+                            if self.fallback_to_yahoo:
+                                # Get historical data from Yahoo Finance
+                                df = self._fetch_yahoo_finance_data(symbol, 100)
+                                if not df.empty:
+                                    # Update latest price with Alpha Vantage data
+                                    current_quote = bulk_data[symbol]
+                                    latest_date = df.index[0]
+                                    df.loc[latest_date, 'close'] = current_quote['price']
+                                    df.loc[latest_date, 'volume'] = current_quote['volume']
+                                    results[symbol] = df
+                                else:
+                                    # Create minimal DataFrame with current data only
+                                    current_quote = bulk_data[symbol]
+                                    df = pd.DataFrame({
+                                        'close': [current_quote['price']],
+                                        'volume': [current_quote['volume']],
+                                        'open': [current_quote['price']],
+                                        'high': [current_quote['price']],
+                                        'low': [current_quote['price']]
+                                    }, index=[pd.to_datetime(current_quote['timestamp'])])
+                                    results[symbol] = df
+                        else:
+                            # If symbol not in bulk response, try individual fetch
+                            df = self.get_historical_data(symbol)
+                            if not df.empty:
+                                results[symbol] = df
+                else:
+                    # If bulk request failed, fall back to individual requests
+                    for symbol in batch:
+                        df = self.get_historical_data(symbol)
+                        if not df.empty:
+                            results[symbol] = df
+        else:
+            # Use individual requests for each symbol
+            for symbol in symbols:
+                df = self.get_historical_data(symbol)
+                if not df.empty:
+                    results[symbol] = df
+        
+        self.logger.info(f"Successfully fetched data for {len(results)} out of {len(symbols)} symbols")
+        return results
     def _fetch_finnhub_data(self, ticker: str, days: int) -> pd.DataFrame:
         """
         Fetch historical data from Finnhub API.
@@ -156,7 +396,7 @@ class TechnicalIndicators:
         df = df.astype(float)
         df.sort_index(ascending=False, inplace=True)
         df = df.head(days)
-        df.fillna(method='ffill', inplace=True)
+        df = df.ffill()  # Forward fill NaN values
         return df
 
     def _fetch_yahoo_finance_data(self, ticker: str, days: int) -> pd.DataFrame:
@@ -176,61 +416,24 @@ class TechnicalIndicators:
             self.logger.info(f"Fetching data from Yahoo Finance for {ticker} from {start_date} to {end_date}.")
 
             df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'), auto_adjust=False)
-            if df.empty:
+            if df is None or df.empty:
                 self.logger.warning(f"No data returned from Yahoo Finance for {ticker}.")
                 return pd.DataFrame()
 
             # Rename columns to match the standard format
-            df.rename(columns={
+            df = df.rename(columns={
                 'Open': 'open',
                 'High': 'high',
                 'Low': 'low',
                 'Close': 'close',
                 'Volume': 'volume'
-            }, inplace=True)
-            df.sort_index(ascending=False, inplace=True)
+            })
+            df = df.sort_index(ascending=False)
             return df
 
         except Exception as e:
             self.logger.error(f"Yahoo Finance API request failed for {ticker}: {str(e)}")
             return pd.DataFrame()
-        
-    def _fetch_google_finance_data(self, ticker: str, days: int) -> pd.DataFrame:
-        """
-        Fetch historical data from Google Finance.
-
-        Args:
-            ticker (str): Stock ticker symbol.
-            days (int): Number of days of historical data to fetch.
-
-        Returns:
-            pandas.DataFrame: DataFrame containing the historical data.
-        """
-        try:
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
-            self.logger.info(f"Fetching data from Google Finance for {ticker} from {start_date} to {end_date}.")
-
-            df = pdr.get_data_google(ticker, start=start_date, end=end_date)
-            if df.empty:
-                self.logger.warning(f"No data returned from Google Finance for {ticker}.")
-                return pd.DataFrame()
-
-            # Rename columns to match the standard format
-            df.rename(columns={
-                'Open': 'open',
-                'High': 'high',
-                'Low': 'low',
-                'Close': 'close',
-                'Volume': 'volume'
-            }, inplace=True)
-            df.sort_index(ascending=False, inplace=True)
-            return df
-
-        except Exception as e:
-            self.logger.error(f"Google Finance API request failed for {ticker}: {str(e)}")
-            return pd.DataFrame()
-        
     def _convert_finnhub_to_dataframe(self, data: dict) -> pd.DataFrame:
         """
         Convert Finnhub API data to a DataFrame.
@@ -271,7 +474,7 @@ class TechnicalIndicators:
             if len(df) < window:
                 self.logger.warning(f"Not enough data for Bollinger Bands calculation: {len(df)} < {window}")
                 return {}
-            if df['close'].isnull().all().item():
+            if df['close'].isnull().all():
                 self.logger.warning("No valid close price data available for Bollinger Bands.")
                 return {}
                 
@@ -335,7 +538,7 @@ class TechnicalIndicators:
         """
         if df.empty:
             return {}
-        if df['close'].isnull().all().item():
+        if df['close'].isnull().all():
             self.logger.warning("No valid close price data available for Moving Averages.")
             return {}
         try:
@@ -380,7 +583,7 @@ class TechnicalIndicators:
             
             # Determine crossover signals
             signals = {}
-            current_close = df['close'].iloc[0].squeeze()
+            current_close = df['close'].iloc[0]
             
             for window in ma_windows:
                 if f"MA{window}" in mas:
@@ -414,7 +617,7 @@ class TechnicalIndicators:
         """
         if df.empty or len(df) < window + 1:
             return {}
-        if df['close'].isnull().all().item():
+        if df['close'].isnull().all():
             self.logger.warning("No valid close price data available for RSI.")
             return {}
             
@@ -666,7 +869,7 @@ class TechnicalIndicators:
             
         try:
             # Ensure volume data is not NaN
-            if df['volume'].isnull().all().squeeze():
+            if df['volume'].isnull().all():
                 self.logger.warning("No volume data available")
                 return {"Volume Data": "Not Available"}
             
@@ -724,9 +927,9 @@ class TechnicalIndicators:
             # Determine OBV trend
             obv_trend = "Neutral"
             if len(obv_series) > 5:
-                if obv_series.iloc[0] > obv_series.iloc[4].squeeze():
+                if obv_series.iloc[0] > obv_series.iloc[4]:
                     obv_trend = "Bullish"
-                elif obv_series.iloc[0] < obv_series.iloc[4].squeeze():
+                elif obv_series.iloc[0] < obv_series.iloc[4]:
                     obv_trend = "Bearish"
             
             # Add to results
