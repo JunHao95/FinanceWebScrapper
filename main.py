@@ -5,12 +5,14 @@ Stock Data Scraper - Main Application Entry Point
 import os
 import sys
 import argparse
+import json
 from datetime import datetime
 import pandas as pd
 from dotenv import load_dotenv
 import concurrent.futures
 import time
 import logging
+from logging.handlers import RotatingFileHandler
 import tempfile
 from typing import List, Dict, Any, Optional
 # Load environment variables at the start
@@ -28,8 +30,79 @@ from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe, save_to_csv, save_to_excel
 from src.utils.display_formatter import print_grouped_metrics, save_formatted_report
 from src.utils.email_utils import send_consolidated_report, parse_email_list
-from src.config import setup_logging, load_config
 from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
+
+# Configuration constants
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, 'config.json')
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+
+# Ensure logs directory exists
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+def load_config():
+    """
+    Load configuration from config.json file
+    
+    Returns:
+        dict: Configuration dictionary
+    """
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        return config
+    except FileNotFoundError:
+        print(f"Configuration file {CONFIG_FILE} not found. Using default settings.")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"Error parsing configuration file: {e}. Using default settings.")
+        return {}
+
+def setup_logging(log_level=logging.INFO, logging_enabled=True):
+    """
+    Configure logging for the application
+    
+    Args:
+        log_level (int): Logging level
+        logging_enabled (bool): Whether logging is enabled
+    """
+    # Create logger
+    app_logger = logging.getLogger()
+    # Clear any existing handlers
+    for handler in app_logger.handlers[:]:
+        app_logger.removeHandler(handler)
+
+    if not logging_enabled:
+        # Set logging level higher than critical to disable logging
+        app_logger.setLevel(logging.CRITICAL + 1)
+        return app_logger
+    
+    # Normal logging setup
+    app_logger.setLevel(log_level)
+    
+    # Create console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    
+    # Create file handler
+    log_file = os.path.join(LOGS_DIR, 'stock_scraper.log')
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=1024*1024*5, backupCount=5
+    )
+    file_handler.setLevel(log_level)
+    
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+    
+    # Add handlers to logger
+    app_logger.addHandler(console_handler)
+    app_logger.addHandler(file_handler)
+    
+    return app_logger
 
 def create_temp_file(file_format: str) -> str:
     """

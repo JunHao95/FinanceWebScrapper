@@ -420,6 +420,14 @@ class TechnicalIndicators:
                 self.logger.warning(f"No data returned from Yahoo Finance for {ticker}.")
                 return pd.DataFrame()
 
+            # Handle MultiIndex columns (when downloading single ticker, yfinance sometimes returns MultiIndex)
+            if isinstance(df.columns, pd.MultiIndex):
+                # Flatten the MultiIndex columns - take the first level (the price type)
+                df.columns = df.columns.get_level_values(0)
+            
+            # Debug logging to understand data structure
+            self.logger.debug(f"Yahoo Finance data for {ticker} - Shape: {df.shape}, Columns: {df.columns.tolist()}")
+            
             # Rename columns to match the standard format
             df = df.rename(columns={
                 'Open': 'open',
@@ -428,6 +436,20 @@ class TechnicalIndicators:
                 'Close': 'close',
                 'Volume': 'volume'
             })
+            
+            # Ensure we have the expected columns
+            required_columns = ['open', 'high', 'low', 'close', 'volume']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                self.logger.error(f"Missing columns in Yahoo Finance data for {ticker}: {missing_columns}")
+                return pd.DataFrame()
+            
+            # Make sure all columns are proper Series (not DataFrames)
+            for col in required_columns:
+                if isinstance(df[col], pd.DataFrame):
+                    self.logger.warning(f"Column {col} is DataFrame, converting to Series")
+                    df[col] = df[col].squeeze()  # Convert DataFrame to Series
+            
             df = df.sort_index(ascending=False)
             return df
 
@@ -474,7 +496,7 @@ class TechnicalIndicators:
             if len(df) < window:
                 self.logger.warning(f"Not enough data for Bollinger Bands calculation: {len(df)} < {window}")
                 return {}
-            if df['close'].isnull().all():
+            if bool(df['close'].isnull().all()):
                 self.logger.warning("No valid close price data available for Bollinger Bands.")
                 return {}
                 
@@ -493,10 +515,10 @@ class TechnicalIndicators:
                 self.logger.warning("No valid Bollinger Band values found (all NaN).")
                 return {}
 
-            current_middle = middle_band.loc[valid_idx].squeeze()
-            current_upper = upper_band.loc[valid_idx].squeeze()
-            current_lower = lower_band.loc[valid_idx].squeeze()
-            current_close = df['close'].loc[valid_idx].squeeze()
+            current_middle = float(middle_band.loc[valid_idx].squeeze())
+            current_upper = float(upper_band.loc[valid_idx].squeeze())
+            current_lower = float(lower_band.loc[valid_idx].squeeze())
+            current_close = float(df['close'].loc[valid_idx].squeeze())
             # Calculate band width and %B
             band_width = (current_upper - current_lower) / current_middle * 100
             
@@ -538,7 +560,7 @@ class TechnicalIndicators:
         """
         if df.empty:
             return {}
-        if df['close'].isnull().all():
+        if bool(df['close'].isnull().all()):
             self.logger.warning("No valid close price data available for Moving Averages.")
             return {}
         try:
@@ -583,7 +605,7 @@ class TechnicalIndicators:
             
             # Determine crossover signals
             signals = {}
-            current_close = df['close'].iloc[0]
+            current_close = float(df['close'].iloc[-1].squeeze())  # Use latest value and convert to float
             
             for window in ma_windows:
                 if f"MA{window}" in mas:
@@ -617,7 +639,7 @@ class TechnicalIndicators:
         """
         if df.empty or len(df) < window + 1:
             return {}
-        if df['close'].isnull().all():
+        if bool(df['close'].isnull().all()):
             self.logger.warning("No valid close price data available for RSI.")
             return {}
             
@@ -648,14 +670,14 @@ class TechnicalIndicators:
             # Get the most recent valid RSI value
             last_valid = rsi.last_valid_index()
             if last_valid is not None and not np.isnan(rsi.loc[last_valid].squeeze()):
-                current_rsi = round(rsi.loc[last_valid].squeeze(), 2)
+                current_rsi = round(float(rsi.loc[last_valid].squeeze()), 2)
             else:
                 current_rsi = np.nan
             
             # Determine RSI signal
-            if current_rsi > 70:
+            if not np.isnan(current_rsi) and current_rsi > 70:
                 signal = "Overbought"
-            elif current_rsi < 30:
+            elif not np.isnan(current_rsi) and current_rsi < 30:
                 signal = "Oversold"
             else:
                 signal = "Neutral"
@@ -705,17 +727,35 @@ class TechnicalIndicators:
             annualization_factor = period_factors[period]
             
             # Calculate returns based on period
+            # Ensure we're working with the close price series correctly
+            close_prices = df['close']
+            if isinstance(close_prices, pd.DataFrame):
+                close_prices = close_prices.squeeze()
+            
+            # Ensure it's a pandas Series for pct_change calculation
+            if not isinstance(close_prices, pd.Series):
+                self.logger.error("Close prices are not in the expected pandas Series format")
+                return {"Sharpe Ratio": "Data Format Error"}
+            
+            returns_series = None
             if period == 'daily':
-                df['returns'] = df['close'].pct_change()
+                returns_series = close_prices.pct_change()
             elif period == 'weekly':
-                df['returns'] = df['close'].pct_change(5)  # Approximately 5 trading days in a week
+                returns_series = close_prices.pct_change(5)  # Approximately 5 trading days in a week
             elif period == 'monthly':
-                df['returns'] = df['close'].pct_change(21)  # Approximately 21 trading days in a month
+                returns_series = close_prices.pct_change(21)  # Approximately 21 trading days in a month
             elif period == 'annual':
-                df['returns'] = df['close'].pct_change(252)  # Approximately 252 trading days in a year
+                returns_series = close_prices.pct_change(252)  # Approximately 252 trading days in a year
+            
+            if returns_series is None:
+                return {"Sharpe Ratio": "Invalid Period"}
+            
+            # Ensure returns_series is a Series (not DataFrame)
+            if isinstance(returns_series, pd.DataFrame):
+                returns_series = returns_series.squeeze()
             
             # Drop NaN values
-            returns = df['returns'].dropna()
+            returns = returns_series.dropna()
             
             if len(returns) < 2:
                 return {"Sharpe Ratio": "Insufficient Data"}
@@ -869,7 +909,7 @@ class TechnicalIndicators:
             
         try:
             # Ensure volume data is not NaN
-            if df['volume'].isnull().all():
+            if bool(df['volume'].isnull().all()):
                 self.logger.warning("No volume data available")
                 return {"Volume Data": "Not Available"}
             
@@ -883,15 +923,15 @@ class TechnicalIndicators:
             for window in volume_ma_windows:
                 if len(df) >= window:
                     volume_ma = df['volume'].rolling(window=window).mean()
-                    # Safely convert to int with NaN handling
-                    if not np.isnan(volume_ma.iloc[0].squeeze()):
-                        volume_mas[f"Volume MA{window}"] = int(volume_ma.iloc[0].squeeze())
+                    # Safely convert to int with NaN handling - use latest value
+                    if not np.isnan(volume_ma.iloc[-1].squeeze()):
+                        volume_mas[f"Volume MA{window}"] = int(volume_ma.iloc[-1].squeeze())
                     else:
                         volume_mas[f"Volume MA{window}"] = 0
             
-            # Current volume - safely get as int
+            # Current volume - safely get as int (latest value)
             try:
-                current_volume = int(df['volume'].iloc[0].squeeze())
+                current_volume = int(df['volume'].iloc[-1].squeeze())
             except (TypeError, ValueError):
                 current_volume = 0
             
@@ -911,10 +951,14 @@ class TechnicalIndicators:
             # Start with zero OBV and add/subtract volume based on price movement
             obv = [0]
             for i in range(1, len(df)):
-                if df['close'].iloc[i].squeeze() > df['close'].iloc[i-1].squeeze():
-                    obv.append(obv[-1] + safe_volume.iloc[i])
-                elif df['close'].iloc[i].squeeze() < df['close'].iloc[i-1].squeeze():
-                    obv.append(obv[-1] - safe_volume.iloc[i].squeeze())
+                current_price = float(df['close'].iloc[i].squeeze())
+                prev_price = float(df['close'].iloc[i-1].squeeze())
+                current_vol = int(safe_volume.iloc[i].squeeze())
+                
+                if current_price > prev_price:
+                    obv.append(obv[-1] + current_vol)
+                elif current_price < prev_price:
+                    obv.append(obv[-1] - current_vol)
                 else:
                     obv.append(obv[-1])
             
