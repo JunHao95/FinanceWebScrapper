@@ -34,6 +34,7 @@ from datetime import datetime, timedelta
 import yfinance as yf
 from pandas_datareader import data as pdr
 from ..utils.request_handler import make_request
+from ..utils.mongodb_storage import MongoDBStorage
 
 class TechnicalIndicators:
     """
@@ -60,6 +61,24 @@ class TechnicalIndicators:
         self.fallback_to_yahoo = self.alpha_vantage_config.get('fallback_to_yahoo', True)
         self.batch_size = self.alpha_vantage_config.get('batch_size', 100)
         self.enable_retry_on_rate_limit = self.alpha_vantage_config.get('enable_retry_on_rate_limit', True)
+        
+        # MongoDB configuration
+        mongodb_config = self.config.get('mongodb', {})
+        self.enable_mongodb = mongodb_config.get('enabled', True)
+        mongodb_connection = mongodb_config.get('connection_string', 'mongodb://localhost:27017/')
+        mongodb_database = mongodb_config.get('database', 'stock_data')
+        
+        # Initialize MongoDB storage
+        if self.enable_mongodb:
+            try:
+                self.mongodb = MongoDBStorage(mongodb_connection, mongodb_database)
+                self.logger.info("MongoDB storage initialized successfully")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize MongoDB storage: {str(e)}")
+                self.mongodb = None
+        else:
+            self.mongodb = None
+            self.logger.info("MongoDB storage is disabled in configuration")
         
         if not self.api_key:
             self.logger.warning("Alpha Vantage API key not provided. Set ALPHA_VANTAGE_API_KEY environment variable.")
@@ -89,11 +108,15 @@ class TechnicalIndicators:
         Returns:
             pandas.DataFrame: DataFrame containing the historical data.
         """
+        df = pd.DataFrame()
+        
         # Choose strategy based on configuration
         if self.mode == 'realtime_bulk_quotes' and self.api_key:
             self.logger.info(f"Using realtime bulk quotes mode for {ticker}")
             df = self._fetch_with_realtime_bulk_quotes(ticker, days)
             if not df.empty:
+                # Store in MongoDB if enabled
+                self._store_to_mongodb(ticker, df)
                 return df
             
             # If bulk quotes fail and fallback is enabled, try time series
@@ -101,12 +124,16 @@ class TechnicalIndicators:
                 self.logger.info(f"Realtime bulk quotes failed for {ticker}, falling back to time series")
                 df = self._fetch_with_time_series(ticker, days)
                 if not df.empty:
+                    # Store in MongoDB if enabled
+                    self._store_to_mongodb(ticker, df)
                     return df
         
         elif self.mode == 'time_series_daily' and self.api_key:
             self.logger.info(f"Using time series daily mode for {ticker}")
             df = self._fetch_with_time_series(ticker, days)
             if not df.empty:
+                # Store in MongoDB if enabled
+                self._store_to_mongodb(ticker, df)
                 return df
         
         # Fallback to Yahoo Finance if Alpha Vantage fails or no API key
@@ -114,17 +141,35 @@ class TechnicalIndicators:
             self.logger.info(f"Alpha Vantage failed or not configured, trying Yahoo Finance for {ticker}")
             df = self._fetch_yahoo_finance_data(ticker, days)
             if not df.empty:
+                # Store in MongoDB if enabled
+                self._store_to_mongodb(ticker, df)
                 return df
         
         # Try Finnhub as last backup
         self.logger.info("Yahoo Finance failed, trying Finnhub API...")
         df = self._fetch_finnhub_data(ticker, days)
         if not df.empty:
+            # Store in MongoDB if enabled
+            self._store_to_mongodb(ticker, df)
             return df
             
         # If all APIs fail
         self.logger.error("All APIs failed. Unable to fetch historical data.")
         return pd.DataFrame()
+    
+    def _store_to_mongodb(self, ticker: str, df: pd.DataFrame):
+        """
+        Store time series data to MongoDB if enabled
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            df (pandas.DataFrame): DataFrame with historical data
+        """
+        if self.mongodb and not df.empty:
+            try:
+                self.mongodb.store_timeseries_data(ticker, df)
+            except Exception as e:
+                self.logger.warning(f"Failed to store data to MongoDB for {ticker}: {str(e)}")
     
     def _fetch_with_realtime_bulk_quotes(self, ticker: str, days: int) -> pd.DataFrame:
         """

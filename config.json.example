@@ -1,0 +1,27 @@
+{
+  "alpha_vantage": {
+    "mode": "time_series_daily",
+    "fallback_to_yahoo": true,
+    "batch_size": 100,
+    "enable_retry_on_rate_limit": true
+  },
+  "mongodb": {
+    "enabled": true,
+    "connection_string": "mongodb://localhost:27017/",
+    "database": "stock_data",
+    "note": "Set enabled to false to disable MongoDB storage"
+  },
+  "email": {
+    "enabled": false,
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "sender_email": "your-email@gmail.com",
+    "sender_password": "your-app-password",
+    "recipient_email": "recipient@example.com"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/stock_scraper.log",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}

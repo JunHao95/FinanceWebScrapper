@@ -10,6 +10,12 @@ A high-performance Python web scraping application that fetches financial metric
   - 🚀 **Fast Mode**: Minimal delays with optimized concurrent processing 
   - 📈 **Scalable**: Handles multiple tickers efficiently with configurable worker pools
 
+- **Data Persistence**:
+  - 💾 **MongoDB Integration**: Automatic storage of all time series data locally
+  - 🔍 **Queryable History**: Fast retrieval with indexed fields
+  - 🚫 **Deduplication**: Unique indexes prevent duplicate records
+  - 📊 **Analytics Ready**: Data structured for analysis and visualization
+
 - **Multi-Source Data Collection**:
   - Web sources: Yahoo Finance, Finviz, Google Finance
   - APIs: Alpha Vantage, Finhub (API keys required)
@@ -48,13 +54,263 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set API keys (optional but recommended)
+4. Configure MongoDB (optional but recommended)
+```bash
+# Install MongoDB (macOS with Homebrew)
+brew tap mongodb/brew
+brew install mongodb-community
+brew services start mongodb-community
+
+# Or use Docker for mongoDB
+docker run -d -p 27017:27017 --name mongodb mongo:latest
+
+# Verify MongoDB is running
+python check_mongodb.py
+```
+
+5. Set up configuration
+```bash
+# Copy example configuration
+cp config.json.example config.json
+
+# Edit config.json with your settings
+# - MongoDB connection (enabled by default)
+# - Email notifications (optional)
+# - API settings
+```
+
+6. Set API keys (optional but recommended)
 ```bash
 # For Alpha Vantage API
 export ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key_here
 
 # For Finhub API
 export FINHUB_API_KEY=your_finhub_key_here
+```
+
+## MongoDB Storage
+
+All stock time series data is automatically stored in MongoDB for future analysis.
+
+### Features
+- **Automatic Storage**: Data saved during each scraper run
+- **Deduplication**: Unique compound index on (ticker, date) prevents duplicates
+- **Fast Queries**: Indexed fields (ticker, date) for efficient retrieval
+- **Graceful Degradation**: Scraper continues working if MongoDB unavailable
+
+### Configuration
+
+Edit `config.json`:
+```json
+{
+  "mongodb": {
+    "enabled": true,
+    "connection_string": "mongodb://localhost:27017/",
+    "database": "stock_data"
+  }
+}
+```
+
+### Usage
+
+```bash
+# Data is automatically stored when you run the scraper
+python main.py --tickers AAPL,MSFT --sources technical
+
+# Verify stored data
+python check_mongodb.py
+
+# Query data via MongoDB shell
+mongosh stock_data --eval "db.timeseries.find({ticker: 'AAPL'}).sort({date: -1}).limit(5)"
+
+# Query data via Python
+python -c "
+from src.utils.mongodb_storage import MongoDBStorage
+mongodb = MongoDBStorage()
+df = mongodb.get_timeseries_data('AAPL')
+print(df.head())
+mongodb.close()
+"
+```
+
+### Database Schema
+
+**timeseries collection**:
+```javascript
+{
+  ticker: "AAPL",
+  date: ISODate("2025-10-08"),
+  open: 256.53,
+  high: 258.52,
+  low: 256.11,
+  close: 258.24,
+  volume: 15894056,
+  last_updated: ISODate("..."),
+  run_id: "run_20251008_103000"
+}
+```
+
+**Indexes**:
+- Unique compound: `(ticker, date)`
+- Single: `ticker`
+- Single: `date`
+
+### Disabling MongoDB
+
+To run without MongoDB:
+```json
+{
+  "mongodb": {
+    "enabled": false
+  }
+}
+```
+
+### Verifying MongoDB Data Updates
+
+After running `./uat_run_scraper.sh` or `./run_scraper.sh`, follow these steps to verify that new time series data was stored:
+
+#### Method 1: Quick Verification Script
+```bash
+# Run the MongoDB verification script
+python check_mongodb.py
+```
+
+This will show:
+- ✅ Connection status
+- 📊 Total document counts per collection
+- 📈 Sample data from most recent records
+- 📁 Available tickers
+
+#### Method 2: MongoDB Shell Verification
+
+```bash
+# Step 1: Connect to MongoDB
+mongosh stock_data
+
+# Step 2: Check total record count
+db.timeseries.countDocuments({})
+
+# Step 3: View most recent records (sorted by last_updated)
+db.timeseries.find().sort({last_updated: -1}).limit(5).pretty()
+
+# Step 4: Check specific ticker's latest data
+db.timeseries.find({ticker: "AAPL"}).sort({date: -1}).limit(5).pretty()
+
+# Step 5: Count records per ticker
+db.timeseries.aggregate([
+  {$group: {_id: "$ticker", count: {$sum: 1}}},
+  {$sort: {count: -1}}
+])
+
+# Step 6: View records added in last hour
+db.timeseries.find({
+  last_updated: {$gte: new Date(Date.now() - 3600000)}
+}).count()
+```
+
+#### Method 3: Python Verification
+
+```python
+# Create a verification script: verify_updates.py
+from src.utils.mongodb_storage import MongoDBStorage
+from datetime import datetime, timedelta
+
+mongodb = MongoDBStorage()
+
+# Check records updated in last hour
+one_hour_ago = datetime.now() - timedelta(hours=1)
+
+# Get all tickers
+tickers = mongodb.db['timeseries'].distinct('ticker')
+print(f"Total tickers in database: {len(tickers)}")
+print(f"Tickers: {', '.join(sorted(tickers))}")
+
+# Check latest update time for each ticker
+for ticker in sorted(tickers):
+    latest = mongodb.db['timeseries'].find_one(
+        {'ticker': ticker},
+        sort=[('last_updated', -1)]
+    )
+    if latest:
+        print(f"{ticker}: Last updated {latest['last_updated']}, Latest date: {latest['date']}")
+
+mongodb.close()
+```
+
+Run it:
+```bash
+python verify_updates.py
+```
+
+#### Method 4: Before/After Comparison
+
+```bash
+# Step 1: BEFORE running scraper - record current counts
+mongosh stock_data --eval "
+  db.timeseries.aggregate([
+    {$group: {_id: '\$ticker', count: {$sum: 1}}},
+    {$sort: {_id: 1}}
+  ])
+" > before_count.txt
+
+# Step 2: Run your scraper
+./uat_run_scraper.sh
+
+# Step 3: AFTER running scraper - check new counts  
+mongosh stock_data --eval "
+  db.timeseries.aggregate([
+    {$group: {_id: '\$ticker', count: {$sum: 1}}},
+    {$sort: {_id: 1}}
+  ])
+" > after_count.txt
+
+# Step 4: Compare the differences
+diff before_count.txt after_count.txt
+```
+
+#### Method 5: Check Scraper Logs
+
+```bash
+# View logs to confirm MongoDB storage
+tail -f logs/stock_scraper.log | grep -i mongodb
+
+# Look for messages like:
+# "Successfully connected to MongoDB"
+# "Stored X time series records for TICKER"
+# "MongoDB storage initialized successfully"
+```
+
+#### Complete Verification Sequence
+
+```bash
+# 1. Check initial state
+echo "=== BEFORE SCRAPER RUN ==="
+python check_mongodb.py
+
+# 2. Run scraper
+./uat_run_scraper.sh
+
+# 3. Verify updates
+echo "=== AFTER SCRAPER RUN ==="
+python check_mongodb.py
+
+# 4. Check specific ticker's latest date
+mongosh stock_data --eval "
+  db.timeseries.find({ticker: 'AAPL'})
+    .sort({date: -1})
+    .limit(1)
+    .pretty()
+"
+
+# 5. Verify records were updated in last 5 minutes
+mongosh stock_data --eval "
+  var fiveMinutesAgo = new Date(Date.now() - 300000);
+  print('Records updated in last 5 minutes:');
+  print(db.timeseries.countDocuments({
+    last_updated: {$gte: fiveMinutesAgo}
+  }));
+"
 ```
 
 ## Performance Optimizations
@@ -251,7 +507,8 @@ stock_scraper/
 │   │   ├── request_handler.py # HTTP connection pooling & retry logic
 │   │   ├── data_formatter.py  # Data formatting utilities
 │   │   ├── display_formatter.py # Output display formatting
-│   │   └── email_utils.py     # Email reporting functionality
+│   │   ├── email_utils.py     # Email reporting functionality
+│   │   └── mongodb_storage.py # MongoDB storage utility
 │   └── config.py            # Configuration settings
 │
 ├── data/                    # Data storage directory
@@ -261,9 +518,10 @@ stock_scraper/
 ├── trends_cache/            # Google Trends cache directory
 │
 ├── main.py                  # Main application entry point
+├── check_mongodb.py         # MongoDB verification script
 ├── requirements.txt         # Dependencies
-├── config.json              # Configuration file
-├── test_connection_pooling.py # Connection pooling performance test
+├── config.json.example      # Example configuration template
+├── config.json              # Configuration file (gitignored)
 └── README.md                # Documentation
 ```
 
