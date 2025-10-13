@@ -37,6 +37,16 @@ logs/*.log
 .pytest_cache/
 .coverage
 htmlcov/
+test_output/
+
+# Development/debugging scripts
+check_*.py
+verify_*.py
+test_concurrency.py
+*.backup
+
+# macOS system files
+.DS_Store
 
 # Configs
 config.json
