@@ -48,7 +48,7 @@ if not exist "config.json" (
 )
 
 REM Get port from environment or use default
-if "%PORT%"=="" set PORT=5000
+if "%PORT%"=="" set PORT=5173
 
 echo.
 echo ==================================================
