@@ -31,6 +31,7 @@ from src.utils.data_formatter import format_data_as_dataframe, save_to_csv, save
 from src.utils.display_formatter import print_grouped_metrics, save_formatted_report
 from src.utils.email_utils import send_consolidated_report, parse_email_list
 from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
+from src.analytics.financial_analytics import FinancialAnalytics
 
 # Configuration constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -555,6 +556,70 @@ def create_summary_report(all_data: dict, cnnMetricData: dict, output_dir: str, 
     print(f"Summary report saved to: {filename}")
     return filename
 
+def compute_portfolio_analytics(analytics: FinancialAnalytics, tickers: List[str], logger: logging.Logger, days: int = 252) -> Dict[str, Any]:
+    """
+    Compute advanced financial analytics for a portfolio of tickers
+    
+    Args:
+        analytics (FinancialAnalytics): Analytics instance
+        tickers (List[str]): List of ticker symbols
+        logger (logging.Logger): Logger instance
+        days (int): Number of days of historical data (default: 252 for 1 year)
+        
+    Returns:
+        Dict[str, Any]: Dictionary containing analytics results
+    """
+    results = {}
+    
+    try:
+        # 1. Correlation Analysis (requires 2+ tickers)
+        if len(tickers) >= 2:
+            print(f"  📊 Computing correlation analysis...")
+            correlation_result = analytics.correlation_analysis(tickers, days=days)
+            if correlation_result and 'error' not in correlation_result:
+                results['correlation'] = correlation_result
+        
+        # 2. Individual ticker analytics (regression, monte carlo)
+        for ticker in tickers:
+            ticker_analytics = {}
+            
+            # Linear Regression Analysis (vs SPY benchmark)
+            try:
+                print(f"  📈 Computing linear regression for {ticker}...")
+                regression_result = analytics.linear_regression_analysis([ticker], benchmark='SPY', days=days)
+                if regression_result and 'error' not in regression_result:
+                    ticker_analytics['regression'] = regression_result
+            except Exception as e:
+                logger.warning(f"Regression analysis failed for {ticker}: {str(e)}")
+            
+            # Monte Carlo VaR/ES
+            try:
+                print(f"  🎲 Computing Monte Carlo VaR/ES for {ticker}...")
+                mc_result = analytics.monte_carlo_var_es([ticker], days=days, simulations=5000)
+                if mc_result and 'error' not in mc_result:
+                    ticker_analytics['monte_carlo'] = mc_result
+            except Exception as e:
+                logger.warning(f"Monte Carlo analysis failed for {ticker}: {str(e)}")
+            
+            if ticker_analytics:
+                results[ticker] = ticker_analytics
+        
+        # 3. PCA Analysis (if 3+ tickers)
+        if len(tickers) >= 3:
+            try:
+                print(f"  🔍 Computing PCA analysis...")
+                pca_result = analytics.pca_analysis(tickers, days=days, n_components=min(3, len(tickers)))
+                if pca_result and 'error' not in pca_result:
+                    results['pca'] = pca_result
+            except Exception as e:
+                logger.warning(f"PCA analysis failed: {str(e)}")
+        
+    except Exception as e:
+        logger.error(f"Error computing analytics: {str(e)}")
+        results['error'] = str(e)
+    
+    return results
+
 def process_ticker(ticker: str, args: argparse.Namespace, logger: logging.Logger, config: dict | None = None) -> tuple:
     """
     Process a single ticker with optimizations
@@ -700,6 +765,24 @@ def process_all_tickers(
                     logger.error(f"Error processing ticker {ticker}: {str(e)}")
                 print(f"  ❌ Error processing ticker {ticker}: {str(e)}")
     
+    # Add advanced analytics for all tickers
+    analytics_data = {}
+    if len(all_data) >= 1:
+        try:
+            print("\n🔬 Computing Advanced Financial Analytics...")
+            analytics = FinancialAnalytics(config=config)
+            tickers_list = list(all_data.keys())
+            
+            # Compute analytics for the portfolio
+            analytics_data = compute_portfolio_analytics(analytics, tickers_list, logger)
+            
+            if analytics_data:
+                print("  ✅ Analytics computed successfully")
+        except Exception as e:
+            print(f"  ⚠️ Analytics computation skipped: {str(e)}")
+            if logging_enabled:
+                logger.warning(f"Analytics computation failed: {str(e)}")
+    
     # Create summary report if requested
     summary_path: Optional[str] = None
     if args.summary and len(all_data) > 1:
@@ -722,7 +805,8 @@ def process_all_tickers(
             recipients=args.email,
             summary_path=summary_path,
             cc=args.cc,
-            bcc=args.bcc
+            bcc=args.bcc,
+            analytics_data=analytics_data
         )
         
         if success:
@@ -842,6 +926,21 @@ def main() -> None:
             if create_summary:
                 summary_path = create_summary_report(all_data, cnnMetricData, args.output_dir, args.format)
         
+        # Compute analytics for interactive mode
+        analytics_data = {}
+        if len(all_data) >= 1:
+            try:
+                print("\n🔬 Computing Advanced Financial Analytics...")
+                analytics = FinancialAnalytics(config=config)
+                tickers_list = list(all_data.keys())
+                analytics_data = compute_portfolio_analytics(analytics, tickers_list, logger)
+                if analytics_data:
+                    print("  ✅ Analytics computed successfully")
+            except Exception as e:
+                print(f"  ⚠️ Analytics computation skipped: {str(e)}")
+                if logging_enabled:
+                    logger.warning(f"Analytics computation failed: {str(e)}")
+        
         # Ask if user wants to email the report
         send_email = False
         if not (args.email or args.cc or args.bcc):
@@ -873,7 +972,8 @@ def main() -> None:
                     recipients=recipients,
                     summary_path=summary_path,
                     cc=cc,
-                    bcc=bcc
+                    bcc=bcc,
+                    analytics_data=analytics_data
                 )
                 
                 if success:

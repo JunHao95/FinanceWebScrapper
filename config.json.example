@@ -11,6 +11,18 @@
     "database": "stock_data",
     "note": "Set enabled to false to disable MongoDB storage"
   },
+  "portfolio": {
+    "note": "Define your portfolio allocations here. Weights will be auto-normalized to sum to 1.0",
+    "allocations": {
+      "AAPL": 0.30,
+      "MSFT": 0.25,
+      "GOOG": 0.20,
+      "AMZN": 0.15,
+      "NVDA": 0.10
+    },
+    "total_value": 100000,
+    "note2": "total_value is optional and used only for display purposes in reports"
+  },
   "email": {
     "enabled": false,
     "smtp_server": "smtp.gmail.com",

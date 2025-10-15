@@ -403,6 +403,129 @@
         .badge-info {
             background: #3498db;
         }
+
+        #allocationSection {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .allocation-input-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .allocation-input-row label {
+            flex: 0 0 100px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .allocation-input-row input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .allocation-input-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #allocationTotal {
+            padding: 10px;
+            background: #e8f0fe;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #allocationTotal.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        #allocationTotal.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Tab Styles */
+        .tabs-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-button:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Tab badges for counts */
+        .tab-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-left: 8px;
+            font-weight: bold;
+        }
+
+        .tab-button:not(.active) .tab-badge {
+            background: #999;
+        }
     </style>
 </head>
 <body>
@@ -478,6 +601,27 @@
                     >
                 </div>
 
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="customAllocation" onchange="toggleAllocationSection()">
+                        Customize Portfolio Allocation
+                    </label>
+                    <small>Override default equal-weight allocation with custom percentages</small>
+                </div>
+
+                <div id="allocationSection" style="display: none;">
+                    <div class="form-group">
+                        <label>Portfolio Allocation (%)</label>
+                        <small>Enter the percentage allocation for each ticker (total should equal 100%). Leave blank for equal weights.</small>
+                        <div id="allocationInputs" style="margin-top: 15px;">
+                            <!-- Dynamic allocation inputs will be added here -->
+                        </div>
+                        <div id="allocationTotal" style="margin-top: 10px; font-weight: bold; color: #667eea;">
+                            Total: 0%
+                        </div>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button type="submit">🔍 Analyze Stocks</button>
                     <button type="button" class="secondary-btn" onclick="clearForm()">🔄 Clear</button>
@@ -495,9 +639,36 @@
         <div class="results-section" id="resultsSection">
             <h2>📈 Analysis Results</h2>
             
-            <div id="cnnMetrics"></div>
-            
-            <div id="tickerResults"></div>
+            <!-- Tabs Navigation -->
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab('stocks')" id="stocksTab">
+                        📊 Stock Details
+                        <span class="tab-badge" id="stocksCount">0</span>
+                    </button>
+                    <button class="tab-button" onclick="switchTab('analytics')" id="analyticsTab">
+                        📈 Advanced Analytics
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Contents -->
+            <div id="tabContents">
+                <!-- Tab 1: Stock Details -->
+                <div class="tab-content active" id="stocksTabContent">
+                    <div id="cnnMetrics"></div>
+                    <div id="tickerResults"></div>
+                </div>
+
+                <!-- Tab 2: Advanced Analytics -->
+                <div class="tab-content" id="analyticsTabContent">
+                    <div id="analyticsResults"></div>
+                    <div id="noAnalyticsMessage" style="display: none; text-align: center; padding: 40px; color: #666;">
+                        <h3>📊 No Analytics Available</h3>
+                        <p style="margin-top: 10px;">Advanced analytics will appear here when you analyze 2 or more stocks with portfolio allocation enabled.</p>
+                    </div>
+                </div>
+            </div>
 
             <div class="email-section">
                 <h3>📧 Email Report</h3>
@@ -534,6 +705,134 @@
         let currentData = null;
         let currentCnnData = null;
         let currentTickers = [];
+        let currentAnalytics = {};
+
+        // Tab switching function
+        function switchTab(tabName) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            if (tabName === 'stocks') {
+                document.getElementById('stocksTab').classList.add('active');
+                document.getElementById('stocksTabContent').classList.add('active');
+            } else if (tabName === 'analytics') {
+                document.getElementById('analyticsTab').classList.add('active');
+                document.getElementById('analyticsTabContent').classList.add('active');
+            }
+        }
+
+        // Toggle allocation section
+        function toggleAllocationSection() {
+            const checkbox = document.getElementById('customAllocation');
+            const section = document.getElementById('allocationSection');
+            section.style.display = checkbox.checked ? 'block' : 'none';
+            
+            if (checkbox.checked) {
+                updateAllocationInputs();
+            }
+        }
+
+        // Update allocation inputs based on current tickers
+        function updateAllocationInputs() {
+            const tickersInput = document.getElementById('tickers').value;
+            const tickers = tickersInput
+                .split(',')
+                .map(t => t.trim().toUpperCase())
+                .filter(t => t.length > 0);
+            
+            const container = document.getElementById('allocationInputs');
+            container.innerHTML = '';
+            
+            if (tickers.length === 0) {
+                container.innerHTML = '<p style="color: #666;">Enter tickers first to set allocations</p>';
+                return;
+            }
+            
+            tickers.forEach(ticker => {
+                const row = document.createElement('div');
+                row.className = 'allocation-input-row';
+                
+                row.innerHTML = `
+                    <label for="alloc-${ticker}">${ticker}:</label>
+                    <input 
+                        type="number" 
+                        id="alloc-${ticker}" 
+                        name="alloc-${ticker}"
+                        placeholder="e.g., 25"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        oninput="calculateAllocationTotal()"
+                    >
+                `;
+                
+                container.appendChild(row);
+            });
+            
+            calculateAllocationTotal();
+        }
+
+        // Calculate and display total allocation
+        function calculateAllocationTotal() {
+            const inputs = document.querySelectorAll('[id^="alloc-"]');
+            let total = 0;
+            
+            inputs.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            const totalDiv = document.getElementById('allocationTotal');
+            totalDiv.textContent = `Total: ${total.toFixed(1)}%`;
+            
+            // Color code based on validity
+            totalDiv.classList.remove('valid', 'invalid');
+            if (Math.abs(total - 100) < 0.1 && total > 0) {
+                totalDiv.classList.add('valid');
+            } else if (total > 0) {
+                totalDiv.classList.add('invalid');
+            }
+        }
+
+        // Get portfolio allocation from form
+        function getPortfolioAllocation() {
+            const customAllocation = document.getElementById('customAllocation').checked;
+            if (!customAllocation) {
+                return null; // Use default from config
+            }
+            
+            const tickersInput = document.getElementById('tickers').value;
+            const tickers = tickersInput
+                .split(',')
+                .map(t => t.trim().toUpperCase())
+                .filter(t => t.length > 0);
+            
+            const allocations = {};
+            let hasAnyAllocation = false;
+            
+            tickers.forEach(ticker => {
+                const input = document.getElementById(`alloc-${ticker}`);
+                if (input && input.value) {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value) && value > 0) {
+                        allocations[ticker] = value / 100; // Convert percentage to decimal
+                        hasAnyAllocation = true;
+                    }
+                }
+            });
+            
+            return hasAnyAllocation ? allocations : null;
+        }
+
+        // Update allocation inputs when tickers change
+        document.getElementById('tickers').addEventListener('input', function() {
+            const customAllocation = document.getElementById('customAllocation').checked;
+            if (customAllocation) {
+                updateAllocationInputs();
+            }
+        });
 
         // Handle source checkboxes
         document.getElementById('source-all').addEventListener('change', function() {
@@ -581,23 +880,47 @@
             const alphaKey = document.getElementById('alphaKey').value.trim();
             const finhubKey = document.getElementById('finhubKey').value.trim();
 
+            // Get portfolio allocation
+            const portfolioAllocation = getPortfolioAllocation();
+            
+            // Validate allocation if provided
+            if (portfolioAllocation) {
+                let total = 0;
+                for (const weight of Object.values(portfolioAllocation)) {
+                    total += weight;
+                }
+                
+                // Allow some tolerance for rounding errors
+                if (Math.abs(total - 1.0) > 0.01) {
+                    showAlert('Portfolio allocation must sum to 100%. Current total: ' + (total * 100).toFixed(1) + '%', 'error');
+                    return;
+                }
+            }
+
             // Show loading
             document.getElementById('loadingSection').classList.add('active');
             document.getElementById('resultsSection').classList.remove('active');
             hideAlert();
 
             try {
+                const requestBody = {
+                    tickers: tickers,
+                    sources: sources,
+                    alpha_key: alphaKey || undefined,
+                    finhub_key: finhubKey || undefined
+                };
+                
+                // Add portfolio allocation if provided
+                if (portfolioAllocation) {
+                    requestBody.portfolio_allocation = portfolioAllocation;
+                }
+
                 const response = await fetch('/api/scrape', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        tickers: tickers,
-                        sources: sources,
-                        alpha_key: alphaKey || undefined,
-                        finhub_key: finhubKey || undefined
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const result = await response.json();
@@ -606,6 +929,8 @@
                     currentData = result.data;
                     currentCnnData = result.cnn_data;
                     currentTickers = tickers;
+                    currentAnalytics = result.analytics_data || {};
+                    
                     displayResults(result);
                     showAlert('Data scraped successfully!', 'success');
                 } else {
@@ -619,18 +944,40 @@
         });
 
         function displayResults(result) {
-            // Display CNN metrics
+            // Update stock count badge
+            const stockCount = Object.keys(result.data).length;
+            document.getElementById('stocksCount').textContent = stockCount;
+            
+            // Display CNN metrics in Tab 1
             displayCnnMetrics(result.cnn_data);
 
-            // Display ticker results
+            // Clear ticker results first
             const tickerResultsDiv = document.getElementById('tickerResults');
             tickerResultsDiv.innerHTML = '';
 
+            // Display analytics in Tab 2 (portfolio-level)
+            if (result.analytics_data && Object.keys(result.analytics_data).length > 0) {
+                displayAnalytics(result.analytics_data);
+                // Show analytics tab and hide "no analytics" message
+                document.getElementById('noAnalyticsMessage').style.display = 'none';
+                // Add visual indicator that analytics are ready
+                const analyticsTabBtn = document.getElementById('analyticsTab');
+                analyticsTabBtn.innerHTML = '📈 Advanced Analytics <span style="background: #28a745; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; margin-left: 5px;">✓ Ready</span>';
+            } else {
+                // Show "no analytics" message
+                document.getElementById('analyticsResults').innerHTML = '';
+                document.getElementById('noAnalyticsMessage').style.display = 'block';
+            }
+
+            // Display ticker results in Tab 1
             for (const [ticker, data] of Object.entries(result.data)) {
                 const tickerDiv = createTickerCard(ticker, data);
                 tickerResultsDiv.appendChild(tickerDiv);
             }
-
+            
+            // Make sure we're on the stocks tab by default
+            switchTab('stocks');
+            
             document.getElementById('resultsSection').classList.add('active');
         }
 
@@ -651,6 +998,297 @@
             
             html += '</div>';
             cnnDiv.innerHTML = html;
+        }
+
+        function displayAnalytics(analyticsData) {
+            const analyticsResultsDiv = document.getElementById('analyticsResults');
+            
+            // Create analytics section
+            const analyticsDiv = document.createElement('div');
+            analyticsDiv.className = 'analytics-section';
+            analyticsDiv.style.marginBottom = '30px';
+            
+            let html = '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px;">';
+            html += '<h2 style="margin: 0 0 20px 0; font-size: 1.8rem;">📈 Advanced Financial Analytics</h2>';
+            html += '<p style="margin: 0; opacity: 0.9;">Portfolio-level risk metrics and statistical analysis</p>';
+            html += '</div>';
+            
+            // Correlation Analysis (portfolio-level)
+            if (analyticsData.correlation) {
+                html += '<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #667eea;">';
+                html += '<h3 style="color: #667eea; margin-bottom: 15px;">📊 Correlation Analysis</h3>';
+                
+                const corrData = analyticsData.correlation;
+                // Backend returns "Correlation Matrix" with capitals and space
+                const corrMatrix = corrData["Correlation Matrix"] || corrData.correlation_matrix;
+                
+                if (corrMatrix) {
+                    html += '<div style="margin-bottom: 15px;">';
+                    html += '<h4 style="color: #555; margin-bottom: 10px;">Correlation Matrix:</h4>';
+                    html += '<div style="overflow-x: auto;">';
+                    html += '<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">';
+                    
+                    const tickers = Object.keys(corrMatrix);
+                    html += '<tr><th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;"></th>';
+                    tickers.forEach(t => {
+                        html += `<th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;">${t}</th>`;
+                    });
+                    html += '</tr>';
+                    
+                    tickers.forEach(ticker1 => {
+                        html += `<tr><th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;">${ticker1}</th>`;
+                        tickers.forEach(ticker2 => {
+                            const value = corrMatrix[ticker1][ticker2];
+                            const color = value > 0.7 ? '#27ae60' : value < 0.3 ? '#e74c3c' : '#3498db';
+                            html += `<td style="padding: 12px; text-align: center; border: 1px solid #ddd; background: ${color}20; color: ${color}; font-weight: bold;">${value ? value.toFixed(3) : '--'}</td>`;
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</table></div></div>';
+                }
+                
+                // Backend returns "Summary Statistics" with capitals and space
+                const summaryStats = corrData["Summary Statistics"] || corrData.summary;
+                
+                if (summaryStats) {
+                    html += '<div style="background: white; padding: 15px; border-radius: 8px;">';
+                    html += '<h4 style="color: #555; margin-bottom: 10px;">Summary Statistics:</h4>';
+                    html += `<p><strong>Average Correlation:</strong> ${summaryStats["Average Correlation"] ? summaryStats["Average Correlation"].toFixed(3) : (summaryStats.average_correlation ? summaryStats.average_correlation.toFixed(3) : '--')}</p>`;
+                    html += `<p><strong>Diversification Score:</strong> ${summaryStats["Diversification Score"] ? summaryStats["Diversification Score"].toFixed(3) : (summaryStats.diversification_score ? summaryStats.diversification_score.toFixed(3) : '--')}</p>`;
+                    html += `<p><strong>Number of Assets:</strong> ${summaryStats["Number of Assets"] || summaryStats.number_of_assets || '--'}</p>`;
+                    html += `<p><strong>Method:</strong> ${summaryStats["Method"] || summaryStats.method || '--'}</p>`;
+                    html += '</div>';
+                }
+                
+                // Display interpretation if available
+                if (corrData["Interpretation"]) {
+                    html += '<div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #3498db;">';
+                    html += `<p style="margin: 0; color: #2c3e50;"><strong>💡 Analysis:</strong> ${corrData["Interpretation"]}</p>`;
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+            }
+            
+            // PCA Analysis
+            if (analyticsData.pca) {
+                html += '<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #764ba2;">';
+                html += '<h3 style="color: #764ba2; margin-bottom: 15px;">🔬 Principal Component Analysis (PCA)</h3>';
+                
+                const pcaData = analyticsData.pca;
+                if (pcaData.explained_variance) {
+                    html += '<div style="margin-bottom: 15px; background: white; padding: 15px; border-radius: 8px;">';
+                    html += '<h4 style="color: #555; margin-bottom: 10px;">Explained Variance by Component:</h4>';
+                    pcaData.explained_variance.forEach((variance, idx) => {
+                        const percentage = (variance * 100).toFixed(2);
+                        html += `<div style="margin-bottom: 10px;">`;
+                        html += `<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">`;
+                        html += `<span><strong>PC${idx + 1}:</strong></span>`;
+                        html += `<span><strong>${percentage}%</strong></span>`;
+                        html += `</div>`;
+                        html += `<div style="background: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden;">`;
+                        html += `<div style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: ${percentage}%;"></div>`;
+                        html += `</div>`;
+                        html += `</div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                if (pcaData.cumulative_variance) {
+                    html += '<div style="background: white; padding: 15px; border-radius: 8px;">';
+                    html += '<h4 style="color: #555; margin-bottom: 10px;">Cumulative Variance:</h4>';
+                    html += `<p><strong>Total Variance Explained:</strong> ${(pcaData.cumulative_variance[pcaData.cumulative_variance.length - 1] * 100).toFixed(2)}%</p>`;
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            
+            // Individual Ticker Analytics
+            for (const [ticker, tickerAnalytics] of Object.entries(analyticsData)) {
+                if (ticker === 'correlation' || ticker === 'pca') continue;
+                
+                html += `<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #00b894;">`;
+                html += `<h3 style="color: #00b894; margin-bottom: 15px;">📍 ${ticker} Analytics</h3>`;
+                
+                // Regression Analysis
+                if (tickerAnalytics.regression) {
+                    const reg = tickerAnalytics.regression;
+                    
+                    // Backend nests data under ticker name: reg.AAPL.Beta instead of reg.Beta
+                    // Extract the nested ticker data
+                    const tickerReg = reg[ticker] || reg;
+                    
+                    html += '<div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">';
+                    html += '<h4 style="color: #555; margin-bottom: 10px;">📈 Regression vs SPY:</h4>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+                    
+                    // Backend returns "Beta" (capital B)
+                    const beta = tickerReg.Beta || tickerReg.beta;
+                    if (beta !== undefined) {
+                        const betaColor = beta > 1 ? '#e74c3c' : beta < 0.8 ? '#27ae60' : '#3498db';
+                        html += `<div style="padding: 12px; background: ${betaColor}15; border-radius: 8px; border: 2px solid ${betaColor};">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Beta</div>`;
+                        html += `<div style="color: ${betaColor}; font-size: 1.5rem; font-weight: bold;">${beta.toFixed(3)}</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">${beta > 1 ? 'More volatile' : beta < 1 ? 'Less volatile' : 'Similar to'} SPY</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Backend returns "Alpha (Annualized)" or "Alpha (Daily)"
+                    const alpha = tickerReg["Alpha (Annualized)"] || tickerReg["Alpha (Daily)"] || tickerReg.alpha;
+                    if (alpha !== undefined) {
+                        const alphaColor = alpha > 0 ? '#27ae60' : '#e74c3c';
+                        html += `<div style="padding: 12px; background: ${alphaColor}15; border-radius: 8px; border: 2px solid ${alphaColor};">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Alpha (Annual)</div>`;
+                        html += `<div style="color: ${alphaColor}; font-size: 1.5rem; font-weight: bold;">${(alpha * 100).toFixed(2)}%</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">${alpha > 0 ? 'Outperforming' : 'Underperforming'}</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Backend returns "R-Squared" (with hyphen and capitals)
+                    const rSquared = tickerReg["R-Squared"] || tickerReg.r_squared || tickerReg.R_Squared;
+                    if (rSquared !== undefined) {
+                        html += `<div style="padding: 12px; background: #3498db15; border-radius: 8px; border: 2px solid #3498db;">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">R²</div>`;
+                        html += `<div style="color: #3498db; font-size: 1.5rem; font-weight: bold;">${(rSquared * 100).toFixed(1)}%</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">Fit quality</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Add Correlation if available
+                    const correlation = tickerReg.Correlation || tickerReg.correlation;
+                    if (correlation !== undefined) {
+                        const corrColor = Math.abs(correlation) > 0.7 ? '#27ae60' : Math.abs(correlation) < 0.3 ? '#e74c3c' : '#3498db';
+                        html += `<div style="padding: 12px; background: ${corrColor}15; border-radius: 8px; border: 2px solid ${corrColor};">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Correlation</div>`;
+                        html += `<div style="color: ${corrColor}; font-size: 1.5rem; font-weight: bold;">${correlation.toFixed(3)}</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">vs SPY</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    html += '</div>';
+                    
+                    // Add interpretation if available (check both nested and top-level)
+                    const interpretation = tickerReg.Interpretation || reg.Interpretation;
+                    if (interpretation) {
+                        html += '<div style="background: #e8f4fd; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #3498db;">';
+                        html += `<p style="margin: 0; color: #2c3e50; font-size: 0.9rem;"><strong>💡 Analysis:</strong> ${interpretation}</p>`;
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                }
+                
+                // Monte Carlo VaR/ES
+                if (tickerAnalytics.monte_carlo) {
+                    const mc = tickerAnalytics.monte_carlo;
+                    html += '<div style="background: white; padding: 15px; border-radius: 8px;">';
+                    html += '<h4 style="color: #555; margin-bottom: 10px;">🎲 Monte Carlo Risk Metrics:</h4>';
+                    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+                    
+                    // Extract VaR from nested structure
+                    let var95Value = null;
+                    let es95Value = null;
+                    let var99Value = null;
+                    
+                    // Backend returns nested structure: mc.VaR["VaR at 95.0% confidence"].Percentage
+                    if (mc.VaR) {
+                        const var95Key = Object.keys(mc.VaR).find(k => k.includes('95'));
+                        if (var95Key && mc.VaR[var95Key]) {
+                            var95Value = mc.VaR[var95Key].Percentage / 100; // Convert to decimal
+                        }
+                    }
+                    
+                    if (mc["Expected Shortfall"]) {
+                        const es95Key = Object.keys(mc["Expected Shortfall"]).find(k => k.includes('95'));
+                        if (es95Key && mc["Expected Shortfall"][es95Key]) {
+                            es95Value = mc["Expected Shortfall"][es95Key].Percentage / 100; // Convert to decimal
+                        }
+                    }
+                    
+                    // Check for simple structure (fallback for backwards compatibility)
+                    if (!var95Value && mc.var_95 !== undefined) var95Value = mc.var_95;
+                    if (!es95Value && mc.es_95 !== undefined) es95Value = mc.es_95;
+                    if (mc.var_99 !== undefined) var99Value = mc.var_99;
+                    
+                    if (var95Value !== null) {
+                        html += `<div style="padding: 12px; background: #e74c3c15; border-radius: 8px; border: 2px solid #e74c3c;">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">VaR (95%)</div>`;
+                        html += `<div style="color: #e74c3c; font-size: 1.5rem; font-weight: bold;">${(var95Value * 100).toFixed(2)}%</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">Max loss (1 day)</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    if (es95Value !== null) {
+                        html += `<div style="padding: 12px; background: #c0392b15; border-radius: 8px; border: 2px solid #c0392b;">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">ES (95%)</div>`;
+                        html += `<div style="color: #c0392b; font-size: 1.5rem; font-weight: bold;">${(es95Value * 100).toFixed(2)}%</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">Expected loss beyond VaR</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    if (var99Value !== null) {
+                        html += `<div style="padding: 12px; background: #8e44ad15; border-radius: 8px; border: 2px solid #8e44ad;">`;
+                        html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">VaR (99%)</div>`;
+                        html += `<div style="color: #8e44ad; font-size: 1.5rem; font-weight: bold;">${(var99Value * 100).toFixed(2)}%</div>`;
+                        html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">Extreme scenario</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Add Portfolio Statistics if available
+                    if (mc["Portfolio Statistics"]) {
+                        const stats = mc["Portfolio Statistics"];
+                        if (stats["Annualized Return"] !== undefined) {
+                            const returnColor = stats["Annualized Return"] > 0 ? '#27ae60' : '#e74c3c';
+                            html += `<div style="padding: 12px; background: ${returnColor}15; border-radius: 8px; border: 2px solid ${returnColor};">`;
+                            html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Expected Return</div>`;
+                            html += `<div style="color: ${returnColor}; font-size: 1.5rem; font-weight: bold;">${stats["Annualized Return"].toFixed(2)}%</div>`;
+                            html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">Annualized</div>`;
+                            html += `</div>`;
+                        }
+                        
+                        if (stats["Annualized Volatility"] !== undefined) {
+                            html += `<div style="padding: 12px; background: #f39c1215; border-radius: 8px; border: 2px solid #f39c12;">`;
+                            html += `<div style="color: #666; font-size: 0.9rem; margin-bottom: 5px;">Volatility</div>`;
+                            html += `<div style="color: #f39c12; font-size: 1.5rem; font-weight: bold;">${stats["Annualized Volatility"].toFixed(2)}%</div>`;
+                            html += `<div style="color: #666; font-size: 0.8rem; margin-top: 5px;">Annualized</div>`;
+                            html += `</div>`;
+                        }
+                    }
+                    
+                    html += '</div>';
+                    
+                    // Add Scenario Analysis if available
+                    if (mc["Scenario Analysis"]) {
+                        const scenario = mc["Scenario Analysis"];
+                        html += '<div style="background: #e8f4fd; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #3498db;">';
+                        html += '<h5 style="color: #2c3e50; margin: 0 0 10px 0;">Scenario Analysis:</h5>';
+                        html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.85rem;">';
+                        if (scenario["Probability of Loss"] !== undefined) {
+                            html += `<div><strong>Probability of Loss:</strong> ${scenario["Probability of Loss"].toFixed(1)}%</div>`;
+                        }
+                        if (scenario["Best Case"] !== undefined) {
+                            html += `<div><strong>Best Case:</strong> $${scenario["Best Case"].toLocaleString()}</div>`;
+                        }
+                        if (scenario["Worst Case"] !== undefined) {
+                            html += `<div><strong>Worst Case:</strong> $${scenario["Worst Case"].toLocaleString()}</div>`;
+                        }
+                        if (scenario["Expected Value"] !== undefined) {
+                            html += `<div><strong>Expected Value:</strong> $${scenario["Expected Value"].toLocaleString()}</div>`;
+                        }
+                        html += '</div></div>';
+                    }
+                    
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+            }
+            
+            analyticsDiv.innerHTML = html;
+            
+            // Clear and append to analytics results div (Tab 2)
+            analyticsResultsDiv.innerHTML = '';
+            analyticsResultsDiv.appendChild(analyticsDiv);
         }
 
         function createTickerCard(ticker, data) {
@@ -753,6 +1391,7 @@
                         tickers: currentTickers,
                         data: currentData,
                         cnn_data: currentCnnData,
+                        analytics_data: currentAnalytics,
                         email: email,
                         cc: cc || undefined,
                         bcc: bcc || undefined
@@ -797,8 +1436,10 @@
             currentData = null;
             currentCnnData = null;
             currentTickers = [];
+            currentAnalytics = {};
             hideAlert();
         }
+        
     </script>
 </body>
 </html>

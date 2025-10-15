@@ -32,6 +32,7 @@ from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe
 from src.utils.email_utils import send_consolidated_report
 from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
+from src.analytics.financial_analytics import FinancialAnalytics
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -212,7 +213,8 @@ def scrape_data():
         "tickers": ["AAPL", "MSFT"],
         "sources": ["all"],
         "alpha_key": "optional",
-        "finhub_key": "optional"
+        "finhub_key": "optional",
+        "portfolio_allocation": {"AAPL": 0.6, "MSFT": 0.4}  // optional
     }
     
     Returns:
@@ -231,6 +233,7 @@ def scrape_data():
         sources = data.get('sources', ['all'])
         alpha_key = data.get('alpha_key') or os.environ.get("ALPHA_VANTAGE_API_KEY")
         finhub_key = data.get('finhub_key') or os.environ.get("FINHUB_API_KEY")
+        portfolio_allocation = data.get('portfolio_allocation')  # Get custom allocation from UI
         
         # Validate tickers
         if not isinstance(tickers, list) or len(tickers) == 0:
@@ -271,19 +274,87 @@ def scrape_data():
                     try:
                         ticker, ticker_data = future.result(timeout=90)  # 90 second timeout per ticker
                         all_data[ticker] = ticker_data
+                        logger.info(f"Successfully processed ticker: {ticker}")
                     except concurrent.futures.TimeoutError:
                         logger.error(f"Timeout processing ticker")
                     except Exception as e:
                         logger.error(f"Error processing ticker: {str(e)}")
         
+        logger.info(f"Total tickers processed: {len(all_data)}, Tickers: {list(all_data.keys())}")
+        
+        # Compute analytics for the portfolio
+        analytics_data = {}
+        if len(all_data) >= 1:
+            try:
+                logger.info("Computing advanced financial analytics...")
+                
+                # Create a modified config with custom allocation if provided
+                analytics_config = copy.deepcopy(config) if config else {}
+                if portfolio_allocation:
+                    logger.info(f"Using custom portfolio allocation from UI: {portfolio_allocation}")
+                    if 'portfolio' not in analytics_config:
+                        analytics_config['portfolio'] = {}
+                    analytics_config['portfolio']['allocations'] = portfolio_allocation
+                
+                analytics = FinancialAnalytics(config=analytics_config)
+                tickers_list = list(all_data.keys())
+                
+                # Correlation Analysis (requires 2+ tickers)
+                if len(tickers_list) >= 2:
+                    try:
+                        correlation_result = analytics.correlation_analysis(tickers_list, days=252)
+                        if correlation_result and 'error' not in correlation_result:
+                            analytics_data['correlation'] = correlation_result
+                    except Exception as e:
+                        logger.warning(f"Correlation analysis failed: {str(e)}")
+                
+                # Individual ticker analytics
+                for ticker in tickers_list:
+                    ticker_analytics = {}
+                    
+                    try:
+                        regression_result = analytics.linear_regression_analysis([ticker], benchmark='SPY', days=252)
+                        if regression_result and 'error' not in regression_result:
+                            ticker_analytics['regression'] = regression_result
+                    except Exception as e:
+                        logger.warning(f"Regression analysis failed for {ticker}: {str(e)}")
+                    
+                    try:
+                        mc_result = analytics.monte_carlo_var_es([ticker], days=252, simulations=5000)
+                        if mc_result and 'error' not in mc_result:
+                            ticker_analytics['monte_carlo'] = mc_result
+                    except Exception as e:
+                        logger.warning(f"Monte Carlo analysis failed for {ticker}: {str(e)}")
+                    
+                    if ticker_analytics:
+                        analytics_data[ticker] = ticker_analytics
+                
+                # PCA Analysis (if 3+ tickers)
+                if len(tickers_list) >= 3:
+                    try:
+                        pca_result = analytics.pca_analysis(tickers_list, days=252, n_components=min(3, len(tickers_list)))
+                        if pca_result and 'error' not in pca_result:
+                            analytics_data['pca'] = pca_result
+                    except Exception as e:
+                        logger.warning(f"PCA analysis failed: {str(e)}")
+                
+            except Exception as e:
+                logger.error(f"Analytics computation error: {str(e)}")
+        
+        # Log what analytics were computed
+        logger.info(f"Analytics computed: {list(analytics_data.keys())}")
+        logger.info(f"Analytics data size: {len(str(analytics_data))} chars")
+        
         # Convert numpy types to native Python types for JSON serialization
         all_data = convert_numpy_types(all_data)
         cnn_data = convert_numpy_types(cnn_data)
+        analytics_data = convert_numpy_types(analytics_data)
         
         return jsonify({
             'success': True,
             'data': all_data,
             'cnn_data': cnn_data,
+            'analytics_data': analytics_data,
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
     
@@ -324,6 +395,7 @@ def send_email_report():
         tickers = payload.get('tickers', [])
         all_data = payload.get('data', {})
         cnn_data = payload.get('cnn_data', {})
+        analytics_data = payload.get('analytics_data', {})
         recipients = payload.get('email')
         cc = payload.get('cc')
         bcc = payload.get('bcc')
@@ -363,7 +435,8 @@ def send_email_report():
             cnnMetricData=cnn_data,
             recipients=recipients,
             cc=cc,
-            bcc=bcc
+            bcc=bcc,
+            analytics_data=analytics_data
         )
         
         # Clean up temporary files

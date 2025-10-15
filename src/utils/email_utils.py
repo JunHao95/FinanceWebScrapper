@@ -824,7 +824,180 @@ def generate_combined_analysis_section(all_data):
     
     return html
 
-def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None):
+def generate_analytics_section(analytics_data, tickers):
+    """
+    Generate HTML section for advanced financial analytics
+    
+    Args:
+        analytics_data (dict): Dictionary containing analytics results
+        tickers (list): List of ticker symbols
+        
+    Returns:
+        str: HTML string for analytics section
+    """
+    if not analytics_data or not tickers:
+        return ""
+    
+    html = """
+    <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); padding: 25px; border-radius: 15px; margin: 20px 0;">
+        <h3 style="color: white; text-align: center; margin-bottom: 20px; font-size: 24px;">🔬 Advanced Financial Analytics</h3>
+    """
+    
+    # Correlation Analysis
+    if 'correlation' in analytics_data:
+        corr = analytics_data['correlation']
+        summary = corr.get('Summary Statistics', {})
+        
+        html += """
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+            <h4 style="color: #ff6b6b; margin: 0 0 15px 0;">📊 Portfolio Correlation Analysis</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        """
+        
+        avg_corr = summary.get('Average Correlation', 0)
+        max_corr = summary.get('Maximum Correlation', 0)
+        diversification = summary.get('Diversification Score', 0)
+        
+        html += f"""
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Average Correlation</div>
+                    <div style="font-size: 24px; font-weight: bold; color: {'#27ae60' if abs(avg_corr) < 0.5 else '#f39c12' if abs(avg_corr) < 0.7 else '#e74c3c'};">{avg_corr:.3f}</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Max Correlation</div>
+                    <div style="font-size: 24px; font-weight: bold; color: {'#27ae60' if abs(max_corr) < 0.7 else '#f39c12' if abs(max_corr) < 0.85 else '#e74c3c'};">{max_corr:.3f}</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Diversification Score</div>
+                    <div style="font-size: 24px; font-weight: bold; color: {'#27ae60' if diversification >= 7 else '#f39c12' if diversification >= 5 else '#e74c3c'};">{diversification:.1f}/10</div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #e8f4f8; border-left: 4px solid #3498db; border-radius: 4px;">
+                <p style="margin: 0; font-size: 13px; color: #2c3e50;">
+                    💡 <strong>Interpretation:</strong> Lower correlation = Better diversification. 
+                    Score above 7/10 indicates excellent portfolio diversification.
+                </p>
+            </div>
+        </div>
+        """
+    
+    # Individual Ticker Analytics
+    for ticker in tickers:
+        if ticker not in analytics_data:
+            continue
+        
+        ticker_data = analytics_data[ticker]
+        
+        html += f"""
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+            <h4 style="color: #ff6b6b; margin: 0 0 15px 0;">
+                📈 {ticker} - Advanced Metrics
+            </h4>
+        """
+        
+        # Regression Analysis
+        if 'regression' in ticker_data:
+            reg = ticker_data['regression'].get(ticker, {})
+            beta = reg.get('Beta', 0)
+            alpha = reg.get('Alpha (%)', 0)
+            r_squared = reg.get('R-squared', 0)
+            
+            html += f"""
+            <div style="margin-bottom: 15px;">
+                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 14px;">🎯 Linear Regression (vs SPY)</h5>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 11px; color: #666;">Beta</div>
+                        <div style="font-size: 20px; font-weight: bold; color: {'#27ae60' if 0.8 <= beta <= 1.2 else '#f39c12'};">{beta:.3f}</div>
+                        <div style="font-size: 10px; color: #7f8c8d;">{'Low Risk' if beta < 0.8 else 'Market Risk' if beta <= 1.2 else 'High Risk'}</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 11px; color: #666;">Alpha (%)</div>
+                        <div style="font-size: 20px; font-weight: bold; color: {'#27ae60' if alpha > 0 else '#e74c3c'};">{alpha:.2f}%</div>
+                        <div style="font-size: 10px; color: #7f8c8d;">{'Outperforming' if alpha > 0 else 'Underperforming'}</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 11px; color: #666;">R-squared</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #3498db;">{r_squared:.3f}</div>
+                        <div style="font-size: 10px; color: #7f8c8d;">{int(r_squared*100)}% explained</div>
+                    </div>
+                </div>
+            </div>
+            """
+        
+        # Monte Carlo VaR/ES
+        if 'monte_carlo' in ticker_data:
+            mc = ticker_data['monte_carlo'].get(ticker, {})
+            var_95 = mc.get('VaR_95%', 0)
+            var_99 = mc.get('VaR_99%', 0)
+            es_95 = mc.get('ES_95%', 0)
+            
+            html += f"""
+            <div style="margin-bottom: 15px;">
+                <h5 style="color: #34495e; margin: 0 0 10px 0; font-size: 14px;">🎲 Risk Metrics (Monte Carlo Simulation)</h5>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div style="padding: 10px; background: #fff3cd; border-radius: 5px; text-align: center; border: 1px solid #ffc107;">
+                        <div style="font-size: 11px; color: #856404;">VaR (95%)</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #856404;">{var_95:.2f}%</div>
+                        <div style="font-size: 10px; color: #856404;">Max loss (95% conf)</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8d7da; border-radius: 5px; text-align: center; border: 1px solid #f5c6cb;">
+                        <div style="font-size: 11px; color: #721c24;">VaR (99%)</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #721c24;">{var_99:.2f}%</div>
+                        <div style="font-size: 10px; color: #721c24;">Max loss (99% conf)</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8d7da; border-radius: 5px; text-align: center; border: 1px solid #f5c6cb;">
+                        <div style="font-size: 11px; color: #721c24;">ES (95%)</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #721c24;">{es_95:.2f}%</div>
+                        <div style="font-size: 10px; color: #721c24;">Avg tail loss</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; padding: 8px; background: #e8f4f8; border-left: 3px solid #3498db; border-radius: 3px;">
+                    <p style="margin: 0; font-size: 11px; color: #2c3e50;">
+                        💡 VaR = Maximum expected loss | ES = Average loss beyond VaR
+                    </p>
+                </div>
+            </div>
+            """
+        
+        html += "</div>"
+    
+    # PCA Analysis
+    if 'pca' in analytics_data:
+        pca = analytics_data['pca']
+        variance = pca.get('Explained Variance Ratio', [])
+        cumulative = pca.get('Cumulative Variance', [])
+        
+        if variance and cumulative:
+            html += """
+            <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+                <h4 style="color: #ff6b6b; margin: 0 0 15px 0;">🔍 PCA - Dimensionality Analysis</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+            """
+            
+            for i, (var, cum) in enumerate(zip(variance[:3], cumulative[:3]), 1):
+                html += f"""
+                    <div style="padding: 12px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 11px; color: #666;">PC{i}</div>
+                        <div style="font-size: 18px; font-weight: bold; color: #3498db;">{var:.1f}%</div>
+                        <div style="font-size: 10px; color: #7f8c8d;">Cumulative: {cum:.1f}%</div>
+                    </div>
+                """
+            
+            html += """
+                </div>
+                <div style="margin-top: 10px; padding: 8px; background: #e8f4f8; border-left: 3px solid #3498db; border-radius: 3px;">
+                    <p style="margin: 0; font-size: 11px; color: #2c3e50;">
+                        💡 Principal components capture portfolio variance. Higher % = more information captured.
+                    </p>
+                </div>
+            </div>
+            """
+    
+    html += "</div>"
+    return html
+
+def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None, analytics_data=None):
     """
     Send a visually enhanced consolidated report email for multiple stocks using modern HTML formatting.
     
@@ -837,6 +1010,7 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
         summary_path (str, optional): Path to summary report file
         cc (str or list, optional): CC email address(es)
         bcc (str or list, optional): BCC email address(es)
+        analytics_data (dict, optional): Dictionary with advanced analytics results
         
     Returns:
         bool: True if successful, False otherwise
@@ -848,6 +1022,8 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     metrics_table_html = generate_enhanced_html_metrics_table(all_data)
     # Use the new combined analysis section instead of separate technical and sentiment
     combined_analysis_html = generate_combined_analysis_section(all_data)
+    # Generate analytics section if data is available
+    analytics_html = generate_analytics_section(analytics_data, tickers) if analytics_data else ""
     # Create the enhanced HTML email body
         
     email_body = f"""
@@ -923,6 +1099,9 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
                 
                 <!-- Combined Technical and Sentiment Analysis -->
                 {combined_analysis_html}
+                
+                <!-- Advanced Analytics Section -->
+                {analytics_html}
                 
                 <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0; color: white; text-align: center;">
                     <h3 style="margin: 0 0 15px 0; font-size: 24px;">📎 Detailed Reports Attached</h3>

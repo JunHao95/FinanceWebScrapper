@@ -1,12 +1,18 @@
 # Stock Financial Metrics Scraper
 
-A high-performance Python application for scraping and analyzing financial metrics from multiple sources. Available as both a **CLI tool** and a **web application** for maximum flexibility.
+A high-performance Python application for scraping and analyzing financial metrics from multiple sources. Available as both a **CLI tool** and a **web application** with **advanced analytics**.
 
 ## 🌟 Key Features
 
 ### Dual Interface
 - **🖥️ CLI Mode**: Scriptable, automated analysis for scheduled runs
-- **🌐 Web Interface**: Interactive browser-based analysis with beautiful visualizations
+- **🌐 Web Interface**: Interactive browser-based analysis with tabbed interface
+
+### Tabbed Web Interface (NEW!)
+- **Tab 1 - Stock Details**: Individual stock metrics, technical indicators, CNN Fear & Greed Index
+- **Tab 2 - Advanced Analytics**: Portfolio-level analytics with visual indicators showing when data is ready
+- **Smart Organization**: Clean separation of individual stock data vs. portfolio analysis
+- **Stock Count Badge**: Shows number of analyzed stocks at a glance
 
 ### High-Performance Architecture
 - ⚡ **Parallel Processing**: Concurrent data fetching with ThreadPoolExecutor
@@ -19,6 +25,12 @@ A high-performance Python application for scraping and analyzing financial metri
 - **APIs**: Alpha Vantage, Finhub (API keys required)
 - **Enhanced Sentiment**: News, Reddit, Google Trends analysis
 - **Technical Indicators**: RSI, Moving Averages, Bollinger Bands, MACD
+
+### Advanced Financial Analytics
+- **Linear Regression**: Beta, Alpha analysis vs SPY benchmark (returns-based)
+- **Correlation Analysis**: Correlation matrix and diversification metrics
+- **Monte Carlo Simulation**: Value at Risk (VaR) and Expected Shortfall (ES)
+- **PCA Analysis**: Portfolio structure with data standardization (3+ stocks)
 
 ### Data Persistence
 - 💾 **MongoDB Integration**: Automatic local storage of time series data (CLI only)
@@ -33,6 +45,464 @@ A high-performance Python application for scraping and analyzing financial metri
 - Interactive web visualizations
 
 ---
+
+## 📦 Installation
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/yourusername/stock-scraper.git
+cd stock-scraper
+```
+
+### 2. Create Virtual Environment
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure MongoDB (Optional for CLI)
+```bash
+# Install MongoDB (macOS with Homebrew)
+brew tap mongodb/brew
+brew install mongodb-community
+brew services start mongodb-community
+
+# Or use Docker
+docker run -d -p 27017:27017 --name mongodb mongo:latest
+
+# Verify MongoDB is running
+python check_mongodb.py
+```
+
+### 5. Set Up Configuration
+
+#### For CLI Mode
+Copy and configure `config.json`:
+```bash
+cp config.json.example config.json
+# Edit config.json with your settings
+```
+
+#### For Web Mode
+Create a `.env` file:
+```bash
+# API Keys (optional but recommended)
+ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+FINHUB_API_KEY=your_finhub_key
+
+# Email Configuration (required for email feature)
+FINANCE_SENDER_EMAIL=your-email@gmail.com
+FINANCE_SENDER_PASSWORD=your-app-password
+FINANCE_SMTP_SERVER=smtp.gmail.com
+FINANCE_SMTP_PORT=587
+FINANCE_USE_TLS=True
+
+# Flask Configuration
+SECRET_KEY=your-secret-key-here
+FLASK_DEBUG=False
+PORT=5173
+```
+
+**Gmail Users**: Use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password.
+
+---
+
+## 🚀 Quick Start
+
+### Web Application (Recommended for Interactive Use)
+
+#### Starting the Web App
+
+**Unix/macOS/Linux:**
+```bash
+chmod +x start_webapp.sh
+./start_webapp.sh
+```
+
+**Windows:**
+```cmd
+start_webapp.bat
+```
+
+**Direct Python:**
+```bash
+python webapp.py
+```
+
+The web app will start on `http://localhost:5173`
+
+#### Using the Tabbed Web Interface
+
+1. **Enter Ticker Symbols**
+   - Type stock ticker symbols separated by commas
+   - Example: `AAPL, MSFT, GOOG, TSLA`
+
+2. **Select Data Sources**
+   - Choose "All Sources" for comprehensive analysis, or
+   - Select specific sources (Yahoo Finance, Finviz, etc.)
+   - Enable "Technical Indicators" and "Sentiment Analysis"
+
+3. **Add API Keys** (Optional)
+   - Enter Alpha Vantage API key for technical indicators
+   - Enter Finhub API key for additional data
+   - Or set them in `.env` file
+
+4. **Analyze & View Results**
+   - Click "🔍 Analyze Stocks"
+   - Results appear in **Tab 1: Stock Details** (default view)
+     - Shows CNN Fear & Greed Index
+     - Individual stock cards with all metrics
+     - Stock count badge shows number of analyzed stocks
+   
+5. **View Advanced Analytics**
+   - Click **"� Advanced Analytics"** tab to see:
+     - Correlation Analysis (2+ stocks)
+     - PCA Analysis (3+ stocks)
+     - Linear Regression vs SPY (per ticker)
+     - Monte Carlo VaR/ES Analysis (per ticker)
+   - Green "✓ Ready" badge appears when analytics are available
+
+6. **Email Report** (Optional)
+   - Enter email address
+   - Add CC/BCC recipients if needed
+   - Click "📨 Send Email Report"
+
+### CLI Mode (For Automation & Scripting)
+
+#### Basic Usage
+```bash
+# Single ticker
+python main.py --tickers AAPL
+
+# Multiple tickers
+python main.py --tickers AAPL,MSFT,GOOG
+
+# From file
+python main.py --ticker-file tickers.txt
+
+# With analytics
+python main.py --tickers AAPL,MSFT,GOOG --all
+
+# Email report
+python main.py --tickers AAPL,MSFT --email recipient@example.com
+```
+
+#### Performance Mode
+```bash
+# Fast mode with parallel processing
+python main.py --tickers AAPL,MSFT,GOOG --fast-mode --parallel
+
+# High-performance with custom workers
+python main.py --tickers AAPL,MSFT,GOOG,AMZN,TSLA,NVDA,META,NFLX \
+  --fast-mode --parallel --max-workers 8 --format excel --summary
+```
+
+#### Automated Runs
+```bash
+./run_scraper.sh        # Production run
+./uat_run_scraper.sh    # UAT/Testing run
+```
+
+---
+
+## 🎯 Understanding the Tabbed Interface
+
+### Tab 1: 📊 Stock Details (Default View)
+**Shows individual stock information:**
+- CNN Fear & Greed Index (market sentiment)
+- Stock count badge (e.g., "2" for 2 stocks)
+- Individual stock cards with:
+  - Basic info (price, market cap, company name)
+  - Valuation metrics (P/E, P/B, PEG, etc.)
+  - Technical indicators (RSI, Moving Averages, MACD)
+  - Sentiment analysis
+  - Performance metrics
+
+### Tab 2: 📈 Advanced Analytics
+**Shows portfolio-level analytics:**
+- **Correlation Analysis**: How stocks move together
+- **PCA Analysis**: Portfolio structure (requires 3+ stocks)
+- **Per-Ticker Analytics**:
+  - **Regression vs SPY**: Beta, Alpha, R-Squared, Correlation
+  - **Monte Carlo Analysis**: VaR, Expected Shortfall, scenarios
+
+**Visual Indicators:**
+- **Green "✓ Ready" badge**: Appears when analytics are available
+- **"No Analytics Available" message**: Shows when:
+  - Only 1 stock analyzed (need 2+ for portfolio analytics)
+  - Analytics computation failed
+  - No data available
+
+### Navigation Tips
+- **Default view**: Tab 1 (Stock Details) loads first
+- **Quick switching**: Click tab buttons to switch views
+- **Active tab indicator**: Purple bottom border and text
+- **Stock count**: Badge on Tab 1 shows number of analyzed stocks
+- **Smooth animations**: Content fades in when switching tabs
+
+---
+
+## 🔧 Advanced Analytics Explained
+
+### Linear Regression vs SPY
+**Purpose**: Understand how each stock moves relative to the S&P 500 benchmark
+
+**Key Metrics:**
+- **Beta**: Market sensitivity (Beta > 1 = more volatile than market)
+- **Alpha**: Excess returns above market (positive = outperforming)
+- **R-Squared**: How well returns correlate with SPY (higher = stronger relationship)
+- **Correlation**: Direction of relationship (-1 to +1)
+
+**Interpretation**:
+- High Beta + Positive Alpha = Aggressive growth stock
+- Low Beta + Positive Alpha = Stable outperformer
+- High Beta + Negative Alpha = Volatile underperformer
+
+### Monte Carlo Simulation
+**Purpose**: Estimate potential losses under adverse market conditions
+
+**Key Metrics:**
+- **VaR (95%)**: Maximum expected loss at 95% confidence over 1 day
+- **Expected Shortfall (ES)**: Average loss beyond VaR threshold
+- **Best/Worst Case**: Potential outcomes in simulations
+
+**Interpretation**:
+- VaR: "95% confident we won't lose more than X% tomorrow"
+- ES: "If we exceed VaR, average additional loss is Y%"
+- Use for risk management and position sizing
+
+### Correlation Analysis
+**Purpose**: Measure diversification and portfolio risk
+
+**Key Metrics:**
+- **Correlation Matrix**: Pairwise correlations between stocks
+- **Diversification Score**: Portfolio diversification quality
+
+**Interpretation**:
+- Correlation near +1: Stocks move together (low diversification)
+- Correlation near 0: Independent movements (good diversification)
+- Correlation near -1: Opposite movements (excellent hedge)
+
+### PCA (Principal Component Analysis)
+**Purpose**: Identify main drivers of portfolio variation
+
+**Key Metrics:**
+- **PC1, PC2, PC3**: Principal components explaining portfolio variance
+- **Explained Variance**: How much variation each component captures
+
+**Interpretation**:
+- PC1 > 50%: Portfolio driven by single factor (market beta)
+- PC1 < 40%: Well-diversified with multiple factors
+- Use to understand portfolio concentration risk
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### 1. "I don't see analytics!"
+**Solution**: Click the **"📈 Advanced Analytics"** tab at the top of results
+
+**Why**: Analytics are in Tab 2, which is hidden by default. Tab 1 (Stock Details) shows first.
+
+**Check for**: Green "✓ Ready" badge on Advanced Analytics tab - if present, analytics are loaded and ready to view.
+
+#### 2. "Analytics tab says 'No Analytics Available'"
+**Causes**:
+- Only 1 stock analyzed (need 2+ for portfolio analytics)
+- Backend couldn't compute analytics (check logs)
+- Analytics data empty in API response
+
+**Solution**:
+```bash
+# Check backend logs
+tail -50 logs/webapp.log | grep -i "analytics"
+
+# Should see: "Analytics computed: ['correlation', ...]"
+```
+
+#### 3. MongoDB Connection Failed (CLI)
+```bash
+# Check if MongoDB is running
+brew services list | grep mongodb
+# Or
+docker ps | grep mongo
+
+# Verify connection
+python check_mongodb.py
+
+# Disable MongoDB if not needed
+# In config.json, set "mongodb.enabled" to false
+```
+
+#### 4. Web App Won't Start
+```bash
+# Check if port is in use
+lsof -i :5173
+
+# Try different port
+export PORT=8000
+python webapp.py
+
+# Check Flask is installed
+pip install flask
+```
+
+#### 5. API Rate Limits
+- **Alpha Vantage**: Free tier = 25 requests/day, 5 calls/minute
+- **Solution**: Use `--sources yahoo finviz` instead
+- **Or**: Enable `fallback_to_yahoo` in config.json
+
+#### 6. Email Not Sending
+```bash
+# Check .env file exists
+ls -la .env
+
+# For Gmail, use App Password, not regular password
+# Enable "Less secure app access" if needed
+
+# Test email configuration
+python -c "from src.utils.email_utils import send_consolidated_report; print('Email module loaded successfully')"
+```
+
+---
+
+## 🏗️ Project Structure
+
+```
+stock_scraper/
+│
+├── webapp.py                # Flask web application
+├── main.py                  # CLI application
+├── requirements.txt         # Python dependencies
+├── config.json              # CLI configuration
+├── .env                     # Web app environment variables
+├── start_webapp.sh          # Unix/macOS startup script
+├── start_webapp.bat         # Windows startup script
+├── run_scraper.sh           # Production CLI script
+├── uat_run_scraper.sh       # UAT CLI script
+│
+├── templates/               # Web application templates
+│   └── index.html           # Main web interface (tabbed)
+│
+├── src/                     # Source code
+│   ├── scrapers/            # Web scraper modules
+│   ├── analytics/           # Financial analytics
+│   ├── indicators/          # Technical indicators
+│   ├── sentiment/           # Sentiment analysis
+│   └── utils/               # Utility functions
+│
+├── data/                    # Data storage
+├── output/                  # Output files
+├── logs/                    # Log files
+└── tests/                   # Test modules
+```
+
+---
+
+## 📊 Performance Benchmarks
+
+### Speed Improvements
+- **Connection Pooling**: 30-40% faster
+- **Parallel Processing**: 2-3x faster for multiple tickers
+- **Fast Mode**: Up to 90% reduction in execution time
+- **Combined**: 5-10x faster than sequential without pooling
+
+### Scalability
+- **Concurrent Workers**: Supports 8-12 parallel workers efficiently
+- **Memory Efficient**: Connection reuse reduces overhead
+
+---
+
+## 💡 Tips & Best Practices
+
+### For Web Users
+1. **Analyze 2+ stocks** to see portfolio analytics in Tab 2
+2. **Look for "✓ Ready" badge** on Analytics tab when data is available
+3. **Click Analytics tab** to view advanced metrics (hidden by default)
+4. **Set API keys in .env** to avoid entering each time
+5. **Use stock count badge** to verify all tickers processed
+
+### For CLI Users
+1. **Use ticker files** for large batches: `--ticker-file tickers.txt`
+2. **Enable fast mode** for speed: `--fast-mode --parallel`
+3. **Save bandwidth** with selective sources: `--sources yahoo finviz`
+4. **Schedule runs** with cron for regular updates
+5. **Monitor MongoDB** with `check_mongodb.py` after runs
+
+### For Analytics
+1. **Minimum 2 stocks** required for correlation and portfolio analytics
+2. **3+ stocks** recommended for PCA analysis
+3. **Beta interpretation**: >1 = more volatile, <1 = less volatile than market
+4. **VaR use case**: Risk management and position sizing
+5. **Correlation insights**: <0.7 = good diversification
+
+---
+
+## 🎯 Use Cases
+
+### CLI Mode Best For:
+- Scheduled/automated runs (cron jobs)
+- Bulk analysis (large ticker lists)
+- Data collection with MongoDB
+- Batch reports
+- Scripting and integration
+
+### Web Mode Best For:
+- Interactive analysis
+- Ad-hoc queries
+- Tabbed visualization
+- Sharing with non-technical users
+- Quick email reports
+
+### Analytics Mode Best For:
+- Portfolio risk assessment
+- Beta/Alpha analysis
+- Diversification analysis
+- Monte Carlo simulations
+- Quantitative research
+
+---
+
+## 📄 License
+
+This project is for educational purposes. Web scraping may violate terms of service of some websites. Use responsibly and check each website's terms before scraping.
+
+---
+
+## 📝 Changelog
+
+### Latest Updates (Production Release)
+- ✅ **Tabbed Interface**: Clean 2-tab layout (Stock Details + Advanced Analytics)
+- ✅ **Visual Indicators**: Stock count badge, "✓ Ready" badge for analytics
+- ✅ **Fixed Regression Display**: Proper handling of nested backend data structure
+- ✅ **Production Ready**: Removed all debug logging for clean console output
+- ✅ **Consolidated Documentation**: Single comprehensive README
+- ✅ **Advanced Analytics**: Linear regression, PCA, Monte Carlo, correlation
+- ✅ **Returns-based Analysis**: All analytics use returns instead of prices
+- ✅ **MongoDB Storage**: CLI-only time series persistence
+- ✅ **Email Reporting**: HTML reports with analytics
+- ✅ **Performance Optimization**: Parallel processing, connection pooling
+
+---
+
+## 📞 Support
+
+For issues, questions, or contributions:
+- Open an issue on GitHub
+- Check troubleshooting section above
+- Review logs: `logs/webapp.log` (web) or `logs/stock_scraper.log` (CLI)
+- Check browser console (F12) for frontend errors
+
+---
+
+**Happy Analyzing! 📈💹**
 
 ## 📦 Installation
 
@@ -345,6 +815,9 @@ stock_scraper/
 │
 ├── webapp.py                # Flask web application entry point
 ├── main.py                  # CLI application entry point
+├── analytics_demo.py        # 🆕 Advanced analytics demo script
+├── analytics_examples.py    # 🆕 Quick analytics examples
+├── ANALYTICS_GUIDE.md       # 🆕 Comprehensive analytics documentation
 ├── start_webapp.sh          # Unix/macOS web app startup script
 ├── start_webapp.bat         # Windows web app startup script
 ├── run_scraper.sh           # Production CLI run script
@@ -367,6 +840,10 @@ stock_scraper/
 │   │   ├── api_scraper.py   # Alpha Vantage & Finhub
 │   │   └── enhanced_sentiment_scraper.py
 │   │
+│   ├── analytics/           # 🆕 Advanced financial analytics
+│   │   ├── __init__.py
+│   │   └── financial_analytics.py
+│   │
 │   ├── indicators/          # Technical indicators
 │   │   └── technical_indicators.py
 │   │
@@ -382,6 +859,7 @@ stock_scraper/
 │
 ├── data/                    # Data storage
 ├── output/                  # Output files
+├── analytics_output/        # 🆕 Analytics results
 ├── logs/                    # Log files
 ├── tests/                   # Test modules
 └── trends_cache/            # Google Trends cache
@@ -461,6 +939,13 @@ export FINANCE_USE_TLS=True
 - **Visualization**: Viewing organized, categorized data
 - **Sharing**: Easy access for non-technical users
 - **Quick Reports**: Instant email reports without command line
+
+### Analytics Mode Best For: 🆕
+- **Portfolio Risk Assessment**: VaR, Expected Shortfall calculations
+- **Beta/Alpha Analysis**: Understanding market relationships
+- **Diversification Analysis**: Correlation matrices and PCA
+- **Monte Carlo Simulations**: Risk scenario modeling
+- **Quantitative Research**: Statistical analysis of returns
 
 ---
 
@@ -564,7 +1049,13 @@ This project is for educational purposes. Web scraping may violate terms of serv
 
 ## 📝 Changelog
 
-### Latest Updates
+### Latest Updates (Advanced Analytics Release)
+- 🆕 **Advanced Analytics Module**: Linear regression, PCA, Monte Carlo, correlation analysis
+- 🆕 **Returns-based Analysis**: All analytics use returns instead of prices
+- 🆕 **Data Standardization**: PCA with proper standardization
+- 🆕 **Risk Metrics**: Value at Risk (VaR) and Expected Shortfall (ES)
+- 🆕 **Comprehensive Documentation**: ANALYTICS_GUIDE.md with examples
+- 🆕 **Demo Scripts**: analytics_demo.py and analytics_examples.py
 - ✅ Added Flask web application interface
 - ✅ Fixed NumPy int64/float64 JSON serialization issues
 - ✅ Disabled MongoDB storage in web mode (CLI-only feature)
