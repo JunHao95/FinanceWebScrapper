@@ -34,3 +34,6 @@ pandas>=1.4.0
 scipy>=1.9.0
 matplotlib>=3.5.0  # For potential future visualization features
 seaborn>=0.12.0  # For potential future visualization features
+
+# Hosting on Render
+gunicorn==21.2.0
