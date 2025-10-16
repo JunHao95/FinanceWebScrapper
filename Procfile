@@ -1,1 +1,1 @@
-web: gunicorn webapp:app --bind 0.0.0.0:$PORT --timeout 600 --workers 2
+web: gunicorn webapp:app --workers 1 --timeout 600 --log-level info --access-logfile - --error-logfile -

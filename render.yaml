@@ -5,15 +5,13 @@ services:
     region: oregon
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: gunicorn webapp:app --bind 0.0.0.0:$PORT --timeout 600 --workers 2
+    startCommand: gunicorn webapp:app --workers 1 --timeout 600 --log-level info --access-logfile - --error-logfile -
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.0
       - key: FLASK_DEBUG
         value: false
-      - key: PORT
-        generateValue: true
       # API Keys - Set these in Render dashboard (don't commit actual values)
       - key: ALPHA_VANTAGE_API_KEY
         sync: false
