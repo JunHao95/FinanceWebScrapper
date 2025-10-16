@@ -1,0 +1,32 @@
+# Ignore local development files
+.env
+.env.local
+*.pyc
+__pycache__/
+*.log
+logs/
+data/
+output/
+reports/
+analytics_output/
+trends_cache/
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# MongoDB data (local only)
+mongodb_data/
+
+# Ignore test and example files
+test_*.py
+*_test.py
+check_*.py

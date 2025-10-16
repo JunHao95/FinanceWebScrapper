@@ -39,6 +39,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Set socket timeout for cloud hosting (prevents timeout during long scraping operations)
+import socket
+socket.setdefaulttimeout(600)  # 10 minutes timeout
+
 # Setup logging
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
@@ -78,6 +82,13 @@ config = load_config()
 # Create webapp-specific config that disables MongoDB storage
 # MongoDB storage should only happen via CLI (run_scraper.sh/uat_run_scraper.sh)
 webapp_config = copy.deepcopy(config) if config else {}
+
+# Force disable MongoDB for cloud deployment
+if os.environ.get('MONGODB_ENABLED', 'true').lower() == 'false':
+    logger.info("MongoDB disabled via environment variable (cloud deployment)")
+    if 'mongodb' not in webapp_config:
+        webapp_config['mongodb'] = {}
+    webapp_config['mongodb']['enabled'] = False
 if 'mongodb' not in webapp_config:
     webapp_config['mongodb'] = {}
 webapp_config['mongodb']['enabled'] = False  # Disable MongoDB for Flask app

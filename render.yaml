@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: finance-web-scrapper
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn webapp:app --bind 0.0.0.0:$PORT --timeout 600 --workers 2
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_DEBUG
+        value: false
+      - key: PORT
+        generateValue: true
+      # API Keys - Set these in Render dashboard (don't commit actual values)
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: FINHUB_API_KEY
+        sync: false
+      # Email Configuration - Set these in Render dashboard
+      - key: FINANCE_SENDER_EMAIL
+        sync: false
+      - key: FINANCE_SENDER_PASSWORD
+        sync: false
+      - key: FINANCE_SMTP_SERVER
+        value: smtp.gmail.com
+      - key: FINANCE_SMTP_PORT
+        value: 587
+      - key: FINANCE_USE_TLS
+        value: true
+      # Flask Configuration
+      - key: SECRET_KEY
+        generateValue: true
+      # Disable MongoDB for cloud deployment (local only)
+      - key: MONGODB_ENABLED
+        value: false
