@@ -12,6 +12,11 @@ services:
         value: 3.13.0
       - key: FLASK_DEBUG
         value: false
+      # Memory Optimization for Free Tier (512MB RAM)
+      - key: ENABLE_SENTIMENT_ANALYSIS
+        value: false
+      - key: ENABLE_ADVANCED_ANALYTICS
+        value: true
       # API Keys - Set these in Render dashboard (don't commit actual values)
       - key: ALPHA_VANTAGE_API_KEY
         sync: false

@@ -23,6 +23,7 @@ load_dotenv()
 # Add the src directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 
+# Import lightweight scrapers immediately
 from src.scrapers.yahoo_scraper import YahooFinanceScraper
 from src.scrapers.finviz_scraper import FinvizScraper
 from src.scrapers.google_scraper import GoogleFinanceScraper
@@ -31,8 +32,11 @@ from src.scrapers.api_scraper import AlphaVantageAPIScraper, FinhubAPIScraper
 from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe
 from src.utils.email_utils import send_consolidated_report
-from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
-from src.analytics.financial_analytics import FinancialAnalytics
+
+# LAZY IMPORTS: Only import heavy ML libraries when actually needed
+# These imports load torch, transformers (500MB+ in memory)
+# from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
+# from src.analytics.financial_analytics import FinancialAnalytics
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -42,6 +46,17 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Set socket timeout for cloud hosting (prevents timeout during long scraping operations)
 import socket
 socket.setdefaulttimeout(600)  # 10 minutes timeout
+
+# Helper functions for lazy loading heavy modules
+def get_enhanced_sentiment_scraper(alpha_vantage_key="", delay=1):
+    """Lazy load EnhancedSentimentScraper only when needed"""
+    from src.scrapers.enhanced_sentiment_scraper import EnhancedSentimentScraper
+    return EnhancedSentimentScraper(alpha_vantage_key=alpha_vantage_key, delay=delay)
+
+def get_financial_analytics(config=None):
+    """Lazy load FinancialAnalytics only when needed"""
+    from src.analytics.financial_analytics import FinancialAnalytics
+    return FinancialAnalytics(config=config)
 
 # Setup logging
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -164,9 +179,15 @@ def run_scrapers_for_ticker(ticker, sources=['all'], alpha_key=None, finhub_key=
     if 'all' in sources or 'google' in sources:
         scraper_tasks.append(("Google Finance", lambda: GoogleFinanceScraper(delay=1).get_data(ticker)))
     
-    if 'all' in sources or 'enhanced_sentiment' in sources:
+    # Enhanced sentiment analysis - Only if enabled (memory intensive)
+    sentiment_enabled = os.environ.get('ENABLE_SENTIMENT_ANALYSIS', 'false').lower() == 'true'
+    if sentiment_enabled and ('all' in sources or 'enhanced_sentiment' in sources):
         # Enhanced sentiment analysis can work without Alpha Vantage key (uses other sources)
-        scraper_tasks.append(("Enhanced Sentiment", lambda: EnhancedSentimentScraper(alpha_vantage_key=alpha_key or "", delay=1)._scrape_data(ticker)))
+        # Lazy load to save memory
+        def get_sentiment_data():
+            scraper = get_enhanced_sentiment_scraper(alpha_vantage_key=alpha_key or "", delay=1)
+            return scraper._scrape_data(ticker)
+        scraper_tasks.append(("Enhanced Sentiment", get_sentiment_data))
 
     if ('all' in sources or 'alphavantage' in sources) and (alpha_key or os.environ.get("ALPHA_VANTAGE_API_KEY")):
         scraper_tasks.append(("Alpha Vantage", lambda: AlphaVantageAPIScraper(api_key=alpha_key, delay=1).get_data(ticker)))
@@ -307,7 +328,8 @@ def scrape_data():
                         analytics_config['portfolio'] = {}
                     analytics_config['portfolio']['allocations'] = portfolio_allocation
                 
-                analytics = FinancialAnalytics(config=analytics_config)
+                # Lazy load analytics to save memory
+                analytics = get_financial_analytics(config=analytics_config)
                 tickers_list = list(all_data.keys())
                 
                 # Correlation Analysis (requires 2+ tickers)
