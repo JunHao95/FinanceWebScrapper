@@ -198,8 +198,8 @@ def run_scrapers_for_ticker(ticker, sources=['all'], alpha_key=None, finhub_key=
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(run_scraper, name, func) for name, func in scraper_tasks]
             
-            # Wait for all to complete with timeout (60 seconds per ticker)
-            concurrent.futures.wait(futures, timeout=60)
+            # Wait for all to complete with timeout (90 seconds per ticker for cloud hosting)
+            concurrent.futures.wait(futures, timeout=90)
         
         # Small delay to be respectful to APIs
         time.sleep(0.2)

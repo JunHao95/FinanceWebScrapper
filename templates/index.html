@@ -915,13 +915,33 @@
                     requestBody.portfolio_allocation = portfolioAllocation;
                 }
 
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
                 const response = await fetch('/api/scrape', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
+
+                // Check if response is ok
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error (${response.status}): ${errorText}`);
+                }
+
+                // Check if response has content
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Expected JSON response but got: ${text.substring(0, 100)}`);
+                }
 
                 const result = await response.json();
 
@@ -937,7 +957,12 @@
                     showAlert('Error: ' + result.error, 'error');
                 }
             } catch (error) {
-                showAlert('Failed to fetch data: ' + error.message, 'error');
+                console.error('Fetch error:', error);
+                if (error.name === 'AbortError') {
+                    showAlert('Request timed out after 2 minutes. Try with fewer tickers or simpler analysis.', 'error');
+                } else {
+                    showAlert('Failed to fetch data: ' + error.message, 'error');
+                }
             } finally {
                 document.getElementById('loadingSection').classList.remove('active');
             }
