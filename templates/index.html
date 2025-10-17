@@ -573,10 +573,6 @@
                             <input type="checkbox" id="source-technical" value="technical">
                             <label for="source-technical">Technical Indicators</label>
                         </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="source-sentiment" value="enhanced_sentiment">
-                            <label for="source-sentiment">Sentiment Analysis</label>
-                        </div>
                     </div>
                 </div>
 
@@ -1383,7 +1379,18 @@
                 'Profitability': ['ROE', 'ROA', 'ROIC', 'Profit Margin', 'Operating Margin'],
                 'Earnings': ['EPS', 'EPS Growth'],
                 'Technical': ['RSI', 'MA10', 'MA20', 'MA50', 'BB Signal'],
-                'Sentiment': ['Overall Sentiment', 'News Sentiment', 'Reddit Sentiment']
+                'Sentiment Analysis': [
+                    // Overall Sentiment
+                    'Overall Sentiment Score', 'Overall Sentiment Label', 'Sentiment Confidence', 'Active Data Sources',
+                    // Market Trends
+                    'Google Trends Interest', 'Trends Direction', 'Avg Interest',
+                    // News Sentiment
+                    'News Articles Analyzed', 'News Sentiment Score', 'Positive News Articles', 'Negative News Articles', 'FinBERT News Score',
+                    // Reddit Analysis
+                    'Reddit Posts Analyzed', 'Reddit Sentiment Score', 'Reddit Avg Score', 'Reddit Avg Comments', 'Positive Reddit Posts',
+                    // Key Topics
+                    'Top Topic 1 Keywords', 'Top Topic 2 Keywords', 'Top Topic 3 Keywords', 'Document Similarity'
+                ]
             };
 
             let html = '<div class="ticker-header">';
@@ -1413,7 +1420,9 @@
                     
                     for (const [key, value] of Object.entries(groupMetrics)) {
                         html += '<div class="metric-item">';
-                        html += `<span class="metric-label">${key}</span>`;
+                        // Clean up display name by removing (Enhanced) suffix
+                        const cleanKey = key.replace(/\s*\(Enhanced\)\s*$/i, '');
+                        html += `<span class="metric-label">${cleanKey}</span>`;
                         html += `<span class="metric-value">${formatValue(value)}</span>`;
                         html += '</div>';
                     }
