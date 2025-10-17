@@ -58,6 +58,30 @@ def get_financial_analytics(config=None):
     from src.analytics.financial_analytics import FinancialAnalytics
     return FinancialAnalytics(config=config)
 
+# Environment helpers
+def is_cloud_environment() -> bool:
+    """Detect if running on a cloud platform (Render).
+
+    Render sets the environment variable RENDER=true and may also expose
+    RENDER_SERVICE_ID/RENDER_EXTERNAL_URL. We check these to decide defaults.
+    """
+    if os.environ.get("RENDER", "").lower() == "true":
+        return True
+    if os.environ.get("RENDER_SERVICE_ID") or os.environ.get("RENDER_EXTERNAL_URL"):
+        return True
+    return False
+
+def get_sentiment_enabled_default() -> bool:
+    """Sentiment default: ON locally, OFF on cloud; env var can override.
+
+    ENABLE_SENTIMENT_ANALYSIS env var ("true"/"false") takes precedence.
+    If not set, default to False on cloud (memory heavy) and True locally.
+    """
+    override = os.environ.get("ENABLE_SENTIMENT_ANALYSIS")
+    if override is not None:
+        return str(override).lower() == "true"
+    return not is_cloud_environment()
+
 # Setup logging
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
@@ -179,8 +203,8 @@ def run_scrapers_for_ticker(ticker, sources=['all'], alpha_key=None, finhub_key=
     if 'all' in sources or 'google' in sources:
         scraper_tasks.append(("Google Finance", lambda: GoogleFinanceScraper(delay=1).get_data(ticker)))
     
-    # Enhanced sentiment analysis - Only if enabled (memory intensive)
-    sentiment_enabled = os.environ.get('ENABLE_SENTIMENT_ANALYSIS', 'false').lower() == 'true'
+    # Enhanced sentiment analysis - memory intensive; default ON locally, OFF on cloud
+    sentiment_enabled = get_sentiment_enabled_default()
     if sentiment_enabled and ('all' in sources or 'enhanced_sentiment' in sources):
         # Enhanced sentiment analysis can work without Alpha Vantage key (uses other sources)
         # Lazy load to save memory
