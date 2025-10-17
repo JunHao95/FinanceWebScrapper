@@ -2,6 +2,10 @@
 
 A high-performance Python application for scraping and analyzing financial metrics from multiple sources. Available as both a **CLI tool** and a **web application** with **advanced analytics**.
 
+## 📊 System Architecture
+
+![Finance Data Platform Architecture](finance_data_platform.png)
+
 ## 🌟 Key Features
 
 ### Dual Interface
