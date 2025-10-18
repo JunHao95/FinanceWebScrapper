@@ -1,0 +1,27 @@
+name: Keep Render Service Alive
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping Render Service
+        run: |
+          echo "Pinging Finance Web Scraper service..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://finance-web-scrapper.onrender.com/health)
+          
+          if [ $response -eq 200 ]; then
+            echo "✓ Service is alive - Status: $response"
+          else
+            echo "⚠ Service responded with status: $response"
+          fi
+          
+      - name: Log timestamp
+        run: |
+          echo "Ping completed at: $(date -u)"

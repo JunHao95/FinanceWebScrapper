@@ -1529,6 +1529,77 @@
             currentAnalytics = {};
             hideAlert();
         }
+
+        // ===========================
+        // Keep-Alive Mechanism
+        // ===========================
+        // Pings the server every 10 minutes to prevent Render.com free tier from spinning down
+        let keepAliveInterval = null;
+        let keepAliveEnabled = true;
+        let pingCount = 0;
+        let successCount = 0;
+
+        async function pingServer() {
+            if (!keepAliveEnabled) return;
+
+            try {
+                pingCount++;
+                console.log(`[Keep-Alive] Ping #${pingCount} at ${new Date().toLocaleTimeString()}`);
+                
+                const response = await fetch('/health', {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (response.ok) {
+                    successCount++;
+                    console.log(`[Keep-Alive] ✓ Server is alive (${successCount}/${pingCount})`);
+                } else {
+                    console.warn(`[Keep-Alive] ⚠ Server responded with status: ${response.status}`);
+                }
+            } catch (error) {
+                console.error(`[Keep-Alive] ✗ Ping failed:`, error.message);
+            }
+        }
+
+        function startKeepAlive() {
+            // Ping immediately on load
+            pingServer();
+            
+            // Then ping every 10 minutes (600,000 ms)
+            // Render free tier spins down after 15 min of inactivity
+            keepAliveInterval = setInterval(pingServer, 600000);
+            
+            console.log('[Keep-Alive] Service started - pinging every 10 minutes');
+        }
+
+        function stopKeepAlive() {
+            if (keepAliveInterval) {
+                clearInterval(keepAliveInterval);
+                keepAliveInterval = null;
+                console.log(`[Keep-Alive] Service stopped - Success rate: ${successCount}/${pingCount}`);
+            }
+        }
+
+        // Start keep-alive when page loads
+        window.addEventListener('load', startKeepAlive);
+
+        // Stop keep-alive when page unloads (optional, for cleanup)
+        window.addEventListener('beforeunload', stopKeepAlive);
+
+        // Pause keep-alive when tab is hidden (optional, to save resources)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                keepAliveEnabled = false;
+                console.log('[Keep-Alive] Paused (tab hidden)');
+            } else {
+                keepAliveEnabled = true;
+                console.log('[Keep-Alive] Resumed (tab visible)');
+                pingServer(); // Immediate ping when tab becomes visible
+            }
+        });
         
     </script>
 </body>

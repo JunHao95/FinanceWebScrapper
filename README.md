@@ -6,6 +6,9 @@ A high-performance Python application for scraping and analyzing financial metri
 
 ![Finance Data Platform Architecture](finance_data_platform.png)
 
+> **🔗 Live Demo**: [https://finance-web-scrapper.onrender.com](https://finance-web-scrapper.onrender.com)  
+> **⚡ Keep-Alive**: Automatic ping system prevents Render.com free tier spin-down. See [KEEP_ALIVE.md](KEEP_ALIVE.md) for details.
+
 ## 🌟 Key Features
 
 ### Dual Interface
@@ -306,7 +309,37 @@ python main.py --tickers AAPL,MSFT,GOOG,AMZN,TSLA,NVDA,META,NFLX \
 
 ---
 
-## 🐛 Troubleshooting
+## � Deployment & Keep-Alive
+
+### Render.com Deployment
+
+This app is deployed on Render.com free tier at: **https://finance-web-scrapper.onrender.com**
+
+### Keep-Alive Solutions ⚡
+
+Render.com free tier spins down after 15 minutes of inactivity. We've implemented **3 keep-alive solutions**:
+
+#### 1. **Client-Side Keep-Alive** (Built-in) ✅
+- Automatically pings server every 10 minutes when web page is open
+- No setup required - works out of the box
+- Pauses when tab is hidden to save resources
+
+#### 2. **GitHub Actions Keep-Alive** (Recommended for 24/7) ⭐
+- Automated workflow pings server every 10 minutes
+- Completely free (GitHub Actions free tier)
+- Works even when no one is using the website
+- Setup: Just enable GitHub Actions in your repo
+
+#### 3. **Python Keep-Alive Script**
+- Standalone script for custom hosting
+- Run on any always-on server
+- Full control over ping intervals
+
+**For detailed setup instructions, see**: [KEEP_ALIVE.md](KEEP_ALIVE.md)
+
+---
+
+## �🐛 Troubleshooting
 
 ### Common Issues
 
