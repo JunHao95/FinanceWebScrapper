@@ -296,6 +296,97 @@
             margin-bottom: 20px;
         }
 
+        /* Derivative Pricing Styles */
+        .option-results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .result-card h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .result-card h5 {
+            color: #764ba2;
+            margin-top: 10px;
+            margin-bottom: 8px;
+        }
+
+        .price-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2d3436;
+            text-align: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .greeks-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .greeks-grid div {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .result-card table {
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        .result-card table th {
+            background: #667eea;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .result-card table td {
+            background: white;
+            padding: 6px 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
         .email-form {
             display: grid;
             gap: 15px;
@@ -623,6 +714,204 @@
                     <button type="button" class="secondary-btn" onclick="clearForm()">🔄 Clear</button>
                 </div>
             </form>
+        </div>
+
+        <!-- Derivative Pricing Calculator -->
+        <div class="input-section">
+            <h2>💹 Options Pricing Calculator</h2>
+            <div class="form-group">
+                <label for="optionCalcType">Calculator Type</label>
+                <select id="optionCalcType" onchange="toggleCalculatorType()">
+                    <option value="pricing">Option Pricing</option>
+                    <option value="implied_vol">Implied Volatility</option>
+                    <option value="greeks">Greeks Calculator</option>
+                    <option value="comparison">Model Comparison</option>
+                </select>
+            </div>
+
+            <!-- Pricing Calculator -->
+            <div id="pricingCalculator">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="optSpot">Current Stock Price (S)</label>
+                        <input type="number" id="optSpot" step="0.01" value="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="optStrike">Strike Price (K)</label>
+                        <input type="number" id="optStrike" step="0.01" value="105" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="optMaturity">Time to Maturity (Years)</label>
+                        <input type="number" id="optMaturity" step="0.01" value="0.25" required>
+                        <small>Example: 0.25 = 3 months, 1.0 = 1 year</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="optRate">Risk-Free Rate (%)</label>
+                        <input type="number" id="optRate" step="0.01" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="optVol">Volatility (%)</label>
+                        <input type="number" id="optVol" step="0.01" value="20" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="optType">Option Type</label>
+                        <select id="optType">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Pricing Models</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="modelBS" checked>
+                            <label for="modelBS">Black-Scholes</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="modelBinomial" checked>
+                            <label for="modelBinomial">Binomial Tree</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="modelTrinomial" checked>
+                            <label for="modelTrinomial">Trinomial Tree</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="optSteps">Tree Steps (for Binomial/Trinomial)</label>
+                    <input type="number" id="optSteps" min="10" max="500" value="100">
+                    <small>Higher steps = more accurate but slower</small>
+                </div>
+
+                <button type="button" class="primary-btn" onclick="calculateOptionPrice()">
+                    🧮 Calculate Option Price
+                </button>
+            </div>
+
+            <!-- Implied Volatility Calculator -->
+            <div id="impliedVolCalculator" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="ivMarketPrice">Market Option Price</label>
+                        <input type="number" id="ivMarketPrice" step="0.01" value="5.50" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ivSpot">Current Stock Price (S)</label>
+                        <input type="number" id="ivSpot" step="0.01" value="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ivStrike">Strike Price (K)</label>
+                        <input type="number" id="ivStrike" step="0.01" value="105" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ivMaturity">Time to Maturity (Years)</label>
+                        <input type="number" id="ivMaturity" step="0.01" value="0.25" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ivRate">Risk-Free Rate (%)</label>
+                        <input type="number" id="ivRate" step="0.01" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ivType">Option Type</label>
+                        <select id="ivType">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" class="primary-btn" onclick="calculateImpliedVolatility()">
+                    📊 Extract Implied Volatility
+                </button>
+            </div>
+
+            <!-- Greeks Calculator -->
+            <div id="greeksCalculator" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="greeksSpot">Current Stock Price (S)</label>
+                        <input type="number" id="greeksSpot" step="0.01" value="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="greeksStrike">Strike Price (K)</label>
+                        <input type="number" id="greeksStrike" step="0.01" value="105" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="greeksMaturity">Time to Maturity (Years)</label>
+                        <input type="number" id="greeksMaturity" step="0.01" value="0.25" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="greeksRate">Risk-Free Rate (%)</label>
+                        <input type="number" id="greeksRate" step="0.01" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="greeksVol">Volatility (%)</label>
+                        <input type="number" id="greeksVol" step="0.01" value="20" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="greeksType">Option Type</label>
+                        <select id="greeksType">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" class="primary-btn" onclick="calculateGreeks()">
+                    📐 Calculate Greeks
+                </button>
+            </div>
+
+            <!-- Model Comparison Calculator -->
+            <div id="comparisonCalculator" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="compSpot">Current Stock Price (S)</label>
+                        <input type="number" id="compSpot" step="0.01" value="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="compStrike">Strike Price (K)</label>
+                        <input type="number" id="compStrike" step="0.01" value="105" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="compMaturity">Time to Maturity (Years)</label>
+                        <input type="number" id="compMaturity" step="0.01" value="0.25" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="compRate">Risk-Free Rate (%)</label>
+                        <input type="number" id="compRate" step="0.01" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="compVol">Volatility (%)</label>
+                        <input type="number" id="compVol" step="0.01" value="20" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="compType">Option Type</label>
+                        <select id="compType">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="compSteps">Tree Steps</label>
+                    <input type="number" id="compSteps" min="10" max="500" value="100">
+                </div>
+
+                <button type="button" class="primary-btn" onclick="calculateModelComparison()">
+                    🔬 Compare All Models
+                </button>
+            </div>
+
+            <!-- Results Display -->
+            <div id="optionResults" style="display: none; margin-top: 30px;">
+                <h3>Results</h3>
+                <div id="optionResultsContent"></div>
+            </div>
         </div>
 
         <div class="loading" id="loadingSection">
@@ -1434,6 +1723,398 @@
             html += '</div>';
             div.innerHTML = html;
             return div;
+        }
+
+        // Derivative Pricing Functions
+        function toggleCalculatorType() {
+            const calcType = document.getElementById('optionCalcType').value;
+            
+            // Hide all calculators
+            document.getElementById('pricingCalculator').style.display = 'none';
+            document.getElementById('impliedVolCalculator').style.display = 'none';
+            document.getElementById('greeksCalculator').style.display = 'none';
+            document.getElementById('comparisonCalculator').style.display = 'none';
+            
+            // Show the selected calculator
+            if (calcType === 'pricing') {
+                document.getElementById('pricingCalculator').style.display = 'block';
+            } else if (calcType === 'implied_vol') {
+                document.getElementById('impliedVolCalculator').style.display = 'block';
+            } else if (calcType === 'greeks') {
+                document.getElementById('greeksCalculator').style.display = 'block';
+            } else if (calcType === 'comparison') {
+                document.getElementById('comparisonCalculator').style.display = 'block';
+            }
+            
+            // Hide results when switching
+            document.getElementById('optionResults').style.display = 'none';
+        }
+
+        async function calculateOptionPrice() {
+            const spot = parseFloat(document.getElementById('optSpot').value);
+            const strike = parseFloat(document.getElementById('optStrike').value);
+            const maturity = parseFloat(document.getElementById('optMaturity').value);
+            const rate = parseFloat(document.getElementById('optRate').value) / 100;
+            const volatility = parseFloat(document.getElementById('optVol').value) / 100;
+            const optionType = document.getElementById('optType').value;
+            const steps = parseInt(document.getElementById('optSteps').value);
+            
+            // Determine which models to use
+            const models = [];
+            if (document.getElementById('modelBS').checked) models.push('black_scholes');
+            if (document.getElementById('modelBinomial').checked) models.push('binomial');
+            if (document.getElementById('modelTrinomial').checked) models.push('trinomial');
+            
+            if (models.length === 0) {
+                showAlert('Please select at least one pricing model', 'error');
+                return;
+            }
+            
+            try {
+                showAlert('Calculating option price...', 'info');
+                
+                const response = await fetch('/api/option_pricing', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        spot: spot,
+                        strike: strike,
+                        maturity: maturity,
+                        risk_free_rate: rate,
+                        volatility: volatility,
+                        option_type: optionType,
+                        models: models,
+                        steps: steps
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayOptionResults(data.results, 'pricing');
+                    showAlert('Calculation complete!', 'success');
+                } else {
+                    showAlert(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to calculate option price', 'error');
+            }
+        }
+
+        async function calculateImpliedVolatility() {
+            const marketPrice = parseFloat(document.getElementById('ivMarketPrice').value);
+            const spot = parseFloat(document.getElementById('ivSpot').value);
+            const strike = parseFloat(document.getElementById('ivStrike').value);
+            const maturity = parseFloat(document.getElementById('ivMaturity').value);
+            const rate = parseFloat(document.getElementById('ivRate').value) / 100;
+            const optionType = document.getElementById('ivType').value;
+            
+            try {
+                showAlert('Extracting implied volatility...', 'info');
+                
+                const response = await fetch('/api/implied_volatility', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        market_price: marketPrice,
+                        spot: spot,
+                        strike: strike,
+                        maturity: maturity,
+                        risk_free_rate: rate,
+                        option_type: optionType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayImpliedVolResults(data.result);
+                    showAlert('Implied volatility extracted!', 'success');
+                } else {
+                    showAlert(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to calculate implied volatility', 'error');
+            }
+        }
+
+        function displayOptionResults(results, type) {
+            const resultsDiv = document.getElementById('optionResults');
+            const contentDiv = document.getElementById('optionResultsContent');
+            
+            let html = '<div class="option-results-grid">';
+            
+            if (results.black_scholes) {
+                html += '<div class="result-card">';
+                html += '<h4>Black-Scholes Model</h4>';
+                html += `<div class="price-display">$${results.black_scholes.price.toFixed(4)}</div>`;
+                html += '<div class="greeks-grid">';
+                html += `<div><strong>Delta:</strong> ${results.black_scholes.delta.toFixed(4)}</div>`;
+                html += `<div><strong>Gamma:</strong> ${results.black_scholes.gamma.toFixed(4)}</div>`;
+                html += `<div><strong>Theta:</strong> ${results.black_scholes.theta.toFixed(4)}</div>`;
+                html += `<div><strong>Vega:</strong> ${results.black_scholes.vega.toFixed(4)}</div>`;
+                html += `<div><strong>Rho:</strong> ${results.black_scholes.rho.toFixed(4)}</div>`;
+                html += '</div></div>';
+            }
+            
+            if (results.binomial) {
+                html += '<div class="result-card">';
+                html += '<h4>Binomial Tree Model</h4>';
+                html += `<div class="price-display">$${results.binomial.price.toFixed(4)}</div>`;
+                html += `<div><strong>Steps:</strong> ${results.binomial.steps}</div>`;
+                html += `<div><strong>Up Factor (u):</strong> ${results.binomial.u.toFixed(4)}</div>`;
+                html += `<div><strong>Down Factor (d):</strong> ${results.binomial.d.toFixed(4)}</div>`;
+                html += `<div><strong>Risk-Neutral Prob:</strong> ${results.binomial.p.toFixed(4)}</div>`;
+                html += '</div>';
+            }
+            
+            if (results.trinomial) {
+                html += '<div class="result-card">';
+                html += '<h4>Trinomial Tree Model</h4>';
+                html += `<div class="price-display">$${results.trinomial.price.toFixed(4)}</div>`;
+                html += `<div><strong>Steps:</strong> ${results.trinomial.steps}</div>`;
+                html += `<div><strong>Up Probability:</strong> ${results.trinomial.pu.toFixed(4)}</div>`;
+                html += `<div><strong>Down Probability:</strong> ${results.trinomial.pd.toFixed(4)}</div>`;
+                html += `<div><strong>Middle Probability:</strong> ${results.trinomial.pm.toFixed(4)}</div>`;
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+
+        function displayImpliedVolResults(result) {
+            const resultsDiv = document.getElementById('optionResults');
+            const contentDiv = document.getElementById('optionResultsContent');
+            
+            let html = '<div class="result-card">';
+            html += '<h4>Implied Volatility Results</h4>';
+            html += `<div class="price-display">${(result.implied_volatility * 100).toFixed(2)}%</div>`;
+            html += `<div><strong>Converged:</strong> ${result.converged ? '✅ Yes' : '❌ No'}</div>`;
+            html += `<div><strong>Iterations:</strong> ${result.num_iterations}</div>`;
+            html += `<div><strong>Final Difference:</strong> $${Math.abs(result.final_difference).toFixed(6)}</div>`;
+            
+            if (result.validation) {
+                html += '<hr style="margin: 15px 0;">';
+                html += '<h5>Validation</h5>';
+                html += `<div><strong>Recalculated Price:</strong> $${result.validation.recalculated_price.toFixed(4)}</div>`;
+                html += `<div><strong>Market Price:</strong> $${result.validation.market_price.toFixed(4)}</div>`;
+                html += `<div><strong>Percentage Error:</strong> ${result.validation.percentage_error.toFixed(4)}%</div>`;
+                html += `<div><strong>Valid:</strong> ${result.validation.is_valid ? '✅ Yes' : '⚠️ Check accuracy'}</div>`;
+            }
+            
+            // Show iteration convergence
+            if (result.iterations && result.iterations.length > 0) {
+                html += '<hr style="margin: 15px 0;">';
+                html += '<h5>Convergence Details (Last 5 iterations)</h5>';
+                html += '<table style="width: 100%; border-collapse: collapse;">';
+                html += '<tr><th>Iter</th><th>Sigma</th><th>Price</th><th>Diff</th></tr>';
+                const lastIterations = result.iterations.slice(-5);
+                for (const iter of lastIterations) {
+                    html += `<tr>`;
+                    html += `<td>${iter.iteration}</td>`;
+                    html += `<td>${(iter.sigma * 100).toFixed(2)}%</td>`;
+                    html += `<td>$${iter.price.toFixed(4)}</td>`;
+                    html += `<td>$${iter.abs_diff.toFixed(6)}</td>`;
+                    html += `</tr>`;
+                }
+                html += '</table>';
+            }
+            
+            html += '</div>';
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+
+        async function calculateGreeks() {
+            const spot = parseFloat(document.getElementById('greeksSpot').value);
+            const strike = parseFloat(document.getElementById('greeksStrike').value);
+            const maturity = parseFloat(document.getElementById('greeksMaturity').value);
+            const rate = parseFloat(document.getElementById('greeksRate').value) / 100;
+            const volatility = parseFloat(document.getElementById('greeksVol').value) / 100;
+            const optionType = document.getElementById('greeksType').value;
+            
+            try {
+                const response = await fetch('/api/greeks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        spot: spot,
+                        strike: strike,
+                        maturity: maturity,
+                        risk_free_rate: rate,
+                        volatility: volatility,
+                        option_type: optionType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayGreeksResults(data.greeks);
+                } else {
+                    showAlert(data.error || 'Failed to calculate Greeks', 'error');
+                }
+            } catch (error) {
+                showAlert('Error calculating Greeks: ' + error.message, 'error');
+            }
+        }
+
+        function displayGreeksResults(greeks) {
+            const resultsDiv = document.getElementById('optionResults');
+            const contentDiv = document.getElementById('optionResultsContent');
+            
+            let html = '<div class="result-card">';
+            html += '<h4>📐 Option Greeks</h4>';
+            html += '<div class="greeks-grid" style="grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">';
+            
+            html += '<div style="padding: 15px; background: #e8f5e9; border-radius: 8px;">';
+            html += '<h5 style="margin: 0 0 10px 0; color: #2e7d32;">Delta (Δ)</h5>';
+            html += `<div style="font-size: 1.5rem; font-weight: bold;">${greeks.delta.toFixed(4)}</div>`;
+            html += '<small>Price sensitivity to underlying asset</small>';
+            html += '</div>';
+            
+            html += '<div style="padding: 15px; background: #fff3e0; border-radius: 8px;">';
+            html += '<h5 style="margin: 0 0 10px 0; color: #e65100;">Gamma (Γ)</h5>';
+            html += `<div style="font-size: 1.5rem; font-weight: bold;">${greeks.gamma.toFixed(4)}</div>`;
+            html += '<small>Rate of change of Delta</small>';
+            html += '</div>';
+            
+            html += '<div style="padding: 15px; background: #f3e5f5; border-radius: 8px;">';
+            html += '<h5 style="margin: 0 0 10px 0; color: #6a1b9a;">Theta (Θ)</h5>';
+            html += `<div style="font-size: 1.5rem; font-weight: bold;">${greeks.theta.toFixed(4)}</div>`;
+            html += '<small>Time decay (per day)</small>';
+            html += '</div>';
+            
+            html += '<div style="padding: 15px; background: #e3f2fd; border-radius: 8px;">';
+            html += '<h5 style="margin: 0 0 10px 0; color: #1565c0;">Vega (ν)</h5>';
+            html += `<div style="font-size: 1.5rem; font-weight: bold;">${greeks.vega.toFixed(4)}</div>`;
+            html += '<small>Sensitivity to volatility (per 1%)</small>';
+            html += '</div>';
+            
+            html += '<div style="padding: 15px; background: #fce4ec; border-radius: 8px;">';
+            html += '<h5 style="margin: 0 0 10px 0; color: #c2185b;">Rho (ρ)</h5>';
+            html += `<div style="font-size: 1.5rem; font-weight: bold;">${greeks.rho.toFixed(4)}</div>`;
+            html += '<small>Sensitivity to interest rates (per 1%)</small>';
+            html += '</div>';
+            
+            html += '</div></div>';
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+
+        async function calculateModelComparison() {
+            const spot = parseFloat(document.getElementById('compSpot').value);
+            const strike = parseFloat(document.getElementById('compStrike').value);
+            const maturity = parseFloat(document.getElementById('compMaturity').value);
+            const rate = parseFloat(document.getElementById('compRate').value) / 100;
+            const volatility = parseFloat(document.getElementById('compVol').value) / 100;
+            const optionType = document.getElementById('compType').value;
+            const steps = parseInt(document.getElementById('compSteps').value);
+            
+            try {
+                const response = await fetch('/api/model_comparison', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        spot: spot,
+                        strike: strike,
+                        maturity: maturity,
+                        risk_free_rate: rate,
+                        volatility: volatility,
+                        option_type: optionType,
+                        steps: steps
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayModelComparisonResults(data.comparison);
+                } else {
+                    showAlert(data.error || 'Failed to compare models', 'error');
+                }
+            } catch (error) {
+                showAlert('Error comparing models: ' + error.message, 'error');
+            }
+        }
+
+        function displayModelComparisonResults(comparison) {
+            const resultsDiv = document.getElementById('optionResults');
+            const contentDiv = document.getElementById('optionResultsContent');
+            
+            const results = {
+                black_scholes: comparison.black_scholes,
+                binomial: comparison.binomial,
+                trinomial: comparison.trinomial
+            };
+            const differences = comparison.differences;
+            
+            let html = '<div style="margin-bottom: 20px;">';
+            html += '<h4>🔬 Model Comparison</h4>';
+            html += '<div class="option-results-grid">';
+            
+            // Black-Scholes
+            html += '<div class="result-card">';
+            html += '<h4>Black-Scholes (Analytical)</h4>';
+            html += `<div class="price-display">$${results.black_scholes.price.toFixed(4)}</div>`;
+            html += '<div style="margin-top: 10px; font-size: 0.9rem; color: #666;">';
+            html += '<strong>Benchmark Model</strong><br>';
+            html += 'Closed-form solution';
+            html += '</div></div>';
+            
+            // Binomial
+            html += '<div class="result-card">';
+            html += '<h4>Binomial Tree</h4>';
+            html += `<div class="price-display">$${results.binomial.price.toFixed(4)}</div>`;
+            html += `<div style="margin-top: 10px; color: ${Math.abs(differences.binomial_vs_bs) < 0.01 ? '#27ae60' : '#e67e22'};">`;
+            html += `<strong>Diff vs BS:</strong> $${differences.binomial_vs_bs.toFixed(6)}`;
+            html += `<br><small>(${((differences.binomial_vs_bs / results.black_scholes.price) * 100).toFixed(3)}%)</small>`;
+            html += '</div></div>';
+            
+            // Trinomial
+            html += '<div class="result-card">';
+            html += '<h4>Trinomial Tree</h4>';
+            html += `<div class="price-display">$${results.trinomial.price.toFixed(4)}</div>`;
+            html += `<div style="margin-top: 10px; color: ${Math.abs(differences.trinomial_vs_bs) < 0.01 ? '#27ae60' : '#e67e22'};">`;
+            html += `<strong>Diff vs BS:</strong> $${differences.trinomial_vs_bs.toFixed(6)}`;
+            html += `<br><small>(${((differences.trinomial_vs_bs / results.black_scholes.price) * 100).toFixed(3)}%)</small>`;
+            html += '</div></div>';
+            
+            html += '</div>';
+            
+            // Analysis summary
+            html += '<div class="result-card" style="margin-top: 20px;">';
+            html += '<h5>📊 Analysis Summary</h5>';
+            html += `<div><strong>Binomial vs Trinomial:</strong> $${differences.binomial_vs_trinomial.toFixed(6)}</div>`;
+            
+            const maxDiff = Math.max(
+                Math.abs(differences.binomial_vs_bs),
+                Math.abs(differences.trinomial_vs_bs)
+            );
+            
+            if (maxDiff < 0.01) {
+                html += '<div style="margin-top: 10px; padding: 10px; background: #d4edda; border-radius: 8px; color: #155724;">';
+                html += '✅ Excellent convergence! All models agree within $0.01';
+            } else if (maxDiff < 0.05) {
+                html += '<div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 8px; color: #856404;">';
+                html += '⚠️ Good convergence. Consider increasing tree steps for better accuracy.';
+            } else {
+                html += '<div style="margin-top: 10px; padding: 10px; background: #f8d7da; border-radius: 8px; color: #721c24;">';
+                html += '❌ Poor convergence. Increase tree steps significantly.';
+            }
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
         }
 
         function formatValue(value) {

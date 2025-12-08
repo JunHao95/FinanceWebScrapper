@@ -521,6 +521,327 @@ def send_email_report():
             'error': str(e)
         }), 500
 
+@app.route('/api/option_pricing', methods=['POST'])
+def option_pricing():
+    """
+    Calculate option price using multiple models
+    
+    Expected JSON payload:
+    {
+        "spot": 100,
+        "strike": 105,
+        "maturity": 0.25,
+        "risk_free_rate": 0.05,
+        "volatility": 0.20,
+        "option_type": "call",
+        "models": ["black_scholes", "binomial", "trinomial"],
+        "steps": 100
+    }
+    """
+    try:
+        from src.derivatives.options_pricer import OptionsPricer
+        
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['spot', 'strike', 'maturity', 'risk_free_rate', 'volatility']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Extract parameters
+        S = float(data['spot'])
+        K = float(data['strike'])
+        T = float(data['maturity'])
+        r = float(data['risk_free_rate'])
+        sigma = float(data['volatility'])
+        option_type = data.get('option_type', 'call').lower()
+        models = data.get('models', ['black_scholes'])
+        steps = int(data.get('steps', 100))
+        exercise_type = data.get('exercise_type', 'european').lower()
+        
+        pricer = OptionsPricer()
+        results = {}
+        
+        # Calculate prices for requested models
+        if 'black_scholes' in models:
+            bs_result = pricer.black_scholes(S, K, T, r, sigma, option_type)
+            results['black_scholes'] = bs_result
+        
+        if 'binomial' in models:
+            binomial_result = pricer.binomial_tree(
+                S, K, T, r, sigma, steps, option_type, exercise_type
+            )
+            results['binomial'] = binomial_result
+        
+        if 'trinomial' in models:
+            trinomial_result = pricer.trinomial_tree(
+                S, K, T, r, sigma, steps, option_type, exercise_type
+            )
+            results['trinomial'] = trinomial_result
+        
+        # Convert numpy types for JSON serialization
+        results = convert_numpy_types(results)
+        
+        return jsonify({
+            'success': True,
+            'results': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in option pricing: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/implied_volatility', methods=['POST'])
+def calculate_implied_volatility():
+    """
+    Calculate implied volatility from market price
+    
+    Expected JSON payload:
+    {
+        "market_price": 5.50,
+        "spot": 100,
+        "strike": 105,
+        "maturity": 0.25,
+        "risk_free_rate": 0.05,
+        "option_type": "call",
+        "sigma_init": 0.3,
+        "tolerance": 0.0001
+    }
+    """
+    try:
+        from src.derivatives.implied_volatility import ImpliedVolatilityCalculator
+        
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['market_price', 'spot', 'strike', 'maturity', 'risk_free_rate']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Extract parameters
+        market_price = float(data['market_price'])
+        S = float(data['spot'])
+        K = float(data['strike'])
+        T = float(data['maturity'])
+        r = float(data['risk_free_rate'])
+        option_type = data.get('option_type', 'call').lower()
+        sigma_init = float(data.get('sigma_init', 0.3))
+        tol = float(data.get('tolerance', 0.0001))
+        
+        calculator = ImpliedVolatilityCalculator()
+        result = calculator.calculate_implied_volatility(
+            market_price, S, K, T, r, option_type, sigma_init, tol
+        )
+        
+        # Validate the result
+        if result['converged']:
+            validation = calculator.validate_implied_volatility(
+                result['implied_volatility'], market_price, S, K, T, r, option_type
+            )
+            result['validation'] = validation
+        
+        # Convert numpy types for JSON serialization
+        result = convert_numpy_types(result)
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Error calculating implied volatility: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/greeks', methods=['POST'])
+def calculate_greeks():
+    """
+    Calculate option Greeks
+    
+    Expected JSON payload:
+    {
+        "spot": 100,
+        "strike": 105,
+        "maturity": 0.25,
+        "risk_free_rate": 0.05,
+        "volatility": 0.20,
+        "option_type": "call"
+    }
+    """
+    try:
+        from src.derivatives.options_pricer import OptionsPricer
+        
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['spot', 'strike', 'maturity', 'risk_free_rate', 'volatility']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Extract parameters
+        S = float(data['spot'])
+        K = float(data['strike'])
+        T = float(data['maturity'])
+        r = float(data['risk_free_rate'])
+        sigma = float(data['volatility'])
+        option_type = data.get('option_type', 'call').lower()
+        
+        pricer = OptionsPricer()
+        greeks = pricer.calculate_all_greeks(S, K, T, r, sigma, option_type)
+        
+        # Convert numpy types for JSON serialization
+        greeks = convert_numpy_types(greeks)
+        
+        return jsonify({
+            'success': True,
+            'greeks': greeks
+        })
+        
+    except Exception as e:
+        logger.error(f"Error calculating Greeks: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/model_comparison', methods=['POST'])
+def model_comparison():
+    """
+    Compare option prices across different models
+    
+    Expected JSON payload:
+    {
+        "spot": 100,
+        "strike": 105,
+        "maturity": 0.25,
+        "risk_free_rate": 0.05,
+        "volatility": 0.20,
+        "option_type": "call",
+        "steps": 100
+    }
+    """
+    try:
+        from src.derivatives.options_pricer import OptionsPricer
+        
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['spot', 'strike', 'maturity', 'risk_free_rate', 'volatility']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Extract parameters
+        S = float(data['spot'])
+        K = float(data['strike'])
+        T = float(data['maturity'])
+        r = float(data['risk_free_rate'])
+        sigma = float(data['volatility'])
+        option_type = data.get('option_type', 'call').lower()
+        steps = int(data.get('steps', 100))
+        
+        pricer = OptionsPricer()
+        comparison = pricer.compare_models(S, K, T, r, sigma, option_type, steps)
+        
+        # Convert numpy types for JSON serialization
+        comparison = convert_numpy_types(comparison)
+        
+        return jsonify({
+            'success': True,
+            'comparison': comparison
+        })
+        
+    except Exception as e:
+        logger.error(f"Error comparing models: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/convergence_analysis', methods=['POST'])
+def convergence_analysis():
+    """
+    Analyze trinomial model convergence
+    
+    Expected JSON payload:
+    {
+        "spot": 100,
+        "strike": 105,
+        "maturity": 0.25,
+        "risk_free_rate": 0.05,
+        "volatility": 0.20,
+        "option_type": "call",
+        "min_steps": 10,
+        "max_steps": 500,
+        "step_increment": 50
+    }
+    """
+    try:
+        from src.derivatives.trinomial_model import TrinomialModel
+        
+        data = request.json
+        
+        # Validate required fields
+        required_fields = ['spot', 'strike', 'maturity', 'risk_free_rate', 'volatility']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Extract parameters
+        S = float(data['spot'])
+        K = float(data['strike'])
+        T = float(data['maturity'])
+        r = float(data['risk_free_rate'])
+        sigma = float(data['volatility'])
+        option_type = data.get('option_type', 'call').lower()
+        min_steps = int(data.get('min_steps', 10))
+        max_steps = int(data.get('max_steps', 500))
+        step_increment = int(data.get('step_increment', 50))
+        
+        # Create step range
+        step_range = list(range(min_steps, max_steps + 1, step_increment))
+        
+        model = TrinomialModel(S, r, sigma, T)
+        convergence_data = model.analyze_convergence(K, step_range, option_type)
+        
+        # Convert numpy types for JSON serialization
+        convergence_data = convert_numpy_types(convergence_data)
+        
+        return jsonify({
+            'success': True,
+            'convergence_data': convergence_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in convergence analysis: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
