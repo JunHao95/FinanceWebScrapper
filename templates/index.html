@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Financial Metrics Scraper</title>
+    <!-- Plotly for 3D Interactive Charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
     <style>
         * {
             margin: 0;
@@ -617,6 +619,53 @@
         .tab-button:not(.active) .tab-badge {
             background: #999;
         }
+
+        /* Main Tab Navigation */
+        .main-tabs {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 20px 0 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .main-tab-buttons {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 0;
+            overflow-x: auto;
+        }
+
+        .main-tab-button {
+            padding: 15px 25px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .main-tab-button:hover {
+            color: #667eea;
+        }
+
+        .main-tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .main-tab-content {
+            display: none;
+        }
+
+        .main-tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -626,8 +675,25 @@
             <p>Get comprehensive financial data, technical analysis, and sentiment insights</p>
         </header>
 
-        <div class="input-section">
-            <h2>Enter Stock Tickers</h2>
+        <!-- Main Tab Navigation -->
+        <div class="main-tabs">
+            <div class="main-tab-buttons">
+                <button class="main-tab-button active" onclick="switchMainTab('stockAnalysis')">
+                    📊 Stock Analysis
+                </button>
+                <button class="main-tab-button" onclick="switchMainTab('optionsPricing')">
+                    💹 Options Pricing
+                </button>
+                <button class="main-tab-button" onclick="switchMainTab('volatilitySurface')">
+                    📈 Volatility Surface
+                </button>
+            </div>
+        </div>
+
+        <!-- Stock Analysis Tab -->
+        <div id="stockAnalysisTab" class="main-tab-content active">
+            <div class="input-section">
+                <h2>Enter Stock Tickers</h2>
             <form id="scrapeForm">
                 <div class="form-group">
                     <label for="tickers">Stock Ticker Symbols</label>
@@ -716,9 +782,59 @@
             </form>
         </div>
 
-        <!-- Derivative Pricing Calculator -->
-        <div class="input-section">
-            <h2>💹 Options Pricing Calculator</h2>
+        <div class="results-section" id="resultsSection">
+            <h2>📈 Analysis Results</h2>
+            
+            <!-- Tabs Navigation -->
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab('stocks')" id="stocksTab">
+                        📊 Stock Details
+                        <span class="tab-badge" id="stocksCount">0</span>
+                    </button>
+                    <button class="tab-button" onclick="switchTab('analytics')" id="analyticsTab">
+                        📈 Advanced Analytics
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Contents -->
+            <div id="tabContents">
+                <!-- Tab 1: Stock Details -->
+                <div class="tab-content active" id="stocksTabContent">
+                    <div id="cnnMetrics"></div>
+                    <div id="tickerResults"></div>
+                </div>
+
+                <!-- Tab 2: Advanced Analytics -->
+                <div class="tab-content" id="analyticsTabContent">
+                    <div id="analyticsResults"></div>
+                    <div id="noAnalyticsMessage" style="display: none; text-align: center; padding: 40px; color: #666;">
+                        <h3>📊 No Analytics Available</h3>
+                        <p style="margin-top: 10px;">Advanced analytics will appear here when you analyze 2 or more stocks with portfolio allocation enabled.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="email-section">
+                <h3>📧 Email Report</h3>
+                <p style="margin-bottom: 15px;">Send this analysis to your email</p>
+                <form id="emailForm" onsubmit="sendEmail(event)">
+                    <div class="form-group">
+                        <input type="email" id="emailInput" placeholder="your.email@example.com" required>
+                        <button type="submit" class="submit-btn">📧 Send Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        </div>
+        <!-- End Stock Analysis Tab -->
+
+        <!-- Options Pricing Tab -->
+        <div id="optionsPricingTab" class="main-tab-content">
+            <!-- Derivative Pricing Calculator -->
+            <div class="input-section">
+                <h2>💹 Options Pricing Calculator</h2>
             <div class="form-group">
                 <label for="optionCalcType">Calculator Type</label>
                 <select id="optionCalcType" onchange="toggleCalculatorType()">
@@ -913,6 +1029,96 @@
                 <div id="optionResultsContent"></div>
             </div>
         </div>
+        </div>
+        <!-- End Options Pricing Tab -->
+
+        <!-- Volatility Surface Tab -->
+        <div id="volatilitySurfaceTab" class="main-tab-content">
+            <!-- Volatility Surface Viewer -->
+            <div class="input-section">
+                <h2>📈 Interactive Volatility Surface Viewer</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                Visualize implied volatility surface from real market options data with interactive 3D rotation and zoom
+            </p>
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+                <strong>⏰ Market Hours Recommended:</strong> Best results during 9:30 AM - 4:00 PM ET (Mon-Fri). 
+                After-hours/weekend data may have zero bid/ask quotes. Try <strong>SPY</strong> or <strong>QQQ</strong> for best liquidity.
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div class="form-group">
+                    <label for="volSurfTicker">Stock Ticker</label>
+                    <input type="text" id="volSurfTicker" placeholder="e.g., AAPL, MSFT, TSLA" value="SPY" required>
+                    <small>SPY/QQQ recommended for best liquidity</small>
+                </div>
+                <div class="form-group">
+                    <label for="volSurfOptionType">Option Type</label>
+                    <select id="volSurfOptionType">
+                        <option value="call">Call Options</option>
+                        <option value="put">Put Options</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="volSurfRiskFreeRate">Risk-Free Rate (%)</label>
+                    <input type="number" id="volSurfRiskFreeRate" step="0.01" value="5" required>
+                </div>
+                <div class="form-group">
+                    <label for="volSurfMinVolume">Min Volume Filter</label>
+                    <input type="number" id="volSurfMinVolume" min="0" value="0" required>
+                    <small>Set to 0 for maximum data coverage</small>
+                </div>
+                <div class="form-group">
+                    <label for="volSurfMaxSpread">Max Bid-Ask Spread (%)</label>
+                    <input type="number" id="volSurfMaxSpread" step="0.01" min="0" max="100" value="50" required>
+                    <small>Higher values = more options (50% recommended)</small>
+                </div>
+            </div>
+
+            <div class="button-group" style="margin-top: 20px;">
+                <button type="button" class="primary-btn" onclick="buildVolatilitySurface()">
+                    🌐 Build 3D Surface
+                </button>
+                <button type="button" class="secondary-btn" onclick="showATMTermStructure()">
+                    📊 Show ATM Term Structure
+                </button>
+            </div>
+
+            <!-- Surface Plot Container -->
+            <div id="volSurfaceContainer" style="display: none; margin-top: 30px;">
+                <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Interactive Volatility Surface</h3>
+                    <div id="volSurfaceMetadata" style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <!-- Metadata will be inserted here -->
+                    </div>
+                    <div id="volSurfacePlot" style="width: 100%; height: 700px;"></div>
+                    <div style="margin-top: 15px; padding: 15px; background: #e8f4fd; border-radius: 8px; border-left: 3px solid #3498db;">
+                        <p style="margin: 0; color: #2c3e50;">
+                            <strong>💡 How to interact:</strong> Click and drag to rotate | Scroll to zoom | Hover over surface to see values
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATM Term Structure Container -->
+            <div id="atmTermStructureContainer" style="display: none; margin-top: 30px;">
+                <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="color: #764ba2; margin-bottom: 15px;">ATM Volatility Term Structure</h3>
+                    <div id="atmTermStructurePlot" style="width: 100%; height: 500px;"></div>
+                </div>
+            </div>
+
+            <!-- Loading indicator for surface -->
+            <div id="volSurfaceLoading" style="display: none; margin-top: 20px; text-align: center;">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #667eea; font-weight: 600;">
+                    Fetching options chain and building volatility surface... This may take 30-60 seconds.
+                </p>
+            </div>
+        </div>
+
+        </div>
+        </div>
+        <!-- End Volatility Surface Tab -->
 
         <div class="loading" id="loadingSection">
             <div class="spinner"></div>
@@ -920,65 +1126,6 @@
         </div>
 
         <div id="alertContainer"></div>
-
-        <div class="results-section" id="resultsSection">
-            <h2>📈 Analysis Results</h2>
-            
-            <!-- Tabs Navigation -->
-            <div class="tabs-container">
-                <div class="tabs">
-                    <button class="tab-button active" onclick="switchTab('stocks')" id="stocksTab">
-                        📊 Stock Details
-                        <span class="tab-badge" id="stocksCount">0</span>
-                    </button>
-                    <button class="tab-button" onclick="switchTab('analytics')" id="analyticsTab">
-                        📈 Advanced Analytics
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tab Contents -->
-            <div id="tabContents">
-                <!-- Tab 1: Stock Details -->
-                <div class="tab-content active" id="stocksTabContent">
-                    <div id="cnnMetrics"></div>
-                    <div id="tickerResults"></div>
-                </div>
-
-                <!-- Tab 2: Advanced Analytics -->
-                <div class="tab-content" id="analyticsTabContent">
-                    <div id="analyticsResults"></div>
-                    <div id="noAnalyticsMessage" style="display: none; text-align: center; padding: 40px; color: #666;">
-                        <h3>📊 No Analytics Available</h3>
-                        <p style="margin-top: 10px;">Advanced analytics will appear here when you analyze 2 or more stocks with portfolio allocation enabled.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="email-section">
-                <h3>📧 Email Report</h3>
-                <p style="margin-bottom: 15px;">Send this analysis to your email</p>
-                <div class="email-form">
-                    <input 
-                        type="email" 
-                        id="emailRecipient" 
-                        placeholder="Enter your email address"
-                        required
-                    >
-                    <input 
-                        type="email" 
-                        id="emailCC" 
-                        placeholder="CC (optional)"
-                    >
-                    <input 
-                        type="email" 
-                        id="emailBCC" 
-                        placeholder="BCC (optional)"
-                    >
-                    <button type="button" onclick="sendEmail()">📨 Send Email Report</button>
-                </div>
-            </div>
-        </div>
 
         <div class="footer">
             <p>© 2024 Stock Financial Metrics Scraper | Powered by Multiple Financial Data Sources</p>
@@ -1006,6 +1153,22 @@
                 document.getElementById('analyticsTab').classList.add('active');
                 document.getElementById('analyticsTabContent').classList.add('active');
             }
+        }
+
+        // Main tab switching function for Stock Analysis, Options Pricing, and Volatility Surface
+        function switchMainTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.main-tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Remove active from all buttons
+            document.querySelectorAll('.main-tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            // Activate clicked button
+            event.target.classList.add('active');
         }
 
         // Toggle allocation section
@@ -2281,6 +2444,297 @@
                 pingServer(); // Immediate ping when tab becomes visible
             }
         });
+
+        // ===========================
+        // Volatility Surface Functions
+        // ===========================
+
+        async function buildVolatilitySurface() {
+            const ticker = document.getElementById('volSurfTicker').value.trim().toUpperCase();
+            const optionType = document.getElementById('volSurfOptionType').value;
+            const riskFreeRate = parseFloat(document.getElementById('volSurfRiskFreeRate').value) / 100;
+            const minVolume = parseInt(document.getElementById('volSurfMinVolume').value);
+            const maxSpread = parseFloat(document.getElementById('volSurfMaxSpread').value) / 100;
+
+            if (!ticker) {
+                showAlert('Please enter a ticker symbol', 'error');
+                return;
+            }
+
+            try {
+                // Show loading
+                document.getElementById('volSurfaceLoading').style.display = 'block';
+                document.getElementById('volSurfaceContainer').style.display = 'none';
+                document.getElementById('atmTermStructureContainer').style.display = 'none';
+                hideAlert();
+
+                const response = await fetch('/api/volatility_surface', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        option_type: optionType,
+                        risk_free_rate: riskFreeRate,
+                        min_volume: minVolume,
+                        max_spread_pct: maxSpread
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayVolatilitySurface(data.surface);
+                    showAlert(`✅ Volatility surface built successfully! (${data.surface.data_points} options analyzed)`, 'success');
+                } else {
+                    showAlert(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to build volatility surface: ' + error.message, 'error');
+            } finally {
+                document.getElementById('volSurfaceLoading').style.display = 'none';
+            }
+        }
+
+        function displayVolatilitySurface(surface) {
+            const container = document.getElementById('volSurfaceContainer');
+            const plotDiv = document.getElementById('volSurfacePlot');
+            const metadataDiv = document.getElementById('volSurfaceMetadata');
+
+            // Display metadata
+            let metadataHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+            metadataHTML += `<div><strong>Ticker:</strong> ${surface.ticker}</div>`;
+            metadataHTML += `<div><strong>Current Price:</strong> $${surface.current_price.toFixed(2)}</div>`;
+            metadataHTML += `<div><strong>Option Type:</strong> ${surface.option_type.toUpperCase()}</div>`;
+            metadataHTML += `<div><strong>Data Points:</strong> ${surface.data_points}</div>`;
+            metadataHTML += `<div><strong>IV Range:</strong> ${(surface.metadata.min_iv * 100).toFixed(1)}% - ${(surface.metadata.max_iv * 100).toFixed(1)}%</div>`;
+            metadataHTML += `<div><strong>Avg IV:</strong> ${(surface.metadata.avg_iv * 100).toFixed(1)}%</div>`;
+            metadataHTML += '</div>';
+            
+            // Add warning if using historical data
+            if (surface.using_historical_data) {
+                metadataHTML += '<div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-top: 15px; border-radius: 4px;">';
+                metadataHTML += '<strong>📊 Using Historical Data:</strong> Market is currently closed. ';
+                metadataHTML += 'Displaying volatility surface from previous trading day\'s closing prices. ';
+                metadataHTML += 'For live quotes, access during market hours (9:30 AM - 4:00 PM ET).';
+                metadataHTML += '</div>';
+            }
+            
+            metadataDiv.innerHTML = metadataHTML;
+
+            // Prepare 3D surface data
+            const surfaceData = [{
+                type: 'surface',
+                x: surface.surface_grid.strikes,
+                y: surface.surface_grid.maturities,
+                z: surface.surface_grid.implied_volatilities.map(row => 
+                    row.map(val => val !== null ? val * 100 : null)  // Convert to percentage
+                ),
+                colorscale: [
+                    [0, 'rgb(0, 0, 255)'],      // Blue for low IV
+                    [0.25, 'rgb(0, 255, 255)'], // Cyan
+                    [0.5, 'rgb(0, 255, 0)'],    // Green
+                    [0.75, 'rgb(255, 255, 0)'], // Yellow
+                    [1, 'rgb(255, 0, 0)']       // Red for high IV
+                ],
+                colorbar: {
+                    title: 'IV (%)',
+                    titleside: 'right',
+                    titlefont: { size: 14 }
+                },
+                hovertemplate: '<b>Strike:</b> $%{x:.2f}<br>' +
+                               '<b>Maturity:</b> %{y:.3f} years<br>' +
+                               '<b>Implied Vol:</b> %{z:.2f}%<br>' +
+                               '<extra></extra>',
+                contours: {
+                    z: {
+                        show: true,
+                        usecolormap: true,
+                        highlightcolor: "limegreen",
+                        project: {z: true}
+                    }
+                }
+            }];
+
+            // Add scatter points for actual data
+            const scatterData = {
+                type: 'scatter3d',
+                mode: 'markers',
+                x: surface.raw_data.map(d => d.strike),
+                y: surface.raw_data.map(d => d.time_to_maturity),
+                z: surface.raw_data.map(d => d.implied_volatility * 100),
+                marker: {
+                    size: 3,
+                    color: 'black',
+                    opacity: 0.6
+                },
+                hovertemplate: '<b>Strike:</b> $%{x:.2f}<br>' +
+                               '<b>Maturity:</b> %{y:.3f} years<br>' +
+                               '<b>IV:</b> %{z:.2f}%<br>' +
+                               '<extra>Market Data</extra>',
+                name: 'Market Data Points'
+            };
+
+            const layout = {
+                title: {
+                    text: `${surface.ticker} ${surface.option_type.toUpperCase()} Implied Volatility Surface`,
+                    font: { size: 20, color: '#667eea' }
+                },
+                scene: {
+                    xaxis: {
+                        title: 'Strike Price ($)',
+                        titlefont: { size: 14 },
+                        backgroundcolor: 'rgb(230, 230,230)',
+                        gridcolor: 'white',
+                        showbackground: true
+                    },
+                    yaxis: {
+                        title: 'Time to Maturity (Years)',
+                        titlefont: { size: 14 },
+                        backgroundcolor: 'rgb(230, 230,230)',
+                        gridcolor: 'white',
+                        showbackground: true
+                    },
+                    zaxis: {
+                        title: 'Implied Volatility (%)',
+                        titlefont: { size: 14 },
+                        backgroundcolor: 'rgb(230, 230,230)',
+                        gridcolor: 'white',
+                        showbackground: true
+                    },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.3 }
+                    }
+                },
+                autosize: true,
+                margin: { l: 0, r: 0, b: 0, t: 40 },
+                paper_bgcolor: 'white',
+                plot_bgcolor: 'white'
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['toImage'],
+                displaylogo: false
+            };
+
+            // Plot both surface and scatter points
+            Plotly.newPlot(plotDiv, [surfaceData[0], scatterData], layout, config);
+
+            // Show container
+            container.style.display = 'block';
+
+            // Scroll to view
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function showATMTermStructure() {
+            const ticker = document.getElementById('volSurfTicker').value.trim().toUpperCase();
+            const optionType = document.getElementById('volSurfOptionType').value;
+            const riskFreeRate = parseFloat(document.getElementById('volSurfRiskFreeRate').value) / 100;
+
+            if (!ticker) {
+                showAlert('Please enter a ticker symbol', 'error');
+                return;
+            }
+
+            try {
+                // Show loading
+                document.getElementById('volSurfaceLoading').style.display = 'block';
+                document.getElementById('atmTermStructureContainer').style.display = 'none';
+                hideAlert();
+
+                const response = await fetch('/api/atm_term_structure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        option_type: optionType,
+                        risk_free_rate: riskFreeRate
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayATMTermStructure(data.term_structure, ticker, optionType);
+                    showAlert(`✅ ATM term structure extracted! (${data.term_structure.length} maturities)`, 'success');
+                } else {
+                    showAlert(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to extract ATM term structure: ' + error.message, 'error');
+            } finally {
+                document.getElementById('volSurfaceLoading').style.display = 'none';
+            }
+        }
+
+        function displayATMTermStructure(termStructure, ticker, optionType) {
+            const container = document.getElementById('atmTermStructureContainer');
+            const plotDiv = document.getElementById('atmTermStructurePlot');
+
+            // Prepare data for line chart
+            const trace = {
+                type: 'scatter',
+                mode: 'lines+markers',
+                x: termStructure.map(d => d.time_to_maturity),
+                y: termStructure.map(d => d.implied_volatility * 100),
+                line: {
+                    color: '#667eea',
+                    width: 3
+                },
+                marker: {
+                    size: 10,
+                    color: '#764ba2',
+                    line: {
+                        color: 'white',
+                        width: 2
+                    }
+                },
+                hovertemplate: '<b>Maturity:</b> %{x:.3f} years<br>' +
+                               '<b>Strike:</b> $' + termStructure.map(d => d.strike.toFixed(2)) + '<br>' +
+                               '<b>ATM IV:</b> %{y:.2f}%<br>' +
+                               '<extra></extra>',
+                name: 'ATM Volatility'
+            };
+
+            const layout = {
+                title: {
+                    text: `${ticker} ${optionType.toUpperCase()} ATM Volatility Term Structure`,
+                    font: { size: 18, color: '#667eea' }
+                },
+                xaxis: {
+                    title: 'Time to Maturity (Years)',
+                    titlefont: { size: 14 },
+                    gridcolor: '#e0e0e0'
+                },
+                yaxis: {
+                    title: 'At-The-Money Implied Volatility (%)',
+                    titlefont: { size: 14 },
+                    gridcolor: '#e0e0e0'
+                },
+                hovermode: 'closest',
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white',
+                margin: { l: 60, r: 40, b: 60, t: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false
+            };
+
+            Plotly.newPlot(plotDiv, [trace], layout, config);
+
+            // Show container
+            container.style.display = 'block';
+
+            // Scroll to view
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         
     </script>
 </body>

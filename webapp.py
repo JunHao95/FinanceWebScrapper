@@ -136,6 +136,7 @@ logger.info("MongoDB storage disabled for web application - storage only via CLI
 def convert_numpy_types(data):
     """
     Convert numpy types to native Python types for JSON serialization
+    Also converts NaN/Inf to None for valid JSON
     
     Args:
         data: Data to convert (dict, list, or primitive type)
@@ -148,12 +149,22 @@ def convert_numpy_types(data):
     elif isinstance(data, list):
         return [convert_numpy_types(item) for item in data]
     elif isinstance(data, np.ndarray):
-        return data.tolist()
+        # Convert array to list and handle NaN/Inf
+        return convert_numpy_types(data.tolist())
     elif hasattr(data, 'item'):  # numpy scalar types have .item() method
         try:
-            return data.item()
+            value = data.item()
+            # Check for NaN or Inf
+            if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                return None
+            return value
         except (ValueError, AttributeError):
             return data
+    elif isinstance(data, float):
+        # Handle Python float NaN/Inf
+        if np.isnan(data) or np.isinf(data):
+            return None
+        return data
     else:
         return data
 
@@ -837,6 +848,118 @@ def convergence_analysis():
         
     except Exception as e:
         logger.error(f"Error in convergence analysis: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/volatility_surface', methods=['POST'])
+def volatility_surface():
+    """
+    Build implied volatility surface from real market data
+    
+    Expected JSON payload:
+    {
+        "ticker": "AAPL",
+        "option_type": "call",
+        "risk_free_rate": 0.05,
+        "min_volume": 10,
+        "max_spread_pct": 0.20
+    }
+    """
+    try:
+        from src.derivatives.volatility_surface import VolatilitySurfaceBuilder
+        
+        data = request.json
+        
+        # Validate required fields
+        if 'ticker' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: ticker'
+            }), 400
+        
+        # Extract parameters
+        ticker = data['ticker'].upper()
+        option_type = data.get('option_type', 'call').lower()
+        risk_free_rate = float(data.get('risk_free_rate', 0.05))
+        min_volume = int(data.get('min_volume', 10))
+        max_spread_pct = float(data.get('max_spread_pct', 0.20))
+        
+        builder = VolatilitySurfaceBuilder()
+        
+        # Build the surface
+        surface_data = builder.build_surface(
+            ticker=ticker,
+            risk_free_rate=risk_free_rate,
+            option_type=option_type,
+            min_volume=min_volume,
+            max_spread_pct=max_spread_pct
+        )
+        
+        # Convert numpy types for JSON serialization
+        surface_data = convert_numpy_types(surface_data)
+        
+        return jsonify({
+            'success': True,
+            'surface': surface_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error building volatility surface: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/atm_term_structure', methods=['POST'])
+def atm_term_structure():
+    """
+    Get ATM volatility term structure
+    
+    Expected JSON payload:
+    {
+        "ticker": "AAPL",
+        "option_type": "call",
+        "risk_free_rate": 0.05
+    }
+    """
+    try:
+        from src.derivatives.volatility_surface import VolatilitySurfaceBuilder
+        
+        data = request.json
+        
+        # Validate required fields
+        if 'ticker' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: ticker'
+            }), 400
+        
+        # Extract parameters
+        ticker = data['ticker'].upper()
+        option_type = data.get('option_type', 'call').lower()
+        risk_free_rate = float(data.get('risk_free_rate', 0.05))
+        
+        builder = VolatilitySurfaceBuilder()
+        
+        # Get ATM term structure
+        term_structure = builder.get_atm_volatility_term_structure(
+            ticker=ticker,
+            risk_free_rate=risk_free_rate,
+            option_type=option_type
+        )
+        
+        # Convert numpy types for JSON serialization
+        term_structure = convert_numpy_types(term_structure)
+        
+        return jsonify({
+            'success': True,
+            'term_structure': term_structure
+        })
+        
+    except Exception as e:
+        logger.error(f"Error extracting ATM term structure: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
