@@ -110,8 +110,14 @@ class FinancialAnalytics:
             
             # Handle both single and multiple tickers
             if len(tickers) == 1:
-                prices = data['Close'].to_frame()
-                prices.columns = [tickers[0]]
+                # For single ticker, yfinance returns a DataFrame with columns like 'Close', 'Open', etc.
+                # Extract the 'Close' column and convert to DataFrame with ticker name
+                if isinstance(data['Close'], pd.Series):
+                    prices = data['Close'].to_frame(name=tickers[0])
+                else:
+                    prices = data['Close']
+                    if not isinstance(prices, pd.DataFrame):
+                        prices = pd.DataFrame(prices, columns=[tickers[0]])
             else:
                 prices = data['Close']
             
