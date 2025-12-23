@@ -4,11 +4,31 @@
 
 const FormManager = {
     /**
+     * Parse tickers from input string (helper method)
+     * @param {string} tickersInput - Comma-separated ticker string
+     * @returns {string[]} Array of uppercase, trimmed ticker symbols
+     */
+    parseTickersInput(tickersInput) {
+        if (!tickersInput || typeof tickersInput !== 'string') {
+            return [];
+        }
+        return tickersInput
+            .split(',')
+            .map(t => t.trim().toUpperCase())
+            .filter(t => t.length > 0);
+    },
+    /**
      * Toggle portfolio allocation section
      */
     toggleAllocationSection() {
         const checkbox = document.getElementById('customAllocation');
         const section = document.getElementById('allocationSection');
+        
+        if (!checkbox || !section) {
+            console.error('Required DOM elements not found: customAllocation or allocationSection');
+            return;
+        }
+        
         section.style.display = checkbox.checked ? 'block' : 'none';
         
         if (checkbox.checked) {
@@ -20,13 +40,15 @@ const FormManager = {
      * Update allocation inputs based on current tickers
      */
     updateAllocationInputs() {
-        const tickersInput = document.getElementById('tickers').value;
-        const tickers = tickersInput
-            .split(',')
-            .map(t => t.trim().toUpperCase())
-            .filter(t => t.length > 0);
-        
+        const tickersInputElement = document.getElementById('tickers');
         const container = document.getElementById('allocationInputs');
+        
+        if (!tickersInputElement || !container) {
+            console.error('Required DOM elements not found: tickers or allocationInputs');
+            return;
+        }
+        
+        const tickers = this.parseTickersInput(tickersInputElement.value);
         container.innerHTML = '';
         
         if (tickers.length === 0) {
@@ -48,11 +70,17 @@ const FormManager = {
                     min="0"
                     max="100"
                     step="0.1"
-                    oninput="FormManager.calculateAllocationTotal()"
+                    class="allocation-input"
                 >
             `;
             
             container.appendChild(row);
+            
+            // Attach event listener instead of inline handler
+            const input = row.querySelector('input');
+            if (input) {
+                input.addEventListener('input', () => this.calculateAllocationTotal());
+            }
         });
         
         this.calculateAllocationTotal();
@@ -71,6 +99,11 @@ const FormManager = {
         });
         
         const totalDiv = document.getElementById('allocationTotal');
+        if (!totalDiv) {
+            console.error('Required DOM element not found: allocationTotal');
+            return;
+        }
+        
         totalDiv.textContent = `Total: ${total.toFixed(1)}%`;
         
         // Color code based on validity
@@ -86,17 +119,18 @@ const FormManager = {
      * Get portfolio allocation from form
      */
     getPortfolioAllocation() {
-        const customAllocation = document.getElementById('customAllocation').checked;
-        if (!customAllocation) {
+        const customAllocationCheckbox = document.getElementById('customAllocation');
+        if (!customAllocationCheckbox || !customAllocationCheckbox.checked) {
             return null;
         }
         
-        const tickersInput = document.getElementById('tickers').value;
-        const tickers = tickersInput
-            .split(',')
-            .map(t => t.trim().toUpperCase())
-            .filter(t => t.length > 0);
+        const tickersInputElement = document.getElementById('tickers');
+        if (!tickersInputElement) {
+            console.error('Required DOM element not found: tickers');
+            return null;
+        }
         
+        const tickers = this.parseTickersInput(tickersInputElement.value);
         const allocations = {};
         let hasAnyAllocation = false;
         
@@ -118,41 +152,67 @@ const FormManager = {
      * Clear form
      */
     clearForm() {
-        document.getElementById('scrapeForm').reset();
-        document.getElementById('source-all').checked = true;
-        document.getElementById('resultsSection').classList.remove('active');
-        AppState.currentData = null;
-        AppState.currentCnnData = null;
-        AppState.currentTickers = [];
-        AppState.currentAnalytics = {};
-        Utils.hideAlert();
+        const scrapeForm = document.getElementById('scrapeForm');
+        const sourceAll = document.getElementById('source-all');
+        const resultsSection = document.getElementById('resultsSection');
+        
+        if (!scrapeForm || !sourceAll || !resultsSection) {
+            console.error('Required DOM elements not found for form clearing');
+            return;
+        }
+        
+        scrapeForm.reset();
+        sourceAll.checked = true;
+        resultsSection.classList.remove('active');
+        
+        // Verify global dependencies exist before accessing
+        if (typeof AppState !== 'undefined') {
+            AppState.currentData = null;
+            AppState.currentCnnData = null;
+            AppState.currentTickers = [];
+            AppState.currentAnalytics = {};
+        }
+        
+        if (typeof Utils !== 'undefined' && typeof Utils.hideAlert === 'function') {
+            Utils.hideAlert();
+        }
     },
 
     /**
      * Initialize event listeners
      */
     initEventListeners() {
+        const tickersInput = document.getElementById('tickers');
+        const customAllocationCheckbox = document.getElementById('customAllocation');
+        const sourceAllCheckbox = document.getElementById('source-all');
+        
         // Update allocation inputs when tickers change
-        document.getElementById('tickers').addEventListener('input', () => {
-            const customAllocation = document.getElementById('customAllocation').checked;
-            if (customAllocation) {
-                this.updateAllocationInputs();
-            }
-        });
-
-        // Handle source checkboxes
-        document.getElementById('source-all').addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:not(#source-all)');
-            checkboxes.forEach(cb => cb.checked = false);
-        });
-
-        document.querySelectorAll('.checkbox-item input[type="checkbox"]:not(#source-all)').forEach(cb => {
-            cb.addEventListener('change', function() {
-                if (this.checked) {
-                    document.getElementById('source-all').checked = false;
+        if (tickersInput && customAllocationCheckbox) {
+            tickersInput.addEventListener('input', () => {
+                if (customAllocationCheckbox.checked) {
+                    this.updateAllocationInputs();
                 }
             });
-        });
+        }
+
+        // Handle source checkboxes
+        if (sourceAllCheckbox) {
+            sourceAllCheckbox.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:not(#source-all)');
+                checkboxes.forEach(cb => cb.checked = false);
+            });
+        }
+
+        const otherCheckboxes = document.querySelectorAll('.checkbox-item input[type="checkbox"]:not(#source-all)');
+        if (otherCheckboxes.length > 0 && sourceAllCheckbox) {
+            otherCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function() {
+                    if (this.checked) {
+                        sourceAllCheckbox.checked = false;
+                    }
+                });
+            });
+        }
     }
 };
 

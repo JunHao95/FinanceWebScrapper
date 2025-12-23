@@ -5,20 +5,44 @@
 
 const DisplayManager = {
     /**
+     * Escape HTML to prevent XSS attacks
+     */
+    escapeHtml(text) {
+        if (text === null || text === undefined) {
+            return '';
+        }
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    },
+
+    /**
      * Display CNN Fear & Greed metrics
      */
     displayCnnMetrics(cnnData) {
         const cnnDiv = document.getElementById('cnnMetrics');
+        if (!cnnDiv) {
+            console.error('Required DOM element not found: cnnMetrics');
+            return;
+        }
+        
+        if (!cnnData || typeof cnnData !== 'object') {
+            console.error('Invalid cnnData provided');
+            return;
+        }
         
         let html = '<div class="cnn-metrics">';
         html += '<h3>📊 CNN Fear & Greed Index</h3>';
         
         for (const [metric, values] of Object.entries(cnnData)) {
-            const displayName = metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const displayName = this.escapeHtml(metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+            const score = this.escapeHtml(values.score || '--');
+            const rating = this.escapeHtml(values.rating || '--');
+            
             html += '<div class="metric-card">';
             html += `<strong>${displayName}:</strong> `;
-            html += `Score: ${values.score || '--'} | `;
-            html += `Rating: ${values.rating || '--'}`;
+            html += `Score: ${score} | `;
+            html += `Rating: ${rating}`;
             html += '</div>';
         }
         
@@ -30,6 +54,17 @@ const DisplayManager = {
      * Create ticker card with metrics
      */
     createTickerCard(ticker, data) {
+        if (!ticker || !data || typeof data !== 'object') {
+            console.error('Invalid ticker or data provided to createTickerCard');
+            return null;
+        }
+
+        // Verify Utils dependency exists
+        if (typeof Utils === 'undefined' || typeof Utils.formatValue !== 'function') {
+            console.error('Required dependency not found: Utils.formatValue');
+            return null;
+        }
+
         const div = document.createElement('div');
         div.className = 'ticker-results';
 
@@ -50,8 +85,8 @@ const DisplayManager = {
         };
 
         let html = '<div class="ticker-header">';
-        html += `<h3>${ticker}</h3>`;
-        html += `<span>${data['Data Timestamp'] || ''}</span>`;
+        html += `<h3>${this.escapeHtml(ticker)}</h3>`;
+        html += `<span>${this.escapeHtml(data['Data Timestamp'] || '')}</span>`;
         html += '</div>';
 
         html += '<div class="metrics-grid">';
@@ -72,13 +107,13 @@ const DisplayManager = {
 
             if (Object.keys(groupMetrics).length > 0) {
                 html += '<div class="metric-group">';
-                html += `<h4>${groupName}</h4>`;
+                html += `<h4>${this.escapeHtml(groupName)}</h4>`;
                 
                 for (const [key, value] of Object.entries(groupMetrics)) {
                     html += '<div class="metric-item">';
-                    const cleanKey = key.replace(/\s*\(Enhanced\)\s*$/i, '');
+                    const cleanKey = this.escapeHtml(key.replace(/\s*\(Enhanced\)\s*$/i, ''));
                     html += `<span class="metric-label">${cleanKey}</span>`;
-                    html += `<span class="metric-value">${Utils.formatValue(value)}</span>`;
+                    html += `<span class="metric-value">${this.escapeHtml(Utils.formatValue(value))}</span>`;
                     html += '</div>';
                 }
                 
@@ -97,6 +132,21 @@ const DisplayManager = {
      */
     displayAnalytics(analyticsData) {
         const analyticsResultsDiv = document.getElementById('analyticsResults');
+        if (!analyticsResultsDiv) {
+            console.error('Required DOM element not found: analyticsResults');
+            return;
+        }
+
+        if (!analyticsData || typeof analyticsData !== 'object') {
+            console.error('Invalid analyticsData provided');
+            return;
+        }
+
+        // Verify AnalyticsRenderer dependency exists
+        if (typeof AnalyticsRenderer === 'undefined') {
+            console.error('Required dependency not found: AnalyticsRenderer');
+            return;
+        }
         
         const analyticsDiv = document.createElement('div');
         analyticsDiv.className = 'analytics-section';
@@ -108,26 +158,32 @@ const DisplayManager = {
         html += '</div>';
         
         // Add correlation analysis
-        if (analyticsData.correlation) {
+        if (analyticsData.correlation && typeof AnalyticsRenderer.renderCorrelation === 'function') {
             html += AnalyticsRenderer.renderCorrelation(analyticsData.correlation);
         }
         
         // Add PCA analysis
-        if (analyticsData.pca) {
+        if (analyticsData.pca && typeof AnalyticsRenderer.renderPCA === 'function') {
             html += AnalyticsRenderer.renderPCA(analyticsData.pca);
         }
         
         // Add individual ticker analytics
-        for (const [ticker, tickerAnalytics] of Object.entries(analyticsData)) {
-            if (ticker === 'correlation' || ticker === 'pca') continue;
-            html += AnalyticsRenderer.renderTickerAnalytics(ticker, tickerAnalytics);
+        if (typeof AnalyticsRenderer.renderTickerAnalytics === 'function') {
+            for (const [ticker, tickerAnalytics] of Object.entries(analyticsData)) {
+                if (ticker === 'correlation' || ticker === 'pca') continue;
+                html += AnalyticsRenderer.renderTickerAnalytics(ticker, tickerAnalytics);
+            }
         }
         
         analyticsDiv.innerHTML = html;
-        analyticsResultsDiv.innerHTML = '';
-        analyticsResultsDiv.appendChild(analyticsDiv);
+        
+        // Use replaceChildren() for clarity instead of innerHTML = '' + appendChild
+        analyticsResultsDiv.replaceChildren(analyticsDiv);
     }
 };
+
+// Export for browser environment
+window.DisplayManager = DisplayManager;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

@@ -14,11 +14,45 @@ const VolatilitySurface = {
      * Build volatility surface
      */
     async buildSurface() {
-        const ticker = document.getElementById('volSurfTicker').value.trim().toUpperCase();
-        const optionType = document.getElementById('volSurfOptionType').value;
-        const riskFreeRate = parseFloat(document.getElementById('volSurfRiskFreeRate').value) / 100;
-        const minVolume = parseInt(document.getElementById('volSurfMinVolume').value);
-        const maxSpread = parseFloat(document.getElementById('volSurfMaxSpread').value) / 100;
+        const tickerElement = document.getElementById('volSurfTicker');
+        const optionTypeElement = document.getElementById('volSurfOptionType');
+        const riskFreeRateElement = document.getElementById('volSurfRiskFreeRate');
+        const minVolumeElement = document.getElementById('volSurfMinVolume');
+        const maxSpreadElement = document.getElementById('volSurfMaxSpread');
+        const loadingElement = document.getElementById('volSurfaceLoading');
+        const containerElement = document.getElementById('volSurfaceContainer');
+        const atmContainerElement = document.getElementById('atmTermStructureContainer');
+
+        // Add null checks for DOM elements
+        if (!tickerElement || !optionTypeElement || !riskFreeRateElement || 
+            !minVolumeElement || !maxSpreadElement || !loadingElement || 
+            !containerElement || !atmContainerElement) {
+            console.error('Required DOM elements not found for volatility surface');
+            if (typeof Utils !== 'undefined' && Utils.showAlert) {
+                Utils.showAlert('Error: Form elements not found', 'error');
+            }
+            return;
+        }
+
+        const ticker = tickerElement.value.trim().toUpperCase();
+        const optionType = optionTypeElement.value;
+        const riskFreeRate = parseFloat(riskFreeRateElement.value) / 100;
+        const minVolume = parseInt(minVolumeElement.value);
+        const maxSpread = parseFloat(maxSpreadElement.value) / 100;
+
+        // Add validation for parsed numeric values
+        if (isNaN(riskFreeRate) || !isFinite(riskFreeRate)) {
+            Utils.showAlert('Invalid risk-free rate', 'error');
+            return;
+        }
+        if (isNaN(minVolume) || minVolume < 0) {
+            Utils.showAlert('Invalid minimum volume', 'error');
+            return;
+        }
+        if (isNaN(maxSpread) || !isFinite(maxSpread) || maxSpread < 0) {
+            Utils.showAlert('Invalid max spread', 'error');
+            return;
+        }
 
         if (!ticker) {
             Utils.showAlert('Please enter a ticker symbol', 'error');
@@ -26,9 +60,9 @@ const VolatilitySurface = {
         }
 
         try {
-            document.getElementById('volSurfaceLoading').style.display = 'block';
-            document.getElementById('volSurfaceContainer').style.display = 'none';
-            document.getElementById('atmTermStructureContainer').style.display = 'none';
+            loadingElement.style.display = 'block';
+            containerElement.style.display = 'none';
+            atmContainerElement.style.display = 'none';
             Utils.hideAlert();
 
             const data = await API.buildVolatilitySurface({
@@ -49,7 +83,7 @@ const VolatilitySurface = {
             console.error('Error:', error);
             Utils.showAlert('Failed to build volatility surface: ' + error.message, 'error');
         } finally {
-            document.getElementById('volSurfaceLoading').style.display = 'none';
+            loadingElement.style.display = 'none';
         }
     },
 
@@ -61,12 +95,31 @@ const VolatilitySurface = {
         const plotDiv = document.getElementById('volSurfacePlot');
         const metadataDiv = document.getElementById('volSurfaceMetadata');
 
-        // Display metadata
+        // Add null checks for DOM elements
+        if (!container || !plotDiv || !metadataDiv) {
+            console.error('Required DOM elements not found for displaying volatility surface');
+            return;
+        }
+
+        // Validate surface data
+        if (!surface || typeof surface !== 'object') {
+            console.error('Invalid surface data');
+            return;
+        }
+
+        // Escape HTML helper function for XSS prevention
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        };
+
+        // Display metadata with sanitization to prevent XSS
         let metadataHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
-        metadataHTML += `<div><strong>Ticker:</strong> ${surface.ticker}</div>`;
-        metadataHTML += `<div><strong>Current Price:</strong> $${surface.current_price.toFixed(2)}</div>`;
-        metadataHTML += `<div><strong>Option Type:</strong> ${surface.option_type.toUpperCase()}</div>`;
-        metadataHTML += `<div><strong>Data Points:</strong> ${surface.data_points}</div>`;
+        metadataHTML += `<div><strong>Ticker:</strong> ${escapeHtml(surface.ticker)}</div>`;
+        metadataHTML += `<div><strong>Current Price:</strong> $${parseFloat(surface.current_price).toFixed(2)}</div>`;
+        metadataHTML += `<div><strong>Option Type:</strong> ${escapeHtml(surface.option_type).toUpperCase()}</div>`;
+        metadataHTML += `<div><strong>Data Points:</strong> ${parseInt(surface.data_points)}</div>`;
         metadataHTML += `<div><strong>IV Range:</strong> ${(surface.metadata.min_iv * 100).toFixed(1)}% - ${(surface.metadata.max_iv * 100).toFixed(1)}%</div>`;
         metadataHTML += `<div><strong>Avg IV:</strong> ${(surface.metadata.avg_iv * 100).toFixed(1)}%</div>`;
         metadataHTML += '</div>';
@@ -143,21 +196,21 @@ const VolatilitySurface = {
                 xaxis: {
                     title: 'Strike Price ($)',
                     titlefont: { size: 14 },
-                    backgroundcolor: 'rgb(230, 230,230)',
+                    backgroundcolor: 'rgb(230, 230, 230)',
                     gridcolor: 'white',
                     showbackground: true
                 },
                 yaxis: {
                     title: 'Time to Maturity (Years)',
                     titlefont: { size: 14 },
-                    backgroundcolor: 'rgb(230, 230,230)',
+                    backgroundcolor: 'rgb(230, 230, 230)',
                     gridcolor: 'white',
                     showbackground: true
                 },
                 zaxis: {
                     title: 'Implied Volatility (%)',
                     titlefont: { size: 14 },
-                    backgroundcolor: 'rgb(230, 230,230)',
+                    backgroundcolor: 'rgb(230, 230, 230)',
                     gridcolor: 'white',
                     showbackground: true
                 },
@@ -187,9 +240,31 @@ const VolatilitySurface = {
      * Show ATM term structure
      */
     async showATMTermStructure() {
-        const ticker = document.getElementById('volSurfTicker').value.trim().toUpperCase();
-        const optionType = document.getElementById('volSurfOptionType').value;
-        const riskFreeRate = parseFloat(document.getElementById('volSurfRiskFreeRate').value) / 100;
+        const tickerElement = document.getElementById('volSurfTicker');
+        const optionTypeElement = document.getElementById('volSurfOptionType');
+        const riskFreeRateElement = document.getElementById('volSurfRiskFreeRate');
+        const loadingElement = document.getElementById('volSurfaceLoading');
+        const atmContainerElement = document.getElementById('atmTermStructureContainer');
+
+        // Add null checks for DOM elements
+        if (!tickerElement || !optionTypeElement || !riskFreeRateElement || 
+            !loadingElement || !atmContainerElement) {
+            console.error('Required DOM elements not found for ATM term structure');
+            if (typeof Utils !== 'undefined' && Utils.showAlert) {
+                Utils.showAlert('Error: Form elements not found', 'error');
+            }
+            return;
+        }
+
+        const ticker = tickerElement.value.trim().toUpperCase();
+        const optionType = optionTypeElement.value;
+        const riskFreeRate = parseFloat(riskFreeRateElement.value) / 100;
+
+        // Add validation for parsed numeric values
+        if (isNaN(riskFreeRate) || !isFinite(riskFreeRate)) {
+            Utils.showAlert('Invalid risk-free rate', 'error');
+            return;
+        }
 
         if (!ticker) {
             Utils.showAlert('Please enter a ticker symbol', 'error');
@@ -197,8 +272,8 @@ const VolatilitySurface = {
         }
 
         try {
-            document.getElementById('volSurfaceLoading').style.display = 'block';
-            document.getElementById('atmTermStructureContainer').style.display = 'none';
+            loadingElement.style.display = 'block';
+            atmContainerElement.style.display = 'none';
             Utils.hideAlert();
 
             const data = await API.getATMTermStructure({
@@ -217,7 +292,7 @@ const VolatilitySurface = {
             console.error('Error:', error);
             Utils.showAlert('Failed to extract ATM term structure: ' + error.message, 'error');
         } finally {
-            document.getElementById('volSurfaceLoading').style.display = 'none';
+            loadingElement.style.display = 'none';
         }
     },
 
@@ -227,6 +302,25 @@ const VolatilitySurface = {
     displayATMTermStructure(termStructure, ticker, optionType) {
         const container = document.getElementById('atmTermStructureContainer');
         const plotDiv = document.getElementById('atmTermStructurePlot');
+
+        // Add null checks for DOM elements
+        if (!container || !plotDiv) {
+            console.error('Required DOM elements not found for displaying ATM term structure');
+            return;
+        }
+
+        // Validate term structure data
+        if (!termStructure || !Array.isArray(termStructure) || termStructure.length === 0) {
+            console.error('Invalid term structure data');
+            return;
+        }
+
+        // Escape HTML helper function for XSS prevention
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        };
 
         const trace = {
             type: 'scatter',
@@ -246,14 +340,14 @@ const VolatilitySurface = {
                 }
             },
             hovertemplate: '<b>Maturity:</b> %{x:.3f} years<br>' +
-                           '<b>ATM IV:</strong> %{y:.2f}%<br>' +
+                           '<b>ATM IV:</b> %{y:.2f}%<br>' +
                            '<extra></extra>',
             name: 'ATM Volatility'
         };
 
         const layout = {
             title: {
-                text: `${ticker} ${optionType.toUpperCase()} ATM Volatility Term Structure`,
+                text: `${escapeHtml(ticker)} ${escapeHtml(optionType).toUpperCase()} ATM Volatility Term Structure`,
                 font: { size: 18, color: '#667eea' }
             },
             xaxis: {
@@ -283,6 +377,9 @@ const VolatilitySurface = {
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 };
+
+// Export for browser environment
+window.VolatilitySurface = VolatilitySurface;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

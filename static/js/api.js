@@ -46,111 +46,287 @@ const API = {
      * Send email report
      */
     async sendEmail(emailData) {
-        const response = await fetch('/api/send-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(emailData)
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        return await response.json();
+        try {
+            const response = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(emailData),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to send email (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from email service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Email request timed out. Please try again.');
+            }
+            throw error;
+        }
     },
 
     /**
      * Calculate option price
      */
     async calculateOptionPrice(params) {
-        const response = await fetch('/api/option_pricing', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-        
-        return await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        try {
+            const response = await fetch('/api/option_pricing', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Option pricing failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from option pricing service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Option pricing calculation timed out');
+            }
+            throw error;
+        }
     },
 
     /**
      * Calculate implied volatility
      */
     async calculateImpliedVolatility(params) {
-        const response = await fetch('/api/implied_volatility', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-        
-        return await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        try {
+            const response = await fetch('/api/implied_volatility', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Implied volatility calculation failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from implied volatility service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Implied volatility calculation timed out');
+            }
+            throw error;
+        }
     },
 
     /**
      * Calculate Greeks
      */
     async calculateGreeks(params) {
-        const response = await fetch('/api/greeks', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-        
-        return await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        try {
+            const response = await fetch('/api/greeks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Greeks calculation failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from Greeks service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Greeks calculation timed out');
+            }
+            throw error;
+        }
     },
 
     /**
      * Calculate model comparison
      */
     async calculateModelComparison(params) {
-        const response = await fetch('/api/model_comparison', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-        
-        return await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        try {
+            const response = await fetch('/api/model_comparison', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Model comparison failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from model comparison service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Model comparison timed out');
+            }
+            throw error;
+        }
     },
 
     /**
      * Build volatility surface
      */
     async buildVolatilitySurface(params) {
-        const response = await fetch('/api/volatility_surface', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-        
-        return await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for complex calculation
+
+        try {
+            const response = await fetch('/api/volatility_surface', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Volatility surface build failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from volatility surface service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Volatility surface calculation timed out');
+            }
+            throw error;
+        }
     },
 
     /**
      * Get ATM term structure
      */
     async getATMTermStructure(params) {
-        const response = await fetch('/api/atm_term_structure', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(params)
-        });
-        
-        return await response.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        try {
+            const response = await fetch('/api/atm_term_structure', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`ATM term structure failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from ATM term structure service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('ATM term structure calculation timed out');
+            }
+            throw error;
+        }
     },
 
     /**
      * Health check for keep-alive
+     * Returns boolean - true if healthy, false otherwise
+     * Does not throw errors to avoid disrupting keep-alive mechanism
      */
     async healthCheck() {
-        const response = await fetch('/health', {
-            method: 'GET',
-            headers: {
-                'Cache-Control': 'no-cache'
-            }
-        });
-        
-        return response.ok;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+            const response = await fetch('/health', {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            return response.ok;
+        } catch (error) {
+            // Gracefully handle errors without throwing
+            // Keep-alive should continue even if health check fails
+            console.warn('[API] Health check failed:', error.message);
+            return false;
+        }
     }
 };
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = API;
-}
+// Export for browser environment (window global)
+window.API = API;
+
+// Note: Module exports commented out as this is browser-only code
+// CommonJS/Node.js modules are not used in browser context

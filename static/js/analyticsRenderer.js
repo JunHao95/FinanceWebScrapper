@@ -5,6 +5,20 @@
 
 const AnalyticsRenderer = {
     /**
+     * Escape HTML to prevent XSS attacks via output encoding, a strategy to neutralize malicious code
+     */
+    escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    },
+    /**
      * Render correlation analysis
      */
     renderCorrelation(corrData) {
@@ -22,12 +36,12 @@ const AnalyticsRenderer = {
             const tickers = Object.keys(corrMatrix);
             html += '<tr><th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;"></th>';
             tickers.forEach(t => {
-                html += `<th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;">${t}</th>`;
+                html += `<th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;">${this.escapeHtml(t)}</th>`;
             });
             html += '</tr>';
             
             tickers.forEach(ticker1 => {
-                html += `<tr><th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;">${ticker1}</th>`;
+                html += `<tr><th style="padding: 12px; background: #667eea; color: white; border: 1px solid #ddd;">${this.escapeHtml(ticker1)}</th>`;
                 tickers.forEach(ticker2 => {
                     const value = corrMatrix[ticker1][ticker2];
                     const color = value > 0.7 ? '#27ae60' : value < 0.3 ? '#e74c3c' : '#3498db';
@@ -52,7 +66,7 @@ const AnalyticsRenderer = {
         
         if (corrData["Interpretation"]) {
             html += '<div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #3498db;">';
-            html += `<p style="margin: 0; color: #2c3e50;"><strong>💡 Analysis:</strong> ${corrData["Interpretation"]}</p>`;
+            html += `<p style="margin: 0; color: #2c3e50;"><strong>💡 Analysis:</strong> ${this.escapeHtml(corrData["Interpretation"])}</p>`;
             html += '</div>';
         }
         
@@ -108,32 +122,55 @@ const AnalyticsRenderer = {
             html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6;">Component</th>';
             
             const firstPC = Object.keys(loadings)[0];
-            const tickers = Object.keys(loadings[firstPC]);
-            tickers.forEach(ticker => {
-                html += `<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6;">${ticker}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            Object.entries(loadings).forEach(([pc, tickerLoadings]) => {
-                html += `<tr>`;
-                html += `<td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #dee2e6;">${pc}</td>`;
-                Object.values(tickerLoadings).forEach(loading => {
-                    const color = loading > 0 ? '#00b894' : '#d63031';
-                    html += `<td style="padding: 10px; text-align: center; border-bottom: 1px solid #dee2e6; color: ${color};">${loading.toFixed(3)}</td>`;
+            if (!firstPC || !loadings[firstPC]) {
+                html += '</thead></table></div></div>';
+            } else {
+                const tickers = Object.keys(loadings[firstPC]);
+                tickers.forEach(ticker => {
+                    html += `<th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6;">${this.escapeHtml(ticker)}</th>`;
                 });
-                html += `</tr>`;
-            });
-            html += '</tbody></table></div></div>';
+                html += '</tr></thead><tbody>';
+                
+                Object.entries(loadings).forEach(([pc, tickerLoadings]) => {
+                    html += `<tr>`;
+                    html += `<td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #dee2e6;">${this.escapeHtml(pc)}</td>`;
+                    Object.values(tickerLoadings).forEach(loading => {
+                        const color = loading > 0 ? '#00b894' : '#d63031';
+                        const safeLoading = (typeof loading === 'number' && !isNaN(loading)) ? loading.toFixed(3) : '--';
+                        html += `<td style="padding: 10px; text-align: center; border-bottom: 1px solid #dee2e6; color: ${color};">${safeLoading}</td>`;
+                    });
+                    html += `</tr>`;
+                });
+                html += '</tbody></table></div></div>';
+            }
         }
         
         const summary = pcaData["Summary"];
         if (summary) {
             html += '<div style="background: white; padding: 15px; border-radius: 8px;">';
             html += '<h4 style="color: #555; margin-bottom: 10px;">Summary:</h4>';
-            html += `<p><strong>Tickers Analyzed:</strong> ${summary["Tickers Analyzed"].join(', ')}</p>`;
-            html += `<p><strong>Total Variance Explained:</strong> ${(summary["Total Variance Explained"] * 100).toFixed(2)}%</p>`;
-            html += `<p><strong>Components for 90% Variance:</strong> ${summary["Components for 90% Variance"]}</p>`;
-            html += `<p><strong>Components for 95% Variance:</strong> ${summary["Components for 95% Variance"]}</p>`;
+            
+            const tickersAnalyzed = summary["Tickers Analyzed"];
+            if (Array.isArray(tickersAnalyzed)) {
+                const escapedTickers = tickersAnalyzed.map(t => this.escapeHtml(t)).join(', ');
+                html += `<p><strong>Tickers Analyzed:</strong> ${escapedTickers}</p>`;
+            }
+            
+            const totalVariance = summary["Total Variance Explained"];
+            if (typeof totalVariance === 'number' && !isNaN(totalVariance)) {
+                html += `<p><strong>Total Variance Explained:</strong> ${(totalVariance * 100).toFixed(2)}%</p>`;
+            }
+            
+            const comp90 = summary["Components for 90% Variance"];
+            if (comp90 !== null && comp90 !== undefined) {
+                html += `<p><strong>Components for 90% Variance:</strong> ${this.escapeHtml(comp90)}</p>`;
+            }
+            
+            const comp95 = summary["Components for 95% Variance"];
+            if (comp95 !== null && comp95 !== undefined) {
+                html += `<p><strong>Components for 95% Variance:</strong> ${this.escapeHtml(comp95)}</p>`;
+            }
+            
             html += '</div>';
         }
         
@@ -146,7 +183,7 @@ const AnalyticsRenderer = {
      */
     renderTickerAnalytics(ticker, tickerAnalytics) {
         let html = `<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #00b894;">`;
-        html += `<h3 style="color: #00b894; margin-bottom: 15px;">📍 ${ticker} Analytics</h3>`;
+        html += `<h3 style="color: #00b894; margin-bottom: 15px;">📍 ${this.escapeHtml(ticker)} Analytics</h3>`;
         
         if (tickerAnalytics.regression) {
             html += this.renderRegression(ticker, tickerAnalytics.regression);
@@ -214,7 +251,7 @@ const AnalyticsRenderer = {
         const interpretation = tickerReg.Interpretation || reg.Interpretation;
         if (interpretation) {
             html += '<div style="background: #e8f4fd; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #3498db;">';
-            html += `<p style="margin: 0; color: #2c3e50; font-size: 0.9rem;"><strong>💡 Analysis:</strong> ${interpretation}</p>`;
+            html += `<p style="margin: 0; color: #2c3e50; font-size: 0.9rem;"><strong>💡 Analysis:</strong> ${this.escapeHtml(interpretation)}</p>`;
             html += '</div>';
         }
         
@@ -323,6 +360,9 @@ const AnalyticsRenderer = {
         return html;
     }
 };
+
+// Export for browser environment
+window.AnalyticsRenderer = AnalyticsRenderer;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

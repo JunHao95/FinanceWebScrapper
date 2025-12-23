@@ -3,14 +3,30 @@
 // ===========================
 
 const StockScraper = {
+    _initialized: false,
+
     /**
      * Initialize stock scraper
      */
     init() {
+        // Guard against multiple event listener registrations
+        if (this._initialized) {
+            console.warn('StockScraper already initialized');
+            return;
+        }
+
+        const form = document.getElementById('scrapeForm');
+        if (!form) {
+            console.error('scrapeForm not found');
+            return;
+        }
+
         // Handle form submission
-        document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async (e) => {
             await this.handleSubmit(e);
         });
+
+        this._initialized = true;
     },
 
     /**
@@ -140,15 +156,37 @@ const StockScraper = {
     },
 
     /**
+     * Validate email format
+     * @param {string} email - Email address to validate
+     * @returns {boolean} True if valid
+     */
+    validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    },
+
+    /**
      * Send email report
      */
     async sendEmail(event) {
         if (event) event.preventDefault();
         
-        const email = document.getElementById('emailInput').value.trim();
+        const emailInput = document.getElementById('emailInput');
+        if (!emailInput) {
+            console.error('emailInput element not found');
+            return;
+        }
+
+        const email = emailInput.value.trim();
         
         if (!email) {
             Utils.showAlert('Please enter your email address', 'error');
+            return;
+        }
+
+        // Add email format validation
+        if (!this.validateEmail(email)) {
+            Utils.showAlert('Please enter a valid email address', 'error');
             return;
         }
 
@@ -172,7 +210,7 @@ const StockScraper = {
 
             if (result.success) {
                 Utils.showAlert('Email sent successfully! 📧', 'success');
-                document.getElementById('emailInput').value = '';
+                emailInput.value = '';
             } else {
                 Utils.showAlert('Failed to send email: ' + result.error, 'error');
             }
@@ -181,6 +219,9 @@ const StockScraper = {
         }
     }
 };
+
+// Export for browser environment
+window.StockScraper = StockScraper;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
