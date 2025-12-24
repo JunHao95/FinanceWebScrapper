@@ -113,7 +113,7 @@ const DisplayManager = {
                     html += '<div class="metric-item">';
                     const cleanKey = this.escapeHtml(key.replace(/\s*\(Enhanced\)\s*$/i, ''));
                     html += `<span class="metric-label">${cleanKey}</span>`;
-                    html += `<span class="metric-value">${this.escapeHtml(Utils.formatValue(value))}</span>`;
+                    html += `<span class="metric-value">${Utils.formatValue(value)}</span>`;
                     html += '</div>';
                 }
                 

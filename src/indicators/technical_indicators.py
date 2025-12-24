@@ -653,7 +653,7 @@ class TechnicalIndicators:
             current_close = float(df['close'].iloc[-1].squeeze())  # Use latest value and convert to float
             
             for window in ma_windows:
-                if f"MA{window}" in mas:
+                if f"MA{window}" in mas and not np.isnan(mas[f"MA{window}"]):
                     if current_close > mas[f"MA{window}"]:
                         signals[f"MA{window} Signal"] = "Bullish (Price > MA)"
                     else:
