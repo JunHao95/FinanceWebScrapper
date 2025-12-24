@@ -96,9 +96,38 @@ class AlphaVantageAPIScraper(BaseScraper):
             if "Industry" in result:
                 data["Industry (AlphaVantage)"] = result["Industry"]
             
-            # Wait before next API call (if needed) - reduced delay for parallel processing
+            # Get balance sheet data for cash metrics
+            try:
+                self.logger.info(f"Fetching balance sheet data from Alpha Vantage for {ticker}")
+                balance_sheet_url = f"https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={ticker}&apikey={self.api_key}"
+                
+                bs_response = make_request(balance_sheet_url, timeout=5)
+                bs_result = bs_response.json()
+                
+                # Check for rate limit message
+                if "Information" in bs_result or "Note" in bs_result:
+                    self.logger.warning(f"Alpha Vantage rate limit hit for {ticker} balance sheet")
+                    return data
+                
+                if "annualReports" in bs_result and bs_result["annualReports"]:
+                    latest_bs = bs_result["annualReports"][0]
+                    
+                    # Total Cash and Cash Equivalents
+                    if "cashAndCashEquivalentsAtCarryingValue" in latest_bs:
+                        total_cash = latest_bs["cashAndCashEquivalentsAtCarryingValue"]
+                        if total_cash:
+                            data["Cash (AlphaVantage)"] = f"{float(total_cash):,.0f}"
+                    elif "cashAndShortTermInvestments" in latest_bs:
+                        cash_and_investments = latest_bs["cashAndShortTermInvestments"]
+                        if cash_and_investments:
+                            data["Cash (AlphaVantage)"] = f"{float(cash_and_investments):,.0f}"
+            
+            except Exception as e:
+                self.logger.warning(f"Error fetching balance sheet data for {ticker}: {str(e)}")
+            
+            # Wait before next API call - critical for rate limits
             if self.delay > 0:
-                time.sleep(min(self.delay, 0.5))  # Cap delay at 0.5 seconds
+                time.sleep(max(self.delay, 1.0))  # At least 1 second
             
             # Get additional cash flow data
             try:
@@ -107,6 +136,11 @@ class AlphaVantageAPIScraper(BaseScraper):
                 
                 cf_response = make_request(cash_flow_url, timeout=5)
                 cf_result = cf_response.json()
+                
+                # Check for rate limit message
+                if "Information" in cf_result or "Note" in cf_result:
+                    self.logger.warning(f"Alpha Vantage rate limit hit for {ticker} cash flow")
+                    return data
                 
                 if "annualReports" in cf_result and cf_result["annualReports"]:
                     latest_report = cf_result["annualReports"][0]

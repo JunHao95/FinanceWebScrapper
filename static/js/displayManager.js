@@ -70,10 +70,12 @@ const DisplayManager = {
 
         // Group metrics
         const groups = {
-            'Basic Info': ['Current Price', 'Market Cap', 'Company Name'],
+            'Basic Info': ['Current Price', 'Market Cap', 'Company Name', 'Sector', 'Industry', 'Exchange', 'Website', 'Description'],
             'Valuation': ['P/E Ratio', 'Forward P/E', 'P/B Ratio', 'P/S Ratio', 'PEG Ratio', 'EV/EBITDA'],
             'Profitability': ['ROE', 'ROA', 'ROIC', 'Profit Margin', 'Operating Margin'],
-            'Earnings': ['EPS', 'EPS Growth'],
+            'Earnings': ['EPS', 'EPS Growth', 'Earnings Growth'],
+            'Financial Metrics': ['Gross Profit', 'Total Debt', 'EBITDA'],
+            'Cash/CashFlow': ['Cash', 'Cash Per Share', 'Operating Cash Flow', 'Capital Expenditure', 'Free Cash Flow', 'Cash & Equivalents', 'Cash & ST Investments'],
             'Technical': ['RSI', 'MA10', 'MA20', 'MA50', 'BB Signal'],
             'Sentiment Analysis': [
                 'Overall Sentiment Score', 'Overall Sentiment Label', 'Sentiment Confidence', 'Active Data Sources',

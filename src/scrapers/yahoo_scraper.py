@@ -77,25 +77,7 @@ class YahooFinanceScraper(BaseScraper):
                             data["EPS (Yahoo)"] = value
                         elif "Return on Investment" in header or "Return on Capital" in header:
                             data["ROIC (Yahoo)"] = value
-            # Get the price targets from yahoo
-            try:
-                self.logger.info(f"Fetching data from Yahoo Finance for {ticker}")
-                stock = yf.Ticker(ticker)
-                
-                # Fetch analyst price targets
-                target_mean_price = stock.info.get("targetMeanPrice", None)
-                target_low_price = stock.info.get("targetLowPrice", None)
-                target_high_price = stock.info.get("targetHighPrice", None)
-                
-                if target_mean_price:
-                    data["Analyst Price Target Mean (Yahoo)"] = f"{target_mean_price:.2f}"
-                if target_low_price:
-                    data["Analyst Price Target Low (Yahoo)"] = f"{target_low_price:.2f}"
-                if target_high_price:
-                    data["Analyst Price Target High (Yahoo)"] = f"{target_high_price:.2f}"
-                print(f"Analyst Price Target Mean (Yahoo) {target_mean_price}, low: {target_low_price}, high: {target_high_price}")
-            except Exception as e:
-                self.logger.warning(f"Error fetching data from Yahoo Finance for {ticker}: {str(e)}")
+            
             # Scrape analysis page for additional EPS data
             try:
                 analysis_response = make_request(analysis_url, headers=self.headers)
@@ -121,6 +103,93 @@ class YahooFinanceScraper(BaseScraper):
         
         except Exception as e:
             self.logger.error(f"Error scraping Yahoo Finance statistics page: {str(e)}")
+        
+        # Get additional data from yfinance API (always try, even if web scraping failed)
+        try:
+            self.logger.info(f"Fetching data from yfinance API for {ticker}")
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            # Fetch analyst price targets
+            target_mean_price = info.get("targetMeanPrice", None)
+            target_low_price = info.get("targetLowPrice", None)
+            target_high_price = info.get("targetHighPrice", None)
+            
+            if target_mean_price:
+                data["Analyst Price Target Mean (Yahoo)"] = f"{target_mean_price:.2f}"
+            if target_low_price:
+                data["Analyst Price Target Low (Yahoo)"] = f"{target_low_price:.2f}"
+            if target_high_price:
+                data["Analyst Price Target High (Yahoo)"] = f"{target_high_price:.2f}"
+            
+            # Fetch cash metrics
+            total_cash = info.get("totalCash", None)
+            if total_cash:
+                data["Cash (Yahoo)"] = f"{total_cash:,.0f}"
+            
+            # Fetch additional cash flow metrics
+            total_cash_per_share = info.get("totalCashPerShare", None)
+            if total_cash_per_share:
+                data["Cash Per Share (Yahoo)"] = f"{total_cash_per_share:.2f}"
+            
+            free_cashflow = info.get("freeCashflow", None)
+            if free_cashflow:
+                data["Free Cash Flow (Yahoo)"] = f"{free_cashflow:,.0f}"
+            
+            operating_cashflow = info.get("operatingCashflow", None)
+            if operating_cashflow:
+                data["Operating Cash Flow (Yahoo)"] = f"{operating_cashflow:,.0f}"
+            
+            # Fetch valuation metrics if not already scraped from web
+            if "P/E Ratio (Yahoo)" not in data and info.get("trailingPE"):
+                data["P/E Ratio (Yahoo)"] = f"{info.get('trailingPE'):.2f}"
+            if "Forward P/E (Yahoo)" not in data and info.get("forwardPE"):
+                data["Forward P/E (Yahoo)"] = f"{info.get('forwardPE'):.2f}"
+            if "P/B Ratio (Yahoo)" not in data and info.get("priceToBook"):
+                data["P/B Ratio (Yahoo)"] = f"{info.get('priceToBook'):.2f}"
+            if "P/S Ratio (Yahoo)" not in data and info.get("priceToSalesTrailing12Months"):
+                data["P/S Ratio (Yahoo)"] = f"{info.get('priceToSalesTrailing12Months'):.2f}"
+            if "PEG Ratio (Yahoo)" not in data and info.get("pegRatio"):
+                data["PEG Ratio (Yahoo)"] = f"{info.get('pegRatio'):.2f}"
+            
+            # Profitability metrics
+            if "ROE (Yahoo)" not in data and info.get("returnOnEquity"):
+                data["ROE (Yahoo)"] = f"{info.get('returnOnEquity')*100:.2f}%"
+            if "ROA (Yahoo)" not in data and info.get("returnOnAssets"):
+                data["ROA (Yahoo)"] = f"{info.get('returnOnAssets')*100:.2f}%"
+            if "Profit Margin (Yahoo)" not in data and info.get("profitMargins"):
+                data["Profit Margin (Yahoo)"] = f"{info.get('profitMargins')*100:.2f}%"
+            if "Operating Margin (Yahoo)" not in data and info.get("operatingMargins"):
+                data["Operating Margin (Yahoo)"] = f"{info.get('operatingMargins')*100:.2f}%"
+            
+            # EPS
+            if "EPS (Yahoo)" not in data and info.get("trailingEps"):
+                data["EPS (Yahoo)"] = f"{info.get('trailingEps'):.2f}"
+            
+            # Earnings Growth
+            if info.get("earningsGrowth"):
+                data["Earnings Growth (Yahoo)"] = f"{info.get('earningsGrowth')*100:.2f}%"
+            
+            # Financial metrics
+            if info.get("grossProfits"):
+                data["Gross Profits (Yahoo)"] = f"{info.get('grossProfits'):,.0f}"
+            
+            if info.get("totalDebt"):
+                data["Total Debt (Yahoo)"] = f"{info.get('totalDebt'):,.0f}"
+            
+            if info.get("ebitda"):
+                data["EBITDA (Yahoo)"] = f"{info.get('ebitda'):,.0f}"
+            
+            # Market info
+            if info.get("currentPrice"):
+                data["Current Price (Yahoo)"] = f"{info.get('currentPrice'):.2f}"
+            if info.get("marketCap"):
+                data["Market Cap (Yahoo)"] = f"{info.get('marketCap'):,.0f}"
+            
+            self.logger.info(f"Successfully fetched yfinance API data for {ticker}")
+            
+        except Exception as e:
+            self.logger.warning(f"Error fetching yfinance API data for {ticker}: {str(e)}")
         
         # Add source metadata
         if data:

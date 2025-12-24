@@ -541,7 +541,7 @@ class TechnicalIndicators:
             if len(df) < window:
                 self.logger.warning(f"Not enough data for Bollinger Bands calculation: {len(df)} < {window}")
                 return {}
-            if bool(df['close'].isnull().all()):
+            if df['close'].isnull().all():
                 self.logger.warning("No valid close price data available for Bollinger Bands.")
                 return {}
                 
@@ -605,7 +605,7 @@ class TechnicalIndicators:
         """
         if df.empty:
             return {}
-        if bool(df['close'].isnull().all()):
+        if df['close'].isnull().all():
             self.logger.warning("No valid close price data available for Moving Averages.")
             return {}
         try:
@@ -684,7 +684,7 @@ class TechnicalIndicators:
         """
         if df.empty or len(df) < window + 1:
             return {}
-        if bool(df['close'].isnull().all()):
+        if df['close'].isnull().all():
             self.logger.warning("No valid close price data available for RSI.")
             return {}
             
@@ -954,7 +954,7 @@ class TechnicalIndicators:
             
         try:
             # Ensure volume data is not NaN
-            if bool(df['volume'].isnull().all()):
+            if df['volume'].isnull().all():
                 self.logger.warning("No volume data available")
                 return {"Volume Data": "Not Available"}
             
