@@ -332,8 +332,11 @@ def scrape_data():
                 logger.info(f"Processing ticker: {ticker}")
                 return ticker, run_scrapers_for_ticker(ticker, sources, alpha_key, finhub_key)
             
-            # Use up to 3 parallel workers for multiple tickers
-            max_ticker_workers = min(3, len(tickers))
+            # Use up to 6 parallel workers for multiple tickers
+            # Scale workers based on portfolio size using sqrt for better scaling
+            import math
+            max_ticker_workers = min(6, max(3, int(math.sqrt(len(tickers)) * 1.5)))
+            logger.info(f"Using {max_ticker_workers} parallel workers for {len(tickers)} tickers")
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_ticker_workers) as executor:
                 futures = [executor.submit(process_ticker, ticker) for ticker in tickers]
                 
@@ -349,9 +352,26 @@ def scrape_data():
         
         logger.info(f"Total tickers processed: {len(all_data)}, Tickers: {list(all_data.keys())}")
         
+        # Filter out tickers with errors or no valid data
+        # Check for substantial data (at least 5 fields excluding Ticker and Timestamp)
+        valid_tickers = [
+            t for t, d in all_data.items() 
+            if d and isinstance(d, dict) and 'error' not in d and 
+            len([k for k in d.keys() if k not in ['Ticker', 'Data Timestamp', 'error']]) >= 5
+        ]
+        logger.info(f"Valid tickers with data: {len(valid_tickers)} out of {len(all_data)}")
+        
+        # Log which tickers were excluded
+        excluded_tickers = set(all_data.keys()) - set(valid_tickers)
+        if excluded_tickers:
+            logger.warning(f"Excluded tickers (insufficient data): {excluded_tickers}")
+        
         # Compute analytics for the portfolio
         analytics_data = {}
-        if len(all_data) >= 1:
+        # Skip heavy analytics for very large portfolios (>50 tickers) unless explicitly requested
+        skip_analytics = len(valid_tickers) > 50
+        
+        if len(valid_tickers) >= 1 and not skip_analytics:
             try:
                 logger.info("Computing advanced financial analytics...")
                 
@@ -365,14 +385,18 @@ def scrape_data():
                 
                 # Lazy load analytics to save memory
                 analytics = get_financial_analytics(config=analytics_config)
-                tickers_list = list(all_data.keys())
+                tickers_list = valid_tickers  # Use only valid tickers for analytics
                 
                 # Correlation Analysis (requires 2+ tickers)
                 if len(tickers_list) >= 2:
                     try:
+                        logger.info(f"Computing correlation analysis for {len(tickers_list)} tickers...")
                         correlation_result = analytics.correlation_analysis(tickers_list, days=252)
                         if correlation_result and 'error' not in correlation_result:
                             analytics_data['correlation'] = correlation_result
+                            logger.info(f"✓ Correlation analysis completed successfully")
+                        else:
+                            logger.warning(f"Correlation analysis returned error: {correlation_result.get('error', 'Unknown error')}")
                     except Exception as e:
                         logger.warning(f"Correlation analysis failed: {str(e)}")
                 
@@ -408,6 +432,12 @@ def scrape_data():
                 
             except Exception as e:
                 logger.error(f"Analytics computation error: {str(e)}")
+        elif len(valid_tickers) >= 1 and skip_analytics:
+            logger.info(f"Skipping advanced analytics for large portfolio ({len(valid_tickers)} tickers). Enable for smaller portfolios (≤50 tickers).")
+            analytics_data['info'] = {
+                'message': f'Advanced analytics skipped for large portfolio ({len(valid_tickers)} tickers)',
+                'recommendation': 'For detailed analytics, analyze portfolios with 50 or fewer tickers'
+            }
         
         # Log what analytics were computed
         logger.info(f"Analytics computed: {list(analytics_data.keys())}")

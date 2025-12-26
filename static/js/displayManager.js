@@ -159,22 +159,50 @@ const DisplayManager = {
         html += '<p style="margin: 0; opacity: 0.9;">Portfolio-level risk metrics and statistical analysis</p>';
         html += '</div>';
         
+        // Check if analytics were skipped (info message present)
+        if (analyticsData.info && analyticsData.info.message) {
+            html += '<div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; margin-bottom: 20px;">';
+            html += '<h3 style="color: #856404; margin: 0 0 10px 0;">ℹ️ Analytics Status</h3>';
+            html += `<p style="color: #856404; margin: 0 0 10px 0; font-size: 1rem;">${this.escapeHtml(analyticsData.info.message)}</p>`;
+            if (analyticsData.info.recommendation) {
+                html += `<p style="color: #856404; margin: 0; font-size: 0.9rem;"><strong>Recommendation:</strong> ${this.escapeHtml(analyticsData.info.recommendation)}</p>`;
+            }
+            html += '</div>';
+        }
+        
+        let hasAnalytics = false;
+        
         // Add correlation analysis
         if (analyticsData.correlation && typeof AnalyticsRenderer.renderCorrelation === 'function') {
             html += AnalyticsRenderer.renderCorrelation(analyticsData.correlation);
+            hasAnalytics = true;
         }
         
         // Add PCA analysis
         if (analyticsData.pca && typeof AnalyticsRenderer.renderPCA === 'function') {
             html += AnalyticsRenderer.renderPCA(analyticsData.pca);
+            hasAnalytics = true;
         }
         
         // Add individual ticker analytics
         if (typeof AnalyticsRenderer.renderTickerAnalytics === 'function') {
             for (const [ticker, tickerAnalytics] of Object.entries(analyticsData)) {
-                if (ticker === 'correlation' || ticker === 'pca') continue;
+                if (ticker === 'correlation' || ticker === 'pca' || ticker === 'info') continue;
                 html += AnalyticsRenderer.renderTickerAnalytics(ticker, tickerAnalytics);
+                hasAnalytics = true;
             }
+        }
+        
+        // If no analytics were rendered and no info message, show empty state
+        if (!hasAnalytics && !analyticsData.info) {
+            html += '<div style="background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 10px; padding: 30px; text-align: center;">';
+            html += '<p style="color: #6c757d; margin: 0; font-size: 1.1rem;">No analytics data available. This may occur if:</p>';
+            html += '<ul style="color: #6c757d; text-align: left; display: inline-block; margin-top: 10px;">';
+            html += '<li>Portfolio has fewer than 2 tickers (required for correlation)</li>';
+            html += '<li>Unable to fetch historical data for the tickers</li>';
+            html += '<li>Analytics computation encountered an error</li>';
+            html += '</ul>';
+            html += '</div>';
         }
         
         analyticsDiv.innerHTML = html;

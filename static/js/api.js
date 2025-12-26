@@ -8,7 +8,17 @@ const API = {
      */
     async scrapeStocks(requestBody) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+        
+        // Dynamic timeout based on number of tickers
+        // Base: 2 minutes, add 5 seconds per ticker after first 5
+        const numTickers = requestBody.tickers?.length || 1;
+        const baseTimeout = 120000; // 2 minutes
+        const additionalTimeout = Math.max(0, (numTickers - 5)) * 5000; // 5 sec per ticker after 5
+        const maxTimeout = 600000; // 10 minutes max
+        const timeout = Math.min(baseTimeout + additionalTimeout, maxTimeout);
+        
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        console.log(`Setting timeout to ${timeout/1000} seconds for ${numTickers} tickers`);
 
         try {
             const response = await fetch('/api/scrape', {
@@ -36,7 +46,8 @@ const API = {
             return await response.json();
         } catch (error) {
             if (error.name === 'AbortError') {
-                throw new Error('Request timed out after 2 minutes. Try with fewer tickers or simpler analysis.');
+                const minutes = Math.floor(timeout / 60000);
+                throw new Error(`Request timed out after ${minutes} minute(s). Try with fewer tickers, disable sentiment analysis, or select fewer sources.`);
             }
             throw error;
         }

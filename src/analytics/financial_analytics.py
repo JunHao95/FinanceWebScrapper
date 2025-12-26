@@ -108,6 +108,11 @@ class FinancialAnalytics:
                 progress=False
             )
             
+            # Check if download returned any data
+            if data.empty:
+                self.logger.warning("yfinance returned empty data for all tickers")
+                return pd.DataFrame()
+            
             # Handle both single and multiple tickers
             if len(tickers) == 1:
                 # For single ticker, yfinance returns a DataFrame with columns like 'Close', 'Open', etc.
@@ -121,20 +126,46 @@ class FinancialAnalytics:
             else:
                 prices = data['Close']
             
+            # Remove columns (tickers) that are entirely NaN or empty (failed downloads)
+            if isinstance(prices, pd.DataFrame):
+                original_columns = list(prices.columns)
+                prices = prices.dropna(axis=1, how='all')
+                failed_tickers = set(original_columns) - set(prices.columns)
+                if failed_tickers:
+                    self.logger.warning(f"Failed to fetch data for tickers: {failed_tickers}")
+                successful_tickers = list(prices.columns)
+                if successful_tickers:
+                    self.logger.info(f"Successfully fetched data for {len(successful_tickers)} tickers: {successful_tickers}")
+            
+            # Check if we have any valid price data
+            if prices.empty or len(prices.columns) == 0:
+                self.logger.warning("No valid price data after removing failed tickers")
+                return pd.DataFrame()
+            
             # Calculate returns
             if return_type == 'log':
                 returns = np.log(prices / prices.shift(1))
             else:  # simple returns
                 returns = prices.pct_change()
             
-            # Drop NaN values
+            # Drop rows with NaN values (first row will always be NaN after pct_change)
             returns = returns.dropna()
+            
+            # Remove any columns that still have too many NaN values (>50%)
+            if not returns.empty:
+                threshold = len(returns) * 0.5
+                returns = returns.dropna(axis=1, thresh=int(threshold))
+            
+            # Check if we still have data after cleanup
+            if returns.empty or len(returns.columns) == 0:
+                self.logger.warning("No valid returns data after NaN removal")
+                return pd.DataFrame()
             
             # Ensure we have the requested number of days (approximately)
             if len(returns) > days:
                 returns = returns.tail(days)
             
-            self.logger.info(f"Successfully fetched {len(returns)} days of returns")
+            self.logger.info(f"Successfully fetched {len(returns)} days of returns for {len(returns.columns)} tickers")
             return returns
             
         except Exception as e:
@@ -657,14 +688,26 @@ class FinancialAnalytics:
             # Get returns data
             returns = self.get_historical_returns(tickers, days=days)
             
-            if returns.empty or len(returns.columns) < 2:
-                return {"error": "Need at least 2 assets for correlation analysis"}
+            self.logger.info(f"Returns shape after fetch: {returns.shape if not returns.empty else 'EMPTY'}")
+            self.logger.info(f"Columns in returns: {list(returns.columns) if not returns.empty else 'NONE'}")
             
-            # Drop any columns with NaN
-            returns = returns.dropna(axis=1)
+            if returns.empty:
+                self.logger.warning("No returns data fetched - all tickers may have failed to download")
+                return {"error": "Unable to fetch historical data for any tickers"}
             
             if len(returns.columns) < 2:
-                return {"error": "Insufficient data for correlation analysis"}
+                self.logger.warning(f"Only {len(returns.columns)} ticker(s) with data, need at least 2")
+                return {"error": "Need at least 2 assets for correlation analysis"}
+            
+            # Drop any columns with too many NaN values (keep columns with at least 50% valid data)
+            threshold = len(returns) * 0.5
+            returns = returns.dropna(axis=1, thresh=int(threshold))
+            
+            self.logger.info(f"After dropping NaN columns: {len(returns.columns)} tickers remaining")
+            
+            if len(returns.columns) < 2:
+                self.logger.warning(f"After filtering NaN, only {len(returns.columns)} ticker(s) remain")
+                return {"error": "Insufficient data for correlation analysis after filtering"}
             
             # Calculate correlation matrix
             corr_matrix = returns.corr(method=method)

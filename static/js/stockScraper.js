@@ -79,9 +79,17 @@ const StockScraper = {
             }
         }
 
-        // Show loading
-        document.getElementById('loadingSection').classList.add('active');
+        // Show loading with ticker count info
+        const loadingSection = document.getElementById('loadingSection');
+        loadingSection.classList.add('active');
         document.getElementById('resultsSection').classList.remove('active');
+        
+        // Update loading message for large portfolios
+        const loadingText = loadingSection.querySelector('.loading-spinner p');
+        if (loadingText && tickers.length > 10) {
+            loadingText.textContent = `Processing ${tickers.length} tickers... This may take several minutes.`;
+        }
+        
         Utils.hideAlert();
 
         try {
@@ -113,7 +121,13 @@ const StockScraper = {
             console.error('Fetch error:', error);
             Utils.showAlert('Failed to fetch data: ' + error.message, 'error');
         } finally {
-            document.getElementById('loadingSection').classList.remove('active');
+            // Reset loading message to default
+            const loadingSection = document.getElementById('loadingSection');
+            const loadingText = loadingSection.querySelector('.loading-spinner p');
+            if (loadingText) {
+                loadingText.textContent = 'Loading...';
+            }
+            loadingSection.classList.remove('active');
         }
     },
 
@@ -137,7 +151,14 @@ const StockScraper = {
             DisplayManager.displayAnalytics(result.analytics_data);
             document.getElementById('noAnalyticsMessage').style.display = 'none';
             const analyticsTabBtn = document.getElementById('analyticsTab');
-            analyticsTabBtn.innerHTML = '📈 Advanced Analytics <span style="background: #28a745; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; margin-left: 5px;">✓ Ready</span>';
+            
+            // Check if only info field exists (analytics skipped)
+            const hasRealAnalytics = Object.keys(result.analytics_data).some(key => key !== 'info');
+            if (hasRealAnalytics) {
+                analyticsTabBtn.innerHTML = '📈 Advanced Analytics <span style="background: #28a745; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; margin-left: 5px;">✓ Ready</span>';
+            } else if (result.analytics_data.info) {
+                analyticsTabBtn.innerHTML = '📈 Advanced Analytics <span style="background: #ffc107; color: #333; border-radius: 10px; padding: 2px 8px; font-size: 11px; margin-left: 5px;">⚠ Skipped</span>';
+            }
         } else {
             document.getElementById('analyticsResults').innerHTML = '';
             document.getElementById('noAnalyticsMessage').style.display = 'block';
