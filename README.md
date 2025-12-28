@@ -39,6 +39,12 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Monte Carlo Simulation**: Value at Risk (VaR) and Expected Shortfall (ES)
 - **PCA Analysis**: Portfolio structure with data standardization (3+ stocks)
 
+### Fundamental Analysis & Investment Rating
+- **4-Category Scoring**: Valuation (P/E, P/B, P/S), Profitability (ROE, ROA, margins), Financial Health (debt ratios, liquidity), Growth (revenue/earnings trends)
+- **Investment Outlook**: 0-10 scale with 6 ratings: Strong Buy (≥8.0), Buy (≥7.0), Moderate Buy (≥6.0), Hold (≥5.0), Moderate Sell (≥4.0), Sell (<4.0)
+- **Smart Parsing**: Handles financial notation (125.82B, 99.58M) and flexible metric extraction
+- **Actionable Insights**: Automated strengths/concerns identification and investment summary
+
 ### Derivative Pricing
 - **Options Pricing Calculator**: Black-Scholes, Binomial, Trinomial models
 - **Implied Volatility Engine**: Newton-Raphson IV extraction with validation

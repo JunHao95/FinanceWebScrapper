@@ -874,3 +874,457 @@ class FinancialAnalytics:
         
         self.logger.info("Comprehensive analysis completed")
         return results
+    
+    def fundamental_analysis(
+        self,
+        stock_data: Dict,
+        ticker: str
+    ) -> Dict:
+        """
+        Provide succinct investment analysis based on fundamental metrics
+        
+        Args:
+            stock_data (dict): Stock data containing valuation, profitability, earnings, 
+                             financial metrics, and cashflow information
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            dict: Investment outlook and analysis summary
+        """
+        try:
+            self.logger.info(f"Performing fundamental analysis for {ticker}")
+            
+            # Debug: Log available keys
+            self.logger.info(f"Available data keys for {ticker}: {list(stock_data.keys())[:20]}")
+            
+            analysis = {
+                "ticker": ticker,
+                "analysis_date": datetime.now().strftime("%Y-%m-%d"),
+                "valuation_score": 0,
+                "profitability_score": 0,
+                "financial_health_score": 0,
+                "growth_score": 0,
+                "overall_score": 0,
+                "investment_outlook": "",
+                "key_strengths": [],
+                "key_concerns": [],
+                "summary": ""
+            }
+            
+            scores = []
+            strengths = []
+            concerns = []
+            
+            # Valuation Analysis
+            valuation_score = self._analyze_valuation(stock_data, strengths, concerns)
+            if valuation_score is not None:
+                analysis["valuation_score"] = valuation_score
+                scores.append(valuation_score)
+            
+            # Profitability Analysis
+            profitability_score = self._analyze_profitability(stock_data, strengths, concerns)
+            if profitability_score is not None:
+                analysis["profitability_score"] = profitability_score
+                scores.append(profitability_score)
+            
+            # Financial Health Analysis
+            financial_score = self._analyze_financial_health(stock_data, strengths, concerns)
+            if financial_score is not None:
+                analysis["financial_health_score"] = financial_score
+                scores.append(financial_score)
+            
+            # Growth Analysis
+            growth_score = self._analyze_growth(stock_data, strengths, concerns)
+            if growth_score is not None:
+                analysis["growth_score"] = growth_score
+                scores.append(growth_score)
+            
+            # Calculate overall score
+            if scores:
+                analysis["overall_score"] = round(sum(scores) / len(scores), 1)
+            
+            # Determine investment outlook
+            overall = analysis["overall_score"]
+            if overall >= 8.0:
+                analysis["investment_outlook"] = "Strong Buy"
+            elif overall >= 7.0:
+                analysis["investment_outlook"] = "Buy"
+            elif overall >= 6.0:
+                analysis["investment_outlook"] = "Moderate Buy"
+            elif overall >= 5.0:
+                analysis["investment_outlook"] = "Hold"
+            elif overall >= 4.0:
+                analysis["investment_outlook"] = "Moderate Sell"
+            else:
+                analysis["investment_outlook"] = "Sell"
+            
+            # Assign strengths and concerns
+            analysis["key_strengths"] = strengths[:5]  # Top 5 strengths
+            analysis["key_concerns"] = concerns[:5]  # Top 5 concerns
+            
+            # Generate summary
+            analysis["summary"] = self._generate_investment_summary(
+                ticker, analysis["investment_outlook"], 
+                analysis["overall_score"], strengths, concerns
+            )
+            
+            self.logger.info(f"Fundamental analysis completed for {ticker}")
+            return analysis
+            
+        except Exception as e:
+            self.logger.error(f"Error in fundamental analysis: {str(e)}")
+            return {"error": str(e)}
+    
+    def _analyze_valuation(self, data: Dict, strengths: List[str], concerns: List[str]) -> Optional[float]:
+        """Analyze valuation metrics (P/E, P/B, P/S, etc.)"""
+        score = 5.0  # Neutral starting point
+        metrics_found = 0
+        
+        try:
+            # P/E Ratio
+            pe = self._extract_metric(data, ['P/E Ratio', 'PE Ratio', 'Price to Earnings', 'P/E', 'PE', 'Trailing P/E', 'Forward P/E'])
+            if pe:
+                metrics_found += 1
+                if pe < 15: # undervalued, a good buy
+                    score += 1.5
+                    strengths.append(f"Attractive P/E ratio of {pe:.2f} (below 15)")
+                elif pe < 25: # generally fair value
+                    score += 0.5
+                elif 25 <= pe < 40: 
+                    score += 0.1
+                    concerns.append(f"Relatively High P/E ratio of {pe:.2f}")
+                elif pe > 40: # overvalued
+                    score -= 1.5
+                    concerns.append(f"High P/E ratio of {pe:.2f} suggests overvaluation")
+            
+            # P/B Ratio
+            pb = self._extract_metric(data, ['P/B Ratio', 'Price to Book', 'Price/Book'])
+            if pb:
+                metrics_found += 1
+                if pb < 1.5: # fairly/under valued 
+                    score += 1.0
+                    strengths.append(f"Low P/B ratio of {pb:.2f} indicates value")
+                elif 1.5 < pb < 4:
+                    score += 0.25
+                    concerns.append(f"Decent/Average P/B ratio of {pb:.2f}")
+                elif pb > 5 : # overvalued
+                    score -= 1.0
+                    concerns.append(f"High P/B ratio of {pb:.2f}")
+            
+            # P/S Ratio
+            ps = self._extract_metric(data, ['P/S Ratio', 'Price to Sales', 'Price/Sales', 'PS Ratio'])
+            if ps:
+                metrics_found += 1
+                if ps < 2: # cheap
+                    score += 1.0
+                    strengths.append(f"Attractive P/S ratio of {ps:.2f} (below 2)")
+                elif ps < 5: # reasonable
+                    score += 0.3
+                elif 5 < ps < 10: # slightly expensive
+                    score += 0.05
+                elif ps > 10: # too expensive
+                    score -= 1.0
+                    concerns.append(f"High P/S ratio of {ps:.2f} suggests overvaluation")
+            
+            # Dividend Yield
+            div_yield = self._extract_metric(data, ['Dividend Yield', 'Yield'])
+            if div_yield:
+                metrics_found += 1
+                if div_yield > 3:
+                    score += 0.5
+                    strengths.append(f"Attractive dividend yield of {div_yield:.2f}%")
+            
+            # PEG Ratio
+            peg = self._extract_metric(data, ['PEG Ratio', 'PEG'])
+            if peg:
+                metrics_found += 1
+                if peg < 1: # very undervalued, high growth potential
+                    score += 1.0
+                    strengths.append(f"PEG ratio of {peg:.2f} suggests undervaluation")
+                elif 1 <= peg < 2:
+                    score += 0.5
+                    strengths.append(f"PEG ratio of {peg:.2f} suggests normal valuation")
+                elif peg > 2:
+                    score -= 0.5
+            
+            return max(0, min(10, score)) if metrics_found > 0 else None
+            
+        except Exception as e:
+            self.logger.warning(f"Error analyzing valuation: {str(e)}")
+            return None
+    
+    def _analyze_profitability(self, data: Dict, strengths: List[str], concerns: List[str]) -> Optional[float]:
+        """Analyze profitability metrics (ROE, ROA, margins, etc.)"""
+        score = 5.0
+        metrics_found = 0
+        
+        try:
+            # ROE
+            roe = self._extract_metric(data, ['ROE', 'Return on Equity', 'Return On Equity', 'ROE %'])
+            if roe:
+                metrics_found += 1
+                if roe > 20:
+                    score += 2.0
+                    strengths.append(f"Excellent ROE of {roe:.2f}% (above 20%)")
+                elif roe > 15:
+                    score += 1.0
+                    strengths.append(f"Strong ROE of {roe:.2f}%")
+                elif 5 <= roe <= 15:
+                    score += 0.5
+                    strengths.append(f"Decent ROE of {roe:.2f}%")
+                elif roe < 5: # too low
+                    score -= 1.5
+                    concerns.append(f"Low ROE of {roe:.2f}%")
+            
+            # Profit Margin
+            profit_margin = self._extract_metric(data, ['Profit Margin', 'Net Margin', 'Net Profit Margin', 'Profit Margin %', 'Net Margin %'])
+            if profit_margin:
+                metrics_found += 1
+                if profit_margin > 20:
+                    score += 1.5
+                    strengths.append(f"High profit margin of {profit_margin:.2f}%")
+                elif profit_margin > 10:
+                    score += 0.5
+                elif 0 < profit_margin < 10:
+                    score += 0.1
+                elif profit_margin < 0:
+                    score -= 2.0
+                    concerns.append("Company is unprofitable")
+            
+            # Operating Margin
+            op_margin = self._extract_metric(data, ['Operating Margin', 'EBIT Margin'])
+            if op_margin:
+                metrics_found += 1
+                if op_margin > 15:
+                    score += 1.0
+                elif op_margin < 0:
+                    score -= 1.0
+            
+            # ROA
+            roa = self._extract_metric(data, ['ROA', 'Return on Assets'])
+            if roa:
+                metrics_found += 1
+                if roa > 10:
+                    score += 1.0
+                    strengths.append(f"Strong ROA of {roa:.2f}%")
+                elif roa < 2:
+                    score -= 0.5
+            
+            return max(0, min(10, score)) if metrics_found > 0 else None
+            
+        except Exception as e:
+            self.logger.warning(f"Error analyzing profitability: {str(e)}")
+            return None
+    
+    def _analyze_financial_health(self, data: Dict, strengths: List[str], concerns: List[str]) -> Optional[float]:
+        """Analyze financial health metrics (debt, liquidity, etc.)"""
+        score = 5.0
+        metrics_found = 0
+        
+        try:
+            # Debt to Equity
+            de = self._extract_metric(data, ['Debt to Equity', 'D/E', 'Debt/Equity', 'Debt-to-Equity', 'Total Debt/Equity'])
+            if de:
+                metrics_found += 1
+                if de < 0.5:
+                    score += 1.5
+                    strengths.append(f"Low debt with D/E ratio of {de:.2f}")
+                elif de < 1.0:
+                    score += 0.5
+                elif de > 2.0:
+                    score -= 1.5
+                    concerns.append(f"High leverage with D/E ratio of {de:.2f}")
+            
+            # Current Ratio
+            current_ratio = self._extract_metric(data, ['Current Ratio'])
+            if current_ratio:
+                metrics_found += 1
+                if current_ratio > 2.0:
+                    score += 1.0
+                    strengths.append(f"Strong liquidity with current ratio of {current_ratio:.2f}")
+                elif current_ratio < 1.0:
+                    score -= 1.5
+                    concerns.append(f"Liquidity concerns with current ratio of {current_ratio:.2f}")
+            
+            # Quick Ratio: measures a company's ability to meet short-term obligations with its most liquid assets
+            quick_ratio = self._extract_metric(data, ['Quick Ratio'])
+            if quick_ratio:
+                metrics_found += 1
+                if quick_ratio > 1.5: # has $1.5 liquid assets for every $1 liability
+                    score += 1.0
+                elif 0.5 > quick_ratio <= 1.5:
+                    score += 0.5
+                elif quick_ratio < 0.5:
+                    score -= 1.0
+            
+            # Free Cash Flow
+            fcf = self._extract_metric(data, ['Free Cash Flow', 'FCF'])
+            if fcf:
+                metrics_found += 1
+                if fcf > 0:
+                    score += 0.5
+                    strengths.append("Positive free cash flow generation")
+                else:
+                    score -= 0.5
+                    concerns.append("Negative free cash flow")
+            
+            # Operating Cash Flow
+            ocf = self._extract_metric(data, ['Operating Cash Flow', 'OCF', 'Cash from Operations'])
+            if ocf:
+                metrics_found += 1
+                if ocf > 0:
+                    score += 0.5
+                    strengths.append("Positive operating cash flow")
+                else:
+                    score -= 1.0
+                    concerns.append("Negative operating cash flow")
+            
+            # EBITDA: profitability measure that looks at a company's earnings before interest, taxes, depreciation, and amortization
+            ebitda = self._extract_metric(data, ['EBITDA', 'Ebitda'])
+            if ebitda:
+                metrics_found += 1
+                if ebitda > 0:
+                    score += 0.5
+                else:
+                    score -= 0.5
+            
+            return max(0, min(10, score)) if metrics_found > 0 else None
+            
+        except Exception as e:
+            self.logger.warning(f"Error analyzing financial health: {str(e)}")
+            return None
+    
+    def _analyze_growth(self, data: Dict, strengths: List[str], concerns: List[str]) -> Optional[float]:
+        """Analyze growth metrics (revenue growth, earnings growth, etc.)"""
+        score = 5.0
+        metrics_found = 0
+        
+        try:
+            # Revenue Growth
+            rev_growth = self._extract_metric(data, ['Revenue Growth', 'Sales Growth'])
+            if rev_growth:
+                metrics_found += 1
+                if rev_growth > 20:
+                    score += 2.0
+                    strengths.append(f"Exceptional revenue growth of {rev_growth:.2f}%")
+                elif rev_growth > 10:
+                    score += 1.0
+                    strengths.append(f"Strong revenue growth of {rev_growth:.2f}%")
+                elif rev_growth > 0:
+                    score += 0.25
+                    strengths.append(f"Positive revenue growth of {rev_growth:.2f}%")
+                elif rev_growth < 0:
+                    score -= 1.5
+                    concerns.append(f"Declining revenue ({rev_growth:.2f}%)")
+            
+            # Earnings Growth
+            earnings_growth = self._extract_metric(data, ['Earnings Growth', 'EPS Growth'])
+            if earnings_growth:
+                metrics_found += 1
+                if earnings_growth > 15:
+                    score += 1.5
+                    strengths.append(f"Strong earnings growth of {earnings_growth:.2f}%")
+                elif earnings_growth > 0:
+                    score += 0.25
+                    strengths.append(f"Positive earnings growth of {earnings_growth:.2f}%")
+                elif earnings_growth < 0:
+                    score -= 1.0
+                    concerns.append(f"Declining earnings ({earnings_growth:.2f}%)")
+            
+            # Note: EPS absolute value removed as it's not meaningful across different stocks
+            # (a $5 EPS might be high for one company but low for another)
+            
+            return max(0, min(10, score)) if metrics_found > 0 else None
+            
+        except Exception as e:
+            self.logger.warning(f"Error analyzing growth: {str(e)}")
+            return None
+    
+    def _extract_metric(self, data: Dict, possible_keys: List[str]) -> Optional[float]:
+        """Extract a metric from data dict with multiple possible key names"""
+        for key in possible_keys:
+            # Check in main data (exact match)
+            if key in data:
+                value = data[key]
+                if value is not None and value != 'N/A' and value != 'N/A%':
+                    try:
+                        return self._parse_numeric_value(value)
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Check for partial match in main data
+            for data_key in data.keys():
+                if isinstance(data_key, str) and key.lower() in data_key.lower():
+                    value = data[data_key]
+                    if value is not None and value != 'N/A' and value != 'N/A%':
+                        try:
+                            return self._parse_numeric_value(value)
+                        except (ValueError, TypeError):
+                            continue
+            
+            # Check in nested dicts
+            for section in ['valuation', 'profitability', 'financial_metrics', 
+                          'earnings', 'cashflow', 'statistics', 'financials']:
+                if section in data and isinstance(data[section], dict):
+                    if key in data[section]:
+                        value = data[section][key]
+                        if value is not None and value != 'N/A' and value != 'N/A%':
+                            try:
+                                return self._parse_numeric_value(value)
+                            except (ValueError, TypeError):
+                                continue
+        return None
+    
+    def _parse_numeric_value(self, value) -> float:
+        """Parse numeric value handling suffixes like B, M, K properly"""
+        if isinstance(value, (int, float)):
+            return float(value)
+        
+        if isinstance(value, str):
+            # Clean the string
+            value = value.replace('%', '').replace(',', '').replace('$', '').strip()
+            
+            # Handle suffixes with proper multiplication
+            multiplier = 1
+            if value.endswith('B'):
+                multiplier = 1_000_000_000
+                value = value[:-1].strip()
+            elif value.endswith('M'):
+                multiplier = 1_000_000
+                value = value[:-1].strip()
+            elif value.endswith('K'):
+                multiplier = 1_000
+                value = value[:-1].strip()
+            
+            return float(value) * multiplier
+        
+        raise ValueError(f"Cannot parse value: {value}")
+    
+    def _generate_investment_summary(
+        self, 
+        ticker: str, 
+        outlook: str, 
+        score: float,
+        strengths: List[str], 
+        concerns: List[str]
+    ) -> str:
+        """Generate a concise investment summary"""
+        
+        # Build summary
+        summary = f"{ticker} receives a {outlook} rating with an overall score of {score:.1f}/10. "
+        
+        if strengths:
+            summary += f"Key strengths include: {', '.join(strengths[:3])}. "
+        
+        if concerns:
+            summary += f"However, concerns include: {', '.join(concerns[:3])}. "
+        
+        # Add outlook context
+        if score >= 7:
+            summary += "The company demonstrates strong fundamentals and appears well-positioned for growth."
+        elif score >= 5:
+            summary += "The company shows mixed signals; further research is recommended before investing."
+        else:
+            summary += "The company faces significant challenges that warrant caution."
+        
+        return summary

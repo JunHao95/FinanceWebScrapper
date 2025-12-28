@@ -270,6 +270,82 @@ def index():
     """Render the main page"""
     return render_template('index.html')
 
+@app.route('/api/fundamental-analysis', methods=['POST'])
+def fundamental_analysis():
+    """
+    API endpoint for fundamental analysis of a stock
+    
+    Expected JSON payload:
+    {
+        "ticker": "AAPL",
+        "data": {
+            "P/E Ratio": 28.5,
+            "P/B Ratio": 5.2,
+            "P/S Ratio": 7.8,
+            "ROE": 25.3,
+            "ROA": 12.1,
+            "Operating Margin": 30.2,
+            "EPS": 6.15,
+            "EBITDA": 125000000000,
+            "Free Cash Flow": 95000000000,
+            "Operating Cash Flow": 110000000000
+        }
+    }
+    
+    Returns:
+        JSON response with investment analysis
+    """
+    try:
+        payload = request.get_json()
+        
+        if not payload:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        ticker = payload.get('ticker')
+        stock_data = payload.get('data', {})
+        
+        if not ticker:
+            return jsonify({
+                'success': False,
+                'error': 'Ticker symbol is required'
+            }), 400
+        
+        if not stock_data:
+            return jsonify({
+                'success': False,
+                'error': 'Stock data is required'
+            }), 400
+        
+        logger.info(f"Performing fundamental analysis for {ticker}")
+        
+        # Lazy load analytics module
+        analytics = get_financial_analytics()
+        
+        # Perform fundamental analysis
+        analysis = analytics.fundamental_analysis(stock_data, ticker)
+        
+        if 'error' in analysis:
+            return jsonify({
+                'success': False,
+                'error': analysis['error']
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis,
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+    
+    except Exception as e:
+        logger.error(f"Error in fundamental_analysis endpoint: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/scrape', methods=['POST'])
 def scrape_data():
     """
@@ -403,6 +479,18 @@ def scrape_data():
                 # Individual ticker analytics
                 for ticker in tickers_list:
                     ticker_analytics = {}
+                    
+                    # Fundamental Analysis - add to stock data for Stock Details tab
+                    try:
+                        if ticker in all_data and all_data[ticker]:
+                            logger.info(f"Computing fundamental analysis for {ticker}...")
+                            fundamental_result = analytics.fundamental_analysis(all_data[ticker], ticker)
+                            if fundamental_result and 'error' not in fundamental_result:
+                                # Add to all_data for Stock Details tab display
+                                all_data[ticker]['_fundamental_analysis'] = fundamental_result
+                                logger.info(f"✓ Fundamental analysis completed for {ticker}")
+                    except Exception as e:
+                        logger.warning(f"Fundamental analysis failed for {ticker}: {str(e)}")
                     
                     try:
                         regression_result = analytics.linear_regression_analysis([ticker], benchmark='SPY', days=252)

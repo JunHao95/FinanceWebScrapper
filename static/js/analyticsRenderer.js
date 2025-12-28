@@ -19,6 +19,98 @@ const AnalyticsRenderer = {
         return String(text).replace(/[&<>"']/g, m => map[m]);
     },
     /**
+     * Render fundamental analysis
+     */
+    renderFundamental(fundamentalData) {
+        const ticker = fundamentalData.ticker || 'Stock';
+        const outlook = fundamentalData.investment_outlook || 'N/A';
+        const score = typeof fundamentalData.overall_score === 'number' ? fundamentalData.overall_score : 0;
+        
+        // Determine color based on outlook with improved matching
+        let outlookColor = '#6c757d';
+        const outlookLower = String(outlook).toLowerCase();
+        if (outlookLower.includes('buy') && !outlookLower.includes('sell')) {
+            outlookColor = '#28a745';
+        } else if (outlookLower.includes('sell')) {
+            outlookColor = '#dc3545';
+        } else if (outlookLower === 'hold') {
+            outlookColor = '#ffc107';
+        }
+        
+        let html = '<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #17a2b8;">';
+        html += '<h3 style="color: #17a2b8; margin-bottom: 15px;">💼 Fundamental Analysis</h3>';
+        
+        // Investment Outlook Header
+        html += '<div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; text-align: center;">';
+        html += `<div style="display: inline-block; background: ${outlookColor}; color: white; padding: 10px 30px; border-radius: 25px; font-size: 1.3rem; font-weight: bold; margin-bottom: 10px;">`;
+        html += `${this.escapeHtml(outlook)}</div>`;
+        html += `<div style="font-size: 2rem; font-weight: bold; color: #333; margin-top: 10px;">`;
+        html += `Overall Score: ${score.toFixed(1)}/10</div>`;
+        html += '</div>';
+        
+        // Score Breakdown
+        html += '<div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px;">';
+        html += '<h4 style="color: #555; margin-bottom: 15px;">Score Breakdown:</h4>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">';
+        
+        const scores = [
+            { label: 'Valuation', value: fundamentalData.valuation_score, icon: '💰' },
+            { label: 'Profitability', value: fundamentalData.profitability_score, icon: '📈' },
+            { label: 'Financial Health', value: fundamentalData.financial_health_score, icon: '🏥' },
+            { label: 'Growth', value: fundamentalData.growth_score, icon: '🚀' }
+        ];
+        
+        scores.forEach(({ label, value, icon }) => {
+            // Validate value is a number and greater than 0
+            if (typeof value === 'number' && !isNaN(value) && value >= 0) {
+                const percentage = (value / 10) * 100;
+                const color = value >= 7 ? '#28a745' : value >= 5 ? '#ffc107' : '#dc3545';
+                html += '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">';
+                html += `<div style="font-size: 1.5rem; margin-bottom: 5px;">${icon}</div>`;
+                html += `<div style="font-weight: bold; margin-bottom: 8px;">${this.escapeHtml(label)}</div>`;
+                html += `<div style="font-size: 1.2rem; font-weight: bold; color: ${color}; margin-bottom: 5px;">${value.toFixed(1)}/10</div>`;
+                html += `<div style="background: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden;">`;
+                html += `<div style="background: ${color}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>`;
+                html += '</div></div>';
+            }
+        });
+        html += '</div></div>';;
+        
+        // Key Strengths
+        if (fundamentalData.key_strengths && fundamentalData.key_strengths.length > 0) {
+            html += '<div style="background: #d4edda; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 3px solid #28a745;">';
+            html += '<h4 style="color: #155724; margin-bottom: 10px;">✅ Key Strengths:</h4>';
+            html += '<ul style="margin: 0; padding-left: 20px; color: #155724;">';
+            fundamentalData.key_strengths.forEach(strength => {
+                html += `<li style="margin-bottom: 5px;">${this.escapeHtml(strength)}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Key Concerns
+        if (fundamentalData.key_concerns && fundamentalData.key_concerns.length > 0) {
+            html += '<div style="background: #f8d7da; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 3px solid #dc3545;">';
+            html += '<h4 style="color: #721c24; margin-bottom: 10px;">⚠️ Key Concerns:</h4>';
+            html += '<ul style="margin: 0; padding-left: 20px; color: #721c24;">';
+            fundamentalData.key_concerns.forEach(concern => {
+                html += `<li style="margin-bottom: 5px;">${this.escapeHtml(concern)}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Summary
+        if (fundamentalData.summary) {
+            html += '<div style="background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 3px solid #0066cc;">';
+            html += '<h4 style="color: #004085; margin-bottom: 10px;">📝 Investment Summary:</h4>';
+            html += `<p style="margin: 0; color: #004085; line-height: 1.6;">${this.escapeHtml(fundamentalData.summary)}</p>`;
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        return html;
+    },
+
+    /**
      * Render correlation analysis
      */
     renderCorrelation(corrData) {
@@ -179,11 +271,15 @@ const AnalyticsRenderer = {
     },
 
     /**
-     * Render individual ticker analytics (regression and Monte Carlo)
+     * Render individual ticker analytics (includes fundamental, regression, and Monte Carlo)
      */
     renderTickerAnalytics(ticker, tickerAnalytics) {
-        let html = `<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #00b894;">`;
-        html += `<h3 style="color: #00b894; margin-bottom: 15px;">📍 ${this.escapeHtml(ticker)} Analytics</h3>`;
+        let html = `<div style="background: #ffffff; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 4px solid #00b894;">`;
+        html += `<h3 style="color: #00b894; margin: 0 0 20px 0; font-size: 1.6rem; display: flex; align-items: center; gap: 10px;">`;
+        html += `<span style="font-size: 1.8rem;">📊</span>`;
+        html += `<span>${this.escapeHtml(ticker)} - Advanced Analysis</span>`;
+        html += `</h3>`;
+        
         
         if (tickerAnalytics.regression) {
             html += this.renderRegression(ticker, tickerAnalytics.regression);

@@ -91,13 +91,19 @@ const DisplayManager = {
         html += `<span>${this.escapeHtml(data['Data Timestamp'] || '')}</span>`;
         html += '</div>';
 
+        // Add fundamental analysis if available
+        if (data._fundamental_analysis && typeof AnalyticsRenderer !== 'undefined' && typeof AnalyticsRenderer.renderFundamental === 'function') {
+            html += AnalyticsRenderer.renderFundamental(data._fundamental_analysis);
+        }
+
         html += '<div class="metrics-grid">';
 
         for (const [groupName, keywords] of Object.entries(groups)) {
             const groupMetrics = {};
             
             for (const [key, value] of Object.entries(data)) {
-                if (key === 'error' || key === 'Ticker' || key === 'Data Timestamp') continue;
+                // Skip internal fields, errors, and metadata
+                if (key === 'error' || key === 'Ticker' || key === 'Data Timestamp' || key === '_fundamental_analysis') continue;
                 
                 const keyLower = key.toLowerCase();
                 const matchesKeyword = keywords.some(kw => keyLower.includes(kw.toLowerCase()));
@@ -184,12 +190,18 @@ const DisplayManager = {
             hasAnalytics = true;
         }
         
-        // Add individual ticker analytics
+        // Add individual ticker analytics (includes fundamental analysis)
         if (typeof AnalyticsRenderer.renderTickerAnalytics === 'function') {
             for (const [ticker, tickerAnalytics] of Object.entries(analyticsData)) {
+                // Skip portfolio-level analytics keys to focus on individual tickers
                 if (ticker === 'correlation' || ticker === 'pca' || ticker === 'info') continue;
-                html += AnalyticsRenderer.renderTickerAnalytics(ticker, tickerAnalytics);
-                hasAnalytics = true;
+                
+                // Render ticker-specific analytics including fundamental analysis
+                const tickerHtml = AnalyticsRenderer.renderTickerAnalytics(ticker, tickerAnalytics);
+                if (tickerHtml) {
+                    html += tickerHtml;
+                    hasAnalytics = true;
+                }
             }
         }
         
