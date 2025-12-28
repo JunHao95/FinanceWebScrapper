@@ -69,6 +69,16 @@ A high-performance Python application for scraping and analyzing financial metri
 - Summary comparison reports
 - Interactive web visualizations
 
+### Troubleshooting Snippets
+- **📁 Location**: `snippets/python_snippets.py` (244 lines)
+- **Purpose**: Short, focused snippets to reproduce and debug webapp functionality
+- **8 Snippets**: 
+  - Scrapers: Yahoo, Finviz, Google Finance, CNN Fear & Greed, Sentiment
+  - Analytics: Fundamental analysis, Monte Carlo VaR, Correlation analysis
+- **Usage**: `python snippets/python_snippets.py` (run from project root)
+- **Import Example**: `from python_snippets import snippet_yahoo_scraper`
+- **Key Feature**: Uses webapp's actual implementation classes for consistent results
+
 ---
 
 ## 📦 Installation
