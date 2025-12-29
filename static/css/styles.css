@@ -262,10 +262,43 @@ button:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.ticker-header:hover {
+    background: linear-gradient(135deg, #7d6ff7, #b3adff);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
 }
 
 .ticker-header h3 {
     font-size: 1.8rem;
+    margin: 0;
+}
+
+.ticker-collapse-icon {
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+    font-weight: bold;
+    margin-left: 15px;
+}
+
+.ticker-header.collapsed .ticker-collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.ticker-content {
+    max-height: 10000px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.4s ease;
+}
+
+.ticker-content.collapsed {
+    max-height: 0;
+    opacity: 0;
 }
 
 .metrics-grid {
@@ -277,8 +310,9 @@ button:disabled {
 
 .metric-group {
     background: #f8f9fa;
-    border-radius: 8px;
     padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
     border-left: 4px solid #667eea;
 }
 

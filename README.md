@@ -79,6 +79,12 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Import Example**: `from python_snippets import snippet_yahoo_scraper`
 - **Key Feature**: Uses webapp's actual implementation classes for consistent results
 
+### Collapsible Ticker Display
+- **Click-to-Expand**: Ticker details collapsed by default for reduced clutter
+- **Smooth Animations**: 0.4s transitions with arrow icon rotation (▼ → ▶)
+- **Visual Feedback**: Gradient hover effects on ticker headers
+- **Mobile-Friendly**: Less scrolling, faster navigation to relevant data
+
 ---
 
 ## 📦 Installation

@@ -86,10 +86,17 @@ const DisplayManager = {
             ]
         };
 
-        let html = '<div class="ticker-header">';
+        const tickerContentId = `ticker-content-${ticker}`;
+        
+        let html = `<div class="ticker-header collapsed" onclick="DisplayManager.toggleTicker('${tickerContentId}')">`;
+        html += '<div style="display: flex; align-items: center;">';
         html += `<h3>${this.escapeHtml(ticker)}</h3>`;
+        html += '<span class="ticker-collapse-icon">▼</span>';
+        html += '</div>';
         html += `<span>${this.escapeHtml(data['Data Timestamp'] || '')}</span>`;
         html += '</div>';
+
+        html += `<div class="ticker-content collapsed" id="${tickerContentId}">`;
 
         // Add fundamental analysis if available
         if (data._fundamental_analysis && typeof AnalyticsRenderer !== 'undefined' && typeof AnalyticsRenderer.renderFundamental === 'function') {
@@ -221,6 +228,26 @@ const DisplayManager = {
         
         // Use replaceChildren() for clarity instead of innerHTML = '' + appendChild
         analyticsResultsDiv.replaceChildren(analyticsDiv);
+    },
+
+    /**
+     * Toggle ticker collapse/expand
+     */
+    toggleTicker(contentId) {
+        const content = document.getElementById(contentId);
+        const header = content?.previousElementSibling;
+        
+        if (!content || !header) return;
+        
+        const isCollapsed = content.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            content.classList.remove('collapsed');
+            header.classList.remove('collapsed');
+        } else {
+            content.classList.add('collapsed');
+            header.classList.add('collapsed');
+        }
     }
 };
 
