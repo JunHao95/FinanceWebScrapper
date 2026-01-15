@@ -34,6 +34,23 @@ class FinancialAnalytics:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.config = config or {}
     
+    @staticmethod
+    def compute_pct_increase(base: float, new: float, initial_investment: float) -> Optional[float]:
+        """
+        Safely compute percentage increase as a percentage of initial investment.
+        
+        Args:
+            base (float): The base value
+            new (float): The new value
+            initial_investment (float): The initial investment amount
+            
+        Returns:
+            Optional[float]: Percentage change relative to initial investment, or None if initial_investment is zero
+        """
+        if initial_investment == 0:
+            return None
+        return round(float((new - base) / initial_investment * 100), 2)
+    
     def _get_portfolio_weights(self, tickers: List[str]) -> Dict[str, float]:
         """
         Get portfolio weights from config or return equal weights
@@ -607,9 +624,9 @@ class FinancialAnalytics:
             # Probability of loss
             prob_loss = np.sum(portfolio_returns < 0) / simulations * 100
             
-            # Best and worst case scenarios
-            best_case = float(np.max(final_values))
-            worst_case = float(np.min(final_values))
+            # Best and worst case scenarios (using 75th and 10th percentiles for more realistic bounds)
+            top_25_percentile = float(np.percentile(final_values, 75))  # 75th percentile (better than 75% of outcomes)
+            bottom_10_percentile = float(np.percentile(final_values, 10))  # 10th percentile (worse than 90% of outcomes)
             
             results = {
                 "VaR": {
@@ -648,8 +665,8 @@ class FinancialAnalytics:
                 "Scenario Analysis": {
                     "Expected Value": round(float(np.mean(final_values)), 2),
                     "Median Value": round(float(np.median(final_values)), 2),
-                    "Best Case": round(best_case, 2),
-                    "Worst Case": round(worst_case, 2),
+                    "Best Case (75th percentile)": round(top_25_percentile, 2),
+                    "Worst Case (10th percentile)": round(bottom_10_percentile, 2),
                     "Probability of Loss": round(prob_loss, 2)
                 },
                 "Distribution Percentiles": percentile_values,
@@ -784,7 +801,7 @@ class FinancialAnalytics:
                     },
                     "Stress Impact": {
                         "VaR Increase": round(float(stress_var - base_var), 2),
-                        "VaR Increase %": round(float((stress_var / base_var - 1) * 100), 2)
+                        "VaR Increase %": self.compute_pct_increase(base_var, stress_var, initial_investment)
                     },
                     "Parameters": {
                         "Assets": len(tickers),
@@ -956,17 +973,17 @@ class FinancialAnalytics:
                 },
                 "Stress Impact": {
                     "VaR Increase": round(float(var_stress - var_base), 2),
-                    "VaR Increase %": round(float((var_stress / var_base - 1) * 100), 2),
+                    "VaR Increase %": self.compute_pct_increase(var_base, var_stress, initial_investment),
                     "VaR 99% Increase": round(float(var_99_stress - var_base), 2),
                     "ES Increase": round(float(es_stress - es_base), 2),
-                    "ES Increase %": round(float((es_stress / es_base - 1) * 100), 2),
+                    "ES Increase %": self.compute_pct_increase(es_base, es_stress, initial_investment),
                     "Prob Loss Increase": round(float(prob_loss_stress - prob_loss_base), 2),
                     "Interpretation": (
                         f"LEPTOKURTIC STRESS: Crisis scenario increases VaR by ${var_stress - var_base:,.2f} "
-                        f"({(var_stress / var_base - 1) * 100:.1f}% worse). "
+                        f"({self.compute_pct_increase(var_base, var_stress, initial_investment) or 0.0:.1f}% of portfolio). "
                         f"Fat-tailed distribution captures extreme 'Black Swan' events. "
                         f"Extreme stress (99% VaR) shows ${var_99_stress:,.2f} loss - "
-                        f"{((var_99_stress / var_base - 1) * 100):.1f}% worse than base case"
+                        f"{self.compute_pct_increase(var_base, var_99_stress, initial_investment) or 0.0:.1f}% of portfolio from base case"
                     )
                 },
                 "Parameters": {

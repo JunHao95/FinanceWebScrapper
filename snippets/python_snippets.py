@@ -8,6 +8,8 @@ Analytics Snippets:
 1. snippet_fundamental_analysis() - Test fundamental scoring
 2. snippet_monte_carlo_var() - Test VaR/ES calculations
 3. snippet_correlation_analysis() - Test correlation matrix
+4. snippet_single_asset_stress_test() - Test single asset stress test
+5. snippet_multi_asset_stress_test() - Test multi-asset portfolio stress test
 
 Scraper Snippets:
 4. snippet_yahoo_scraper() - Test Yahoo Finance scraper
@@ -210,5 +212,134 @@ def snippet_correlation_analysis(tickers: List[str] = ['AAPL', 'MSFT', 'GOOGL'])
     else:
         print(f"✅ Avg Correlation: {result.get('Average Correlation', 0):.3f}")
         print(f"   Diversification: {result.get('Diversification Level', 'N/A')}")
+    
+    return result
+
+
+def snippet_single_asset_stress_test(ticker: str = 'AAPL', initial_investment: float = 100000) -> Dict[str, Any]:
+    """
+    Run single asset stress test using webapp's FinancialAnalytics.
+    
+    Tests stress scenarios on a single stock with increased volatility.
+    
+    Args:
+        ticker: Stock ticker symbol
+        initial_investment: Initial portfolio value
+    
+    Returns:
+        dict: Stress test results with Base Case, Stress Case, and Impact
+    """
+    if not WEBAPP_MODULES_AVAILABLE:
+        raise ImportError("Webapp modules required. Run from project root.")
+    
+    print(f"\n⚠️  Single Asset Stress Test for {ticker}...")
+    print(f"   Initial Investment: ${initial_investment:,.2f}")
+    
+    analytics = FinancialAnalytics()
+    result = analytics.stress_test_var(
+        tickers=[ticker],
+        initial_investment=initial_investment,
+        simulations=10000,
+        confidence_level=0.95,
+        forecast_days=252,
+        vol_stress_multiplier=2.0  # 2x volatility stress
+    )
+    
+    if 'error' in result:
+        print(f"❌ Error: {result['error']}")
+    else:
+        base_var = result.get('Base Case', {}).get('VaR', 0)
+        stress_var = result.get('Stress Case', {}).get('VaR', 0)
+        var_increase_pct = result.get('Stress Impact', {}).get('VaR Increase %', 0)
+        
+        print(f"✅ Base Case VaR (95%): ${base_var:,.2f}")
+        print(f"   Stress Case VaR (95%): ${stress_var:,.2f}")
+        print(f"   VaR Increase: {var_increase_pct}% of portfolio")
+    
+    return result
+
+
+def snippet_multi_asset_stress_test(
+    tickers: List[str] = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'],
+    initial_investment: float = 100000,
+    vol_stress_multiplier: float = 4.0,
+    degrees_of_freedom: int = 3,
+    liquidity_haircut: float = 0.05
+) -> Dict[str, Any]:
+    """
+    Run multi-asset portfolio stress test with extreme parameters.
+    
+    Tests diversified portfolio under extreme crisis conditions with:
+    - Fat-tailed distributions (Student-t) for Black Swan events
+    - High correlation breakdown (90%) during crisis
+    - Increased volatility
+    - Liquidity haircuts
+    
+    Args:
+        tickers: List of stock ticker symbols
+        initial_investment: Initial portfolio value
+        vol_stress_multiplier: Volatility multiplier (default: 4.0x)
+        degrees_of_freedom: Lower = fatter tails (default: 3)
+        liquidity_haircut: Transaction cost % in crisis (default: 0.05 = 5%)
+    
+    Returns:
+        dict: Comprehensive stress test results with Base/Stress Cases and Impact
+    """
+    if not WEBAPP_MODULES_AVAILABLE:
+        raise ImportError("Webapp modules required. Run from project root.")
+    
+    print(f"\n⚠️  Multi-Asset Portfolio Stress Test...")
+    print(f"   Portfolio: {', '.join(tickers)}")
+    print(f"   Initial Investment: ${initial_investment:,.2f}")
+    print(f"   Parameters: {vol_stress_multiplier}x vol, df={degrees_of_freedom}, {liquidity_haircut*100}% haircut")
+    
+    analytics = FinancialAnalytics()
+    
+    # Optional: Define custom portfolio weights (or use None for equal weights)
+    portfolio_weights = {
+        'AAPL': 0.25,
+        'MSFT': 0.25,
+        'GOOGL': 0.20,
+        'AMZN': 0.15,
+        'TSLA': 0.15
+    }
+    
+    result = analytics.stress_test_var(
+        tickers=tickers,
+        initial_investment=initial_investment,
+        simulations=10000,
+        confidence_level=0.95,
+        forecast_days=252,
+        vol_stress_multiplier=vol_stress_multiplier,
+        rho_stress=0.9,  # 90% correlation during crisis
+        use_fat_tails=True,  # Use Student-t distribution
+        degrees_of_freedom=degrees_of_freedom,
+        liquidity_haircut=liquidity_haircut,
+        portfolio_weights=portfolio_weights
+    )
+    
+    if 'error' in result:
+        print(f"❌ Error: {result['error']}")
+    else:
+        base_var = result.get('Base Case', {}).get('VaR', 0)
+        base_var_pct = result.get('Base Case', {}).get('VaR %', 0)
+        stress_var = result.get('Stress Case', {}).get('VaR', 0)
+        stress_var_pct = result.get('Stress Case', {}).get('VaR %', 0)
+        var_99 = result.get('Stress Case', {}).get('VaR 99%', 0)
+        var_99_pct = result.get('Stress Case', {}).get('VaR 99% %', 0)
+        es = result.get('Stress Case', {}).get('Expected Shortfall', 0)
+        
+        print(f"\n✅ BASE CASE (Normal Market):")
+        print(f"   VaR (95%): ${base_var:,.2f} ({base_var_pct:.2f}% of portfolio)")
+        
+        print(f"\n⚠️  STRESS CASE (Extreme Crisis):")
+        print(f"   VaR (95%): ${stress_var:,.2f} ({stress_var_pct:.2f}% of portfolio)")
+        print(f"   VaR (99%): ${var_99:,.2f} ({var_99_pct:.2f}% of portfolio)")
+        print(f"   Expected Shortfall: ${es:,.2f}")
+        
+        print(f"\n💡 INTERPRETATION:")
+        print(f"   In an EXTREME crisis, with 95% confidence:")
+        print(f"   • Maximum loss: {stress_var_pct:.1f}% (${stress_var:,.0f})")
+        print(f"   • Tail event (99%): {var_99_pct:.1f}% (${var_99:,.0f})")
     
     return result

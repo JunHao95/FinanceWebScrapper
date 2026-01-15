@@ -440,11 +440,11 @@ const AnalyticsRenderer = {
             if (scenario["Probability of Loss"] !== undefined) {
                 html += `<div><strong>Probability of Loss:</strong> ${scenario["Probability of Loss"].toFixed(1)}%</div>`;
             }
-            if (scenario["Best Case"] !== undefined) {
-                html += `<div><strong>Best Case (1 in 5000 best outcome):</strong> $${scenario["Best Case"].toLocaleString()}</div>`;
+            if (scenario["Best Case (75th percentile)"] !== undefined) {
+                html += `<div><strong>Best Case (75th percentile - better than 75% of outcomes):</strong> $${scenario["Best Case (75th percentile)"].toLocaleString()}</div>`;
             }
-            if (scenario["Worst Case"] !== undefined) {
-                html += `<div><strong>Worst Case (1 in 5000 worst outcome):</strong> $${scenario["Worst Case"].toLocaleString()}</div>`;
+            if (scenario["Worst Case (10th percentile)"] !== undefined) {
+                html += `<div><strong>Worst Case (10th percentile - worse than 90% of outcomes):</strong> $${scenario["Worst Case (10th percentile)"].toLocaleString()}</div>`;
             }
             if (scenario["Expected Value"] !== undefined) {
                 html += `<div><strong>Expected Value (Average value):</strong> $${scenario["Expected Value"].toLocaleString()}</div>`;
@@ -455,7 +455,6 @@ const AnalyticsRenderer = {
         // Stress Test Section   
         if (mc["Stress Test"]) {
             const stressTest = mc["Stress Test"];
-            console.log('Stress Test Data:', stressTest);
             html += '<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #ffc107;">';
             html += '<h5 style="color: #856404; margin: 0 0 12px 0;">⚠️ Leptokurtic Stress Test Analysis</h5>';
             html += '<p style="color: #856404; font-size: 0.85rem; margin-bottom: 12px;">Enhanced stress test using <strong>Student-t distribution</strong> (fat tails) to capture extreme "Black Swan" events, correlation breakdown, asymmetric downside risk, and liquidity haircuts</p>';
