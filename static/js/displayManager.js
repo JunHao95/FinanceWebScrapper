@@ -197,11 +197,23 @@ const DisplayManager = {
             hasAnalytics = true;
         }
         
+        // Add portfolio-level Monte Carlo (includes stress test for multi-asset portfolios)
+        if (analyticsData.portfolio_monte_carlo && typeof AnalyticsRenderer.renderMonteCarlo === 'function') {
+            html += '<div style="background: #ffffff; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 4px solid #9b59b6;">';
+            html += '<h3 style="color: #9b59b6; margin: 0 0 20px 0; font-size: 1.6rem; display: flex; align-items: center; gap: 10px;">';
+            html += '<span style="font-size: 1.8rem;">📊</span>';
+            html += '<span>Portfolio Risk Analysis</span>';
+            html += '</h3>';
+            html += AnalyticsRenderer.renderMonteCarlo(analyticsData.portfolio_monte_carlo);
+            html += '</div>';
+            hasAnalytics = true;
+        }
+        
         // Add individual ticker analytics (includes fundamental analysis)
         if (typeof AnalyticsRenderer.renderTickerAnalytics === 'function') {
             for (const [ticker, tickerAnalytics] of Object.entries(analyticsData)) {
                 // Skip portfolio-level analytics keys to focus on individual tickers
-                if (ticker === 'correlation' || ticker === 'pca' || ticker === 'info') continue;
+                if (ticker === 'correlation' || ticker === 'pca' || ticker === 'info' || ticker === 'portfolio_monte_carlo') continue;
                 
                 // Render ticker-specific analytics including fundamental analysis
                 const tickerHtml = AnalyticsRenderer.renderTickerAnalytics(ticker, tickerAnalytics);

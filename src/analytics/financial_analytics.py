@@ -659,10 +659,340 @@ class FinancialAnalytics:
                 }
             }
             
+            # Add stress test results if we have multiple assets
+            if len(tickers) >= 2:
+                try:
+                    self.logger.info(f"=== STRESS TEST START === Running for {len(tickers)} tickers")
+                    stress_results = self.stress_test_var(
+                        tickers=tickers,
+                        portfolio_weights=portfolio_weights,
+                        days=days,
+                        simulations=simulations,
+                        forecast_days=1,  # Stress tests typically use 1-day horizon
+                        confidence_level=confidence_level,
+                        initial_investment=initial_investment
+                    )
+                    
+                    if stress_results and 'error' not in stress_results:
+                        results["Stress Test"] = stress_results
+                        self.logger.info(f"=== STRESS TEST COMPLETE === Added to results with keys: {list(stress_results.keys())}")
+                    else:
+                        self.logger.warning(f"Stress test returned error: {stress_results.get('error', 'Unknown')}")
+                except Exception as stress_error:
+                    self.logger.warning(f"Stress test failed with exception: {str(stress_error)}")
+            else:
+                self.logger.info(f"Skipping stress test - only {len(tickers)} ticker(s), need 2+ for multi-asset stress test")
+            
             return results
             
         except Exception as e:
             self.logger.error(f"Error in Monte Carlo simulation: {str(e)}")
+            return {"error": str(e)}
+    
+    def stress_test_var(
+        self,
+        tickers: List[str],
+        portfolio_weights: Optional[Dict[str, float]] = None,
+        days: int = 252,
+        simulations: int = 10000,
+        forecast_days: int = 1,
+        confidence_level: float = 0.95,
+        initial_investment: float = 100000,
+        vol_stress_multiplier: float = 3.0,
+        rho_stress: float = 0.95,
+        use_fat_tails: bool = True,
+        degrees_of_freedom: int = 3,
+        liquidity_haircut: float = 0.02
+    ) -> Dict:
+        """
+        Perform stress testing comparing normal market conditions to stressed conditions
+        
+        This method compares VaR under:
+        - Base Case: Normal historical volatility and correlation
+        - Stress Case: Elevated volatility and high correlation (crisis scenario)
+        
+        Enhanced Features:
+        - Fat Tails: Uses Student-t distribution to capture extreme "Black Swan" events
+        - Correlation Breakdown: Models the "crisis effect" where all correlations → 1
+        - Liquidity Haircuts: Accounts for illiquidity costs during market stress
+        
+        Args:
+            tickers (list): List of stock ticker symbols
+            portfolio_weights (dict): Portfolio weights for each ticker
+            days (int): Historical days for parameter estimation
+            simulations (int): Number of Monte Carlo simulations
+            forecast_days (int): Days to forecast (typically 1 for stress tests)
+            confidence_level (float): Confidence level (e.g., 0.95 for 95%)
+            initial_investment (float): Initial portfolio value
+            vol_stress_multiplier (float): Multiplier for stressed volatility (default 3.0x)
+            rho_stress (float): Correlation in stress scenario (default 0.95 - near total breakdown)
+            use_fat_tails (bool): Use Student-t distribution for fat tails (default True)
+            degrees_of_freedom (int): DoF for Student-t (lower = fatter tails, default 3), lower df captures more extreme events
+            liquidity_haircut (float): Liquidity cost in stress (default 2%)
+            
+        Returns:
+            dict: Stress test results with base and stressed VaR comparisons
+        """
+        try:
+            self.logger.info(f"Running stress test VaR simulation: {simulations} scenarios")
+            
+            # Get historical returns
+            returns = self.get_historical_returns(tickers, days=days)
+            
+            if returns.empty:
+                return {"error": "Could not fetch returns data"}
+            
+            # Clean data
+            returns = returns.dropna(axis=1)
+            tickers = list(returns.columns)
+            
+            if len(tickers) == 0:
+                return {"error": "No valid tickers with data"}
+            
+            # For single asset, default to simple Monte Carlo
+            if len(tickers) == 1:
+                self.logger.warning("Stress test requires multiple assets. Single asset provided.")
+                # Still run a simplified stress test
+                vol_base = returns.std().values[0]
+                vol_stress = vol_base * vol_stress_multiplier
+                mean_return = returns.mean().values[0]
+                
+                # Base case simulations
+                base_returns = np.random.normal(mean_return, vol_base, simulations)
+                base_final_values = initial_investment * (1 + base_returns)
+                base_returns_dollars = base_final_values - initial_investment
+                base_var_idx = int((1 - confidence_level) * simulations)
+                base_var = -np.sort(base_returns_dollars)[base_var_idx]
+                
+                # Stress case simulations
+                stress_returns = np.random.normal(mean_return, vol_stress, simulations)
+                stress_final_values = initial_investment * (1 + stress_returns)
+                stress_returns_dollars = stress_final_values - initial_investment
+                stress_var_idx = int((1 - confidence_level) * simulations)
+                stress_var = -np.sort(stress_returns_dollars)[stress_var_idx]
+                
+                return {
+                    "Base Case": {
+                        "VaR": round(float(base_var), 2),
+                        "VaR %": round(float(base_var / initial_investment * 100), 2),
+                        "Volatility": round(float(vol_base * 100), 2)
+                    },
+                    "Stress Case": {
+                        "VaR": round(float(stress_var), 2),
+                        "VaR %": round(float(stress_var / initial_investment * 100), 2),
+                        "Volatility": round(float(vol_stress * 100), 2)
+                    },
+                    "Stress Impact": {
+                        "VaR Increase": round(float(stress_var - base_var), 2),
+                        "VaR Increase %": round(float((stress_var / base_var - 1) * 100), 2)
+                    },
+                    "Parameters": {
+                        "Assets": len(tickers),
+                        "Simulations": simulations,
+                        "Forecast Days": forecast_days,
+                        "Confidence Level": confidence_level,
+                        "Volatility Multiplier": vol_stress_multiplier
+                    },
+                    "Note": "Single asset stress test: correlation effects not applicable"
+                }
+            
+            # Get portfolio weights from config if not provided
+            if portfolio_weights is None:
+                portfolio_weights = self._get_portfolio_weights(tickers)
+            
+            # Normalize weights
+            total_weight = sum(portfolio_weights.values())
+            if total_weight > 0:
+                portfolio_weights = {k: v/total_weight for k, v in portfolio_weights.items()}
+            else:
+                portfolio_weights = {ticker: 1.0/len(tickers) for ticker in tickers}
+            
+            weights = np.array([portfolio_weights.get(ticker, 0) for ticker in tickers])
+            
+            # Calculate base case parameters
+            mean_returns = returns.mean().values
+            vol_base = returns.std().values
+            corr_base = returns.corr().values
+            
+            # Calculate average base correlation (excluding diagonal)
+            n = len(tickers)
+            if n > 1:
+                rho_base = (corr_base.sum() - n) / (n * (n - 1))
+            else:
+                rho_base = 0
+            
+            # Construct base covariance matrix
+            cov_base = np.zeros((len(tickers), len(tickers)))
+            for i in range(len(tickers)):
+                for j in range(len(tickers)):
+                    if i == j:
+                        cov_base[i, j] = vol_base[i] ** 2
+                    else:
+                        cov_base[i, j] = corr_base[i, j] * vol_base[i] * vol_base[j]
+            
+            # Construct stress covariance matrix
+            vol_stress_vec = vol_base * vol_stress_multiplier
+            cov_stress = np.zeros((len(tickers), len(tickers)))
+            for i in range(len(tickers)):
+                for j in range(len(tickers)):
+                    if i == j:
+                        cov_stress[i, j] = vol_stress_vec[i] ** 2
+                    else:
+                        cov_stress[i, j] = rho_stress * vol_stress_vec[i] * vol_stress_vec[j]
+            
+            # Ensure matrices are positive definite
+            try:
+                L_base = np.linalg.cholesky(cov_base)
+            except np.linalg.LinAlgError:
+                # Add small value to diagonal for numerical stability
+                cov_base += np.eye(len(tickers)) * 1e-6
+                L_base = np.linalg.cholesky(cov_base)
+            
+            try:
+                L_stress = np.linalg.cholesky(cov_stress)
+            except np.linalg.LinAlgError:
+                cov_stress += np.eye(len(tickers)) * 1e-6
+                L_stress = np.linalg.cholesky(cov_stress)
+            
+            # Generate standard normal random variables
+            Z = np.random.normal(0, 1, size=(len(tickers), simulations))
+            
+            # Base case returns (Normal distribution)
+            epsilon_base = L_base @ Z
+            portfolio_returns_base = weights @ epsilon_base
+            
+            # Stress case returns with FAT TAILS (Student-t distribution)
+            if use_fat_tails:
+                # Generate Multivariate Student-t for "Black Swan" events
+                # Math: Y = sqrt(df / W) * L * Z, where W ~ Chi-squared(df)
+                W = np.random.chisquare(degrees_of_freedom, size=simulations)
+                # Scale to create fat-tailed distribution
+                fat_tail_scale = np.sqrt(degrees_of_freedom / W)
+                epsilon_stress = L_stress @ Z * fat_tail_scale
+                
+                # Add asymmetric downside bias (negative returns are worse)
+                # This captures the "leverage effect" in equity markets
+                downside_mask = (epsilon_stress < 0)
+                epsilon_stress[downside_mask] *= 1.2  # 20% worse on downside
+            else:
+                # Standard Normal stress (less realistic)
+                epsilon_stress = L_stress @ Z
+            
+            portfolio_returns_stress = weights @ epsilon_stress
+            
+            # Apply LIQUIDITY HAIRCUT to stress returns
+            # In a crisis, you can't exit at fair value - add transaction costs
+            portfolio_returns_stress = portfolio_returns_stress - liquidity_haircut
+            
+            # Calculate final portfolio values
+            base_final_values = initial_investment * (1 + portfolio_returns_base)
+            stress_final_values = initial_investment * (1 + portfolio_returns_stress)
+            
+            # Calculate returns in dollars
+            base_returns_dollars = base_final_values - initial_investment
+            stress_returns_dollars = stress_final_values - initial_investment
+            
+            # Sort for VaR calculation
+            sorted_base = np.sort(base_returns_dollars)
+            sorted_stress = np.sort(stress_returns_dollars)
+            
+            # Calculate VaR at confidence level
+            # Calculate 99th percentile VaR for extreme stress scenarios
+            var_99_idx = int(0.01 * simulations)  # 99% confidence
+            var_99_stress = -sorted_stress[var_99_idx]
+            es_99_stress = -np.mean(sorted_stress[:var_99_idx])
+            
+            var_idx = int((1 - confidence_level) * simulations)
+            var_base = -sorted_base[var_idx]
+            var_stress = -sorted_stress[var_idx]
+            
+            # Calculate VaR as percentage
+            var_base_pct = var_base / initial_investment * 100
+            var_stress_pct = var_stress / initial_investment * 100
+            
+            # Calculate Expected Shortfall for both scenarios
+            es_base = -np.mean(sorted_base[:var_idx])
+            es_stress = -np.mean(sorted_stress[:var_idx])
+            
+            es_base_pct = es_base / initial_investment * 100
+            es_stress_pct = es_stress / initial_investment * 100
+            
+            # Calculate probability of loss in each scenario
+            prob_loss_base = np.sum(portfolio_returns_base < 0) / simulations * 100
+            prob_loss_stress = np.sum(portfolio_returns_stress < 0) / simulations * 100
+            
+            results = {
+                "Base Case": {
+                    "VaR": round(float(var_base), 2),
+                    "VaR %": round(float(var_base_pct), 2),
+                    "Expected Shortfall": round(float(es_base), 2),
+                    "ES %": round(float(es_base_pct), 2),
+                    "Avg Volatility": round(float(np.mean(vol_base) * 100), 2),
+                    "Avg Correlation": round(float(rho_base), 3),
+                    "Probability of Loss": round(float(prob_loss_base), 2),
+                    "Interpretation": (
+                        f"Under normal conditions, with {confidence_level*100}% confidence, "
+                        f"maximum loss is ${var_base:,.2f} ({var_base_pct:.2f}%)"
+                    )
+                },
+                "Stress Case": {
+                    "VaR": round(float(var_stress), 2),
+                    "VaR %": round(float(var_stress_pct), 2),
+                    "VaR 99%": round(float(var_99_stress), 2),
+                    "VaR 99% %": round(float(var_99_stress / initial_investment * 100), 2),
+                    "Expected Shortfall": round(float(es_stress), 2),
+                    "ES %": round(float(es_stress_pct), 2),
+                    "ES 99%": round(float(es_99_stress), 2),
+                    "ES 99% %": round(float(es_99_stress / initial_investment * 100), 2),
+                    "Avg Volatility": round(float(np.mean(vol_stress_vec) * 100), 2),
+                    "Avg Correlation": round(float(rho_stress), 3),
+                    "Probability of Loss": round(float(prob_loss_stress), 2),
+                    "Distribution": "Student-t (Fat Tails)" if use_fat_tails else "Normal",
+                    "Liquidity Haircut": f"{liquidity_haircut * 100}%",
+                    "Interpretation": (
+                        f"Under EXTREME crisis conditions (fat tails + volatility spike + correlation breakdown + liquidity crisis), "
+                        f"with {confidence_level*100}% confidence, maximum loss is ${var_stress:,.2f} ({var_stress_pct:.2f}%)"
+                    )
+                },
+                "Stress Impact": {
+                    "VaR Increase": round(float(var_stress - var_base), 2),
+                    "VaR Increase %": round(float((var_stress / var_base - 1) * 100), 2),
+                    "VaR 99% Increase": round(float(var_99_stress - var_base), 2),
+                    "ES Increase": round(float(es_stress - es_base), 2),
+                    "ES Increase %": round(float((es_stress / es_base - 1) * 100), 2),
+                    "Prob Loss Increase": round(float(prob_loss_stress - prob_loss_base), 2),
+                    "Interpretation": (
+                        f"LEPTOKURTIC STRESS: Crisis scenario increases VaR by ${var_stress - var_base:,.2f} "
+                        f"({(var_stress / var_base - 1) * 100:.1f}% worse). "
+                        f"Fat-tailed distribution captures extreme 'Black Swan' events. "
+                        f"Extreme stress (99% VaR) shows ${var_99_stress:,.2f} loss - "
+                        f"{((var_99_stress / var_base - 1) * 100):.1f}% worse than base case"
+                    )
+                },
+                "Parameters": {
+                    "Assets": len(tickers),
+                    "Simulations": simulations,
+                    "Forecast Days": forecast_days,
+                    "Initial Investment": initial_investment,
+                    "Confidence Level": confidence_level,
+                    "Volatility Multiplier": vol_stress_multiplier,
+                    "Stress Correlation": rho_stress,
+                    "Historical Days": days,
+                    "Fat Tails (Student-t)": "Yes" if use_fat_tails else "No",
+                    "Degrees of Freedom": degrees_of_freedom if use_fat_tails else "N/A",
+                    "Liquidity Haircut": f"{liquidity_haircut * 100}%",
+                    "Downside Asymmetry": "20% amplification" if use_fat_tails else "None"
+                },
+                "Portfolio Composition": {
+                    ticker: round(weight * 100, 2) 
+                    for ticker, weight in zip(tickers, weights)
+                }
+            }
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Error in stress test VaR: {str(e)}")
             return {"error": str(e)}
     
     def correlation_analysis(

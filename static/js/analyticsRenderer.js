@@ -452,6 +452,104 @@ const AnalyticsRenderer = {
             html += '</div></div>';
         }
         
+        // Stress Test Section   
+        if (mc["Stress Test"]) {
+            const stressTest = mc["Stress Test"];
+            console.log('Stress Test Data:', stressTest);
+            html += '<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #ffc107;">';
+            html += '<h5 style="color: #856404; margin: 0 0 12px 0;">⚠️ Leptokurtic Stress Test Analysis</h5>';
+            html += '<p style="color: #856404; font-size: 0.85rem; margin-bottom: 12px;">Enhanced stress test using <strong>Student-t distribution</strong> (fat tails) to capture extreme "Black Swan" events, correlation breakdown, asymmetric downside risk, and liquidity haircuts</p>';
+            
+            // Parameters display
+            if (stressTest["Parameters"]) {
+                const params = stressTest["Parameters"];
+                html += '<div style="background: #fff; padding: 10px; border-radius: 5px; margin-bottom: 12px; font-size: 0.8rem; color: #666;">';
+                html += `<strong>Stress Model:</strong> ${this.escapeHtml(params["Fat Tails (Student-t)"])} (df=${this.escapeHtml(params["Degrees of Freedom"])}), `;
+                html += `${params.Simulations?.toLocaleString() ?? 'N/A'} simulations, `;
+                html += `${params["Confidence Level"] ? (params["Confidence Level"] * 100) : 'N/A'}% confidence<br>`;
+                html += `<strong>Crisis Parameters:</strong> ${this.escapeHtml(params["Volatility Multiplier"])}x vol, `;
+                html += `${this.escapeHtml(params["Stress Correlation"])} correlation spike, `;
+                html += `${this.escapeHtml(params["Liquidity Haircut"])} liquidity cost, `;
+                html += `${this.escapeHtml(params["Downside Asymmetry"])} downside bias`;
+                html += '</div>';
+            }
+            
+            // Base Case vs Stress Case Comparison
+            if (stressTest["Base Case"] && stressTest["Stress Case"]) {
+                const baseCase = stressTest["Base Case"];
+                const stressCase = stressTest["Stress Case"];
+                const impact = stressTest["Stress Impact"];
+                
+                html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">';
+                
+                // Base Case Card
+                html += '<div style="background: #d4edda; padding: 12px; border-radius: 8px; border: 2px solid #28a745;">';
+                html += '<h6 style="color: #155724; margin: 0 0 10px 0; font-size: 0.9rem;">📊 Base Case (Normal)</h6>';
+                html += `<div style="font-size: 0.8rem; color: #155724; margin-bottom: 5px;"><strong>VaR:</strong> $${baseCase.VaR?.toLocaleString()} (${baseCase["VaR %"]}%)</div>`;
+                html += `<div style="font-size: 0.8rem; color: #155724; margin-bottom: 5px;"><strong>ES:</strong> $${baseCase["Expected Shortfall"]?.toLocaleString()} (${baseCase["ES %"]}%)</div>`;
+                html += `<div style="font-size: 0.8rem; color: #155724; margin-bottom: 5px;"><strong>Vol:</strong> ${baseCase["Avg Volatility"]}%</div>`;
+                html += `<div style="font-size: 0.8rem; color: #155724; margin-bottom: 5px;"><strong>Corr:</strong> ${baseCase["Avg Correlation"]}</div>`;
+                html += `<div style="font-size: 0.8rem; color: #155724;"><strong>P(Loss):</strong> ${baseCase["Probability of Loss"]}%</div>`;
+                html += '</div>';
+                
+                // Stress Case Card
+                html += '<div style="background: #f8d7da; padding: 12px; border-radius: 8px; border: 2px solid #dc3545;">';
+                html += '<h6 style="color: #721c24; margin: 0 0 10px 0; font-size: 0.9rem;">🔥 Stress Case (Crisis)</h6>';
+                html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>VaR (95%):</strong> $${stressCase.VaR?.toLocaleString()} (${stressCase["VaR %"]}%)</div>`;
+                if (stressCase["VaR 99%"]) {
+                    html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>VaR (99%):</strong> $${stressCase["VaR 99%"]?.toLocaleString()} (${stressCase["VaR 99% %"]}%)</div>`;
+                }
+                html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>ES (95%):</strong> $${stressCase["Expected Shortfall"]?.toLocaleString()} (${stressCase["ES %"]}%)</div>`;
+                if (stressCase["ES 99%"]) {
+                    html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>ES (99%):</strong> $${stressCase["ES 99%"]?.toLocaleString()} (${stressCase["ES 99% %"]}%)</div>`;
+                }
+                html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>Vol:</strong> ${stressCase["Avg Volatility"]}%</div>`;
+                html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>Corr:</strong> ${stressCase["Avg Correlation"]}</div>`;
+                html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>P(Loss):</strong> ${stressCase["Probability of Loss"]}%</div>`;
+                if (stressCase["Distribution"]) {
+                    html += `<div style="font-size: 0.8rem; color: #721c24; margin-bottom: 5px;"><strong>Distribution:</strong> ${this.escapeHtml(stressCase["Distribution"])}</div>`;
+                }
+                if (stressCase["Liquidity Haircut"]) {
+                    html += `<div style="font-size: 0.8rem; color: #721c24;"><strong>Liquidity Haircut:</strong> ${this.escapeHtml(stressCase["Liquidity Haircut"])}</div>`;
+                }
+                html += '</div>';
+                
+                // Impact Card
+                if (impact) {
+                    html += '<div style="background: #fff3cd; padding: 12px; border-radius: 8px; border: 2px solid #ffc107;">';
+                    html += '<h6 style="color: #856404; margin: 0 0 10px 0; font-size: 0.9rem;">📈 Stress Impact</h6>';
+                    html += `<div style="font-size: 0.8rem; color: #856404; margin-bottom: 5px;"><strong>VaR ↑:</strong> $${impact["VaR Increase"]?.toLocaleString()} (${impact["VaR Increase %"]}%)</div>`;
+                    if (impact["VaR 99% Increase"]) {
+                        html += `<div style="font-size: 0.8rem; color: #856404; margin-bottom: 5px;"><strong>VaR 99% ↑:</strong> $${impact["VaR 99% Increase"]?.toLocaleString()}</div>`;
+                    }
+                    html += `<div style="font-size: 0.8rem; color: #856404; margin-bottom: 5px;"><strong>ES ↑:</strong> $${impact["ES Increase"]?.toLocaleString()} (${impact["ES Increase %"]}%)</div>`;
+                    html += `<div style="font-size: 0.8rem; color: #856404;"><strong>P(Loss) ↑:</strong> ${impact["Prob Loss Increase"]}%</div>`;
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                
+                // Interpretations
+                if (baseCase.Interpretation) {
+                    html += `<div style="background: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 0.8rem; color: #155724;">`;
+                    html += `<strong>Base Case:</strong> ${this.escapeHtml(baseCase.Interpretation)}`;
+                    html += `</div>`;
+                }
+                if (stressCase.Interpretation) {
+                    html += `<div style="background: #f8d7da; padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 0.8rem; color: #721c24;">`;
+                    html += `<strong>Stress Case:</strong> ${this.escapeHtml(stressCase.Interpretation)}`;
+                    html += `</div>`;
+                }
+                if (impact && impact.Interpretation) {
+                    html += `<div style="background: #fff3cd; padding: 10px; border-radius: 5px; font-size: 0.8rem; color: #856404;">`;
+                    html += `<strong>Impact:</strong> ${this.escapeHtml(impact.Interpretation)}`;
+                    html += `</div>`;
+                }
+            }
+            
+            html += '</div>';
+        }
+        
         html += '</div>';
         return html;
     }

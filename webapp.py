@@ -428,7 +428,7 @@ def scrape_data():
         
         logger.info(f"Total tickers processed: {len(all_data)}, Tickers: {list(all_data.keys())}")
         
-        # Filter out tickers with errors or no valid data
+        # Filter out tickers with errors or no valid data for DISPLAY purposes
         # Check for substantial data (at least 5 fields excluding Ticker and Timestamp)
         valid_tickers = [
             t for t, d in all_data.items() 
@@ -442,12 +442,17 @@ def scrape_data():
         if excluded_tickers:
             logger.warning(f"Excluded tickers (insufficient data): {excluded_tickers}")
         
+        # For ANALYTICS, use original ticker list (not just ones with scraper data)
+        # Analytics like Monte Carlo only need price data, which yfinance fetches independently
+        analytics_tickers = [t.strip().upper() for t in tickers]
+        logger.info(f"Will run analytics for {len(analytics_tickers)} tickers: {analytics_tickers}")
+        
         # Compute analytics for the portfolio
         analytics_data = {}
         # Skip heavy analytics for very large portfolios (>50 tickers) unless explicitly requested
-        skip_analytics = len(valid_tickers) > 50
+        skip_analytics = len(analytics_tickers) > 50
         
-        if len(valid_tickers) >= 1 and not skip_analytics:
+        if len(analytics_tickers) >= 1 and not skip_analytics:
             try:
                 logger.info("Computing advanced financial analytics...")
                 
@@ -461,7 +466,7 @@ def scrape_data():
                 
                 # Lazy load analytics to save memory
                 analytics = get_financial_analytics(config=analytics_config)
-                tickers_list = valid_tickers  # Use only valid tickers for analytics
+                tickers_list = analytics_tickers  # Use all input tickers for analytics (yfinance fetches data independently)
                 
                 # Correlation Analysis (requires 2+ tickers)
                 if len(tickers_list) >= 2:
@@ -509,6 +514,19 @@ def scrape_data():
                     if ticker_analytics:
                         analytics_data[ticker] = ticker_analytics
                 
+                # Portfolio-level Monte Carlo with Stress Test (if 2+ tickers)
+                if len(tickers_list) >= 2:
+                    try:
+                        logger.info(f"Running portfolio-level Monte Carlo for {len(tickers_list)} tickers...")
+                        portfolio_mc_result = analytics.monte_carlo_var_es(tickers_list, days=252, simulations=5000)
+                        if portfolio_mc_result and 'error' not in portfolio_mc_result:
+                            analytics_data['portfolio_monte_carlo'] = portfolio_mc_result
+                            logger.info(f"✓ Portfolio Monte Carlo completed (includes stress test)")
+                        else:
+                            logger.warning(f"Portfolio Monte Carlo returned error: {portfolio_mc_result.get('error', 'Unknown')}")
+                    except Exception as e:
+                        logger.warning(f"Portfolio Monte Carlo analysis failed: {str(e)}")
+                
                 # PCA Analysis (if 3+ tickers)
                 if len(tickers_list) >= 3:
                     try:
@@ -520,10 +538,10 @@ def scrape_data():
                 
             except Exception as e:
                 logger.error(f"Analytics computation error: {str(e)}")
-        elif len(valid_tickers) >= 1 and skip_analytics:
-            logger.info(f"Skipping advanced analytics for large portfolio ({len(valid_tickers)} tickers). Enable for smaller portfolios (≤50 tickers).")
+        elif len(analytics_tickers) >= 1 and skip_analytics:
+            logger.info(f"Skipping advanced analytics for large portfolio ({len(analytics_tickers)} tickers). Enable for smaller portfolios (≤50 tickers).")
             analytics_data['info'] = {
-                'message': f'Advanced analytics skipped for large portfolio ({len(valid_tickers)} tickers)',
+                'message': f'Advanced analytics skipped for large portfolio ({len(analytics_tickers)} tickers)',
                 'recommendation': 'For detailed analytics, analyze portfolios with 50 or fewer tickers'
             }
         
