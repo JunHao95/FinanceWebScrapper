@@ -50,3 +50,4 @@ test_concurrency.py
 
 # Configs
 config.json
+!.planning/config.json
