@@ -105,24 +105,59 @@ Deferred to future semesters/milestones.
 
 ## Traceability
 
-Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATH-01 through MATH-05 | Phase 1 | Pending |
-| MARKOV-01 through MARKOV-06 | Phase 2 | Pending |
-| CREDIT-01 through CREDIT-05 | Phase 2 | Pending |
-| RATE-01 through RATE-05 | Phase 2 | Pending |
-| REGIME-01 through REGIME-05 | Phase 3 | Pending |
-| HESTON-01 through HESTON-05 | Phase 3 | Pending |
-| CALIB-01 through CALIB-05 | Phase 3 | Pending |
-| ML-01 through ML-09 | Phase 4 | Pending |
+| MATH-01 | Phase 1: Math Correctness | Pending |
+| MATH-02 | Phase 1: Math Correctness | Pending |
+| MATH-03 | Phase 1: Math Correctness | Pending |
+| MATH-04 | Phase 1: Math Correctness | Pending |
+| MATH-05 | Phase 1: Math Correctness | Pending |
+| MARKOV-01 | Phase 2: Backend Completeness | Pending |
+| MARKOV-02 | Phase 2: Backend Completeness | Pending |
+| MARKOV-03 | Phase 2: Backend Completeness | Pending |
+| MARKOV-04 | Phase 2: Backend Completeness | Pending |
+| MARKOV-05 | Phase 2: Backend Completeness | Pending |
+| MARKOV-06 | Phase 2: Backend Completeness | Pending |
+| CREDIT-01 | Phase 2: Backend Completeness | Pending |
+| CREDIT-02 | Phase 2: Backend Completeness | Pending |
+| CREDIT-03 | Phase 2: Backend Completeness | Pending |
+| CREDIT-04 | Phase 2: Backend Completeness | Pending |
+| CREDIT-05 | Phase 2: Backend Completeness | Pending |
+| RATE-01 | Phase 2: Backend Completeness | Pending |
+| RATE-02 | Phase 2: Backend Completeness | Pending |
+| RATE-03 | Phase 2: Backend Completeness | Pending |
+| RATE-04 | Phase 2: Backend Completeness | Pending |
+| RATE-05 | Phase 2: Backend Completeness | Pending |
+| REGIME-01 | Phase 3: Frontend Wiring and Visualization | Pending |
+| REGIME-02 | Phase 3: Frontend Wiring and Visualization | Pending |
+| REGIME-03 | Phase 3: Frontend Wiring and Visualization | Pending |
+| REGIME-04 | Phase 3: Frontend Wiring and Visualization | Pending |
+| REGIME-05 | Phase 3: Frontend Wiring and Visualization | Pending |
+| HESTON-01 | Phase 3: Frontend Wiring and Visualization | Pending |
+| HESTON-02 | Phase 3: Frontend Wiring and Visualization | Pending |
+| HESTON-03 | Phase 3: Frontend Wiring and Visualization | Pending |
+| HESTON-04 | Phase 3: Frontend Wiring and Visualization | Pending |
+| HESTON-05 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-01 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-02 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-03 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-04 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-05 | Phase 3: Frontend Wiring and Visualization | Pending |
+| ML-01 | Phase 4: ML-in-Finance Module | Pending |
+| ML-02 | Phase 4: ML-in-Finance Module | Pending |
+| ML-03 | Phase 4: ML-in-Finance Module | Pending |
+| ML-04 | Phase 4: ML-in-Finance Module | Pending |
+| ML-05 | Phase 4: ML-in-Finance Module | Pending |
+| ML-06 | Phase 4: ML-in-Finance Module | Pending |
+| ML-07 | Phase 4: ML-in-Finance Module | Pending |
+| ML-08 | Phase 4: ML-in-Finance Module | Pending |
+| ML-09 | Phase 4: ML-in-Finance Module | Pending |
 
 **Coverage:**
 - v1 requirements: 40 total
 - Mapped to phases: 40
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation*
