@@ -91,7 +91,14 @@ class HestonCalibrator:
             step = len(raw) // max_contracts
             raw = raw[::step][:max_contracts]
 
-        # Pack market data into arrays
+        # Filter out contracts with market_price < 0.50 to prevent near-zero OTM options
+        # from dominating the relative MSE objective (standard practice in calibration)
+        MIN_MARKET_PRICE = 0.50
+        raw = [d for d in raw if d['market_price'] >= MIN_MARKET_PRICE]
+        if not raw:
+            return {'error': f'No contracts remain after filtering market_price < {MIN_MARKET_PRICE} for {ticker}'}
+
+        # Pack market data into arrays (from filtered raw)
         Ks    = np.array([d['strike'] for d in raw])
         Ts    = np.array([d['time_to_maturity'] for d in raw])
         mkt_p = np.array([d['market_price'] for d in raw])
@@ -110,7 +117,12 @@ class HestonCalibrator:
                     res = heston_price(S, K, T, risk_free_rate,
                                        v0, kappa, theta, sigma_v, rho,
                                        option_type)
-                    errors.append((res['price'] - mp) ** 2)
+                    # Relative (percentage) MSE — OTM and ITM options contribute equally per unit of price.
+                    # Dollar MSE caused large ITM contracts to dominate, producing a flat IV smile (MATH-02 fix).
+                    if mp >= MIN_MARKET_PRICE:
+                        errors.append(((res['price'] - mp) / mp) ** 2)
+                    else:
+                        errors.append((res['price'] - mp) ** 2)  # absolute fallback (should not reach here after filter)
                 except Exception:
                     errors.append(1e4)
             return float(np.mean(errors))
