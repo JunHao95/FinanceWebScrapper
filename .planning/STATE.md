@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-03T14:53:32.264Z"
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 1
+---
+
 # Project State
 
 ## Project Reference
@@ -10,30 +23,31 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 1 of 4 (Math Correctness)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-03 — Roadmap created, phases derived from requirements
+Plan: 2 of 3 in current phase
+Status: In Progress
+Last activity: 2026-03-03 — Completed plan 02 (MATH-02 relative MSE, MATH-04 dual-criterion HMM labelling)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 2
+- Average duration: ~3 min
+- Total execution time: ~6 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-math-correctness | 2 | ~6 min | ~3 min |
 
 **Recent Trend:**
-- Last 5 plans: none yet
-- Trend: -
+- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min)
+- Trend: Stable
 
 *Updated after each plan completion*
+| Phase 01-math-correctness P02 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -46,6 +60,8 @@ Recent decisions affecting current work:
 - [Roadmap]: MDP scope is unresolved — whether MARKOV-04/MARKOV-05 (MDP) belong in Phase 2 or are deferred to v2 should be decided before Phase 2 planning begins
 - [Roadmap]: Calibration progress strategy (SSE streaming vs. pre-cached demo results) should be decided during Phase 2 planning, as it affects Phase 3 implementation
 - [Init]: YOLO mode, Standard depth, parallel execution enabled; all 3 workflow agents active
+- [Phase 01-math-correctness]: Relative MSE for Heston calibration normalises OTM/ITM options equally; 0.50 filter prevents near-zero numerical issues
+- [Phase 01-math-correctness]: HMM dual-criterion labelling: sigma primary, mu secondary, 20% separation guard; AMBIGUOUS confidence forces NEUTRAL signal
 
 ### Pending Todos
 
@@ -60,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Roadmap created, STATE.md initialized. Ready to plan Phase 1.
+Stopped at: Completed 01-math-correctness plan 02 (MATH-02 Heston relative MSE, MATH-04 HMM dual-criterion labelling)
 Resume file: None
