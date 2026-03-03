@@ -29,7 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Setting CIR parameters that violate the Feller condition (2κθ < σ²) causes the calibrator to reject or flag them as invalid — the bad parameter set does not produce a silently wrong yield curve.
   4. Running HMM regime detection on SPY for March 2020 labels that period RISK_OFF (not RISK_ON), confirming label-switching is resolved.
   5. All model backends pass a documented validation check against a closed-form or textbook benchmark before Phase 2 begins.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Fix coupon discounting (MATH-01) and CIR Feller hard constraint (MATH-03)
+- [ ] 01-02-PLAN.md — Fix Heston relative MSE calibration (MATH-02) and HMM dual-criterion labels (MATH-04)
+- [ ] 01-03-PLAN.md — Benchmark test suite validating all five fixes (MATH-05)
 
 ### Phase 2: Backend Completeness
 **Goal**: Every stochastic model feature described in requirements has a callable Python function and a Flask route — no planned UI element will be blocked by a missing backend when frontend wiring starts.
@@ -75,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Math Correctness | 0/TBD | Not started | - |
+| 1. Math Correctness | 0/3 | Planned | - |
 | 2. Backend Completeness | 0/TBD | Not started | - |
 | 3. Frontend Wiring and Visualization | 0/TBD | Not started | - |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |
