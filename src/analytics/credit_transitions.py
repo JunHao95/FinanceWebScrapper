@@ -145,17 +145,25 @@ def expected_bond_value(
     Pn = n_year_transition(P, horizon)
     state_probs = Pn[rating_idx]
 
-    # Simplified bond value per final state (present values using par assumption)
-    # In practice, discount at rating-appropriate spread; here use flat coupons
-    coupons_pv = coupon_rate * face_value * horizon  # simplified (no discounting)
+    # Continuous-discounting annuity PV: C*F*(1-exp(-r*T))/r
+    # Par bond assumption: discount_rate = coupon_rate (coupon equals yield at issuance)
+    discount_rate = coupon_rate
+    if discount_rate > 0 and horizon > 0:
+        coupons_pv = coupon_rate * face_value * (1.0 - np.exp(-discount_rate * horizon)) / discount_rate
+        # Discounted principal: face_value * exp(-r*T)
+        # Together: face_value*exp(-rT) + coupon_rate*face_value*(1-exp(-rT))/r = face_value (par bond)
+        principal_pv = face_value * np.exp(-discount_rate * horizon)
+    else:
+        coupons_pv = coupon_rate * face_value * horizon  # degenerate fallback: r=0 or T=0
+        principal_pv = face_value
     state_bond_values = {
-        'AAA':  face_value + coupons_pv * 1.00,
-        'AA':   face_value + coupons_pv * 0.99,
-        'A':    face_value + coupons_pv * 0.98,
-        'BBB':  face_value + coupons_pv * 0.97,
-        'BB':   face_value + coupons_pv * 0.94,
-        'B':    face_value + coupons_pv * 0.90,
-        'CCC':  face_value + coupons_pv * 0.75,
+        'AAA':  principal_pv + coupons_pv * 1.00,
+        'AA':   principal_pv + coupons_pv * 0.99,
+        'A':    principal_pv + coupons_pv * 0.98,
+        'BBB':  principal_pv + coupons_pv * 0.97,
+        'BB':   principal_pv + coupons_pv * 0.94,
+        'B':    principal_pv + coupons_pv * 0.90,
+        'CCC':  principal_pv + coupons_pv * 0.75,
         'D':    recovery_rate * face_value,
     }
 
@@ -298,3 +306,13 @@ def credit_risk_analysis(
         'bond_analysis':  bond_val,
         'time_to_default': ttd,
     }
+
+
+if __name__ == '__main__':
+    # Quick par bond validation: AAA, 1-year, identity matrix (no migration/default)
+    # Expected: ~1000.0 (continuous-discounting annuity PV of coupons = face + discounted coupons)
+    P_identity = np.eye(len(RATINGS))
+    result = expected_bond_value('AAA', 1, coupon_rate=0.05, face_value=1000.0, P=P_identity)
+    val = result['expected_bond_value']
+    status = 'PASS' if abs(val - 1000.0) < 0.01 else 'FAIL'
+    print(f"{status}: Par bond (AAA, 1yr, zero-default) = {val:.4f} (expected ~1000.0)")
