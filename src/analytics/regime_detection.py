@@ -19,6 +19,40 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
+def _assign_labels(mu: np.ndarray, sigma: np.ndarray) -> tuple:
+    """
+    Assign calm/stressed labels to HMM states using dual criteria.
+
+    Primary: lower sigma = calm (higher volatility = stressed)
+    Secondary: higher mu = calm (positive drift = bull market)
+
+    When criteria disagree or sigma states are not clearly separated
+    (< 20% relative difference), returns confidence='AMBIGUOUS'.
+
+    Returns:
+        (calm_idx, stressed_idx, label_confidence)
+        where label_confidence is 'HIGH' or 'AMBIGUOUS'
+    """
+    calm_by_sigma = int(np.argmin(sigma))   # lower vol = calm
+    calm_by_mu    = int(np.argmax(mu))      # higher return = calm
+
+    if calm_by_sigma == calm_by_mu:
+        calm_idx = calm_by_sigma
+        confidence = 'HIGH'
+    else:
+        calm_idx = calm_by_sigma  # sigma is primary criterion; mu breaks ties
+        confidence = 'AMBIGUOUS'
+
+    stressed_idx = 1 - calm_idx  # only 2 states
+
+    # Sigma separation check: if states are too similar, assignment is unreliable
+    sigma_sep = abs(sigma[calm_idx] - sigma[stressed_idx]) / max(sigma)
+    if sigma_sep < 0.20:
+        confidence = 'AMBIGUOUS'
+
+    return calm_idx, stressed_idx, confidence
+
+
 class RegimeDetector:
     """
     Detects market regimes using a 2-state Hidden Markov Model.
@@ -288,9 +322,8 @@ class RegimeDetector:
         """Build output dict with regime info and trading signal."""
         K = self.n_states
 
-        # Determine which state is "calm" (lower sigma)
-        calm_idx = int(np.argmin(self.sigma))
-        stressed_idx = int(np.argmax(self.sigma))
+        # Determine which state is "calm" using dual-criterion assignment (MATH-04 fix)
+        calm_idx, stressed_idx, label_confidence = _assign_labels(self.mu, self.sigma)
 
         # Current regime: last filtered probability
         current_probs = self.filtered_probs[-1].tolist()
@@ -308,15 +341,19 @@ class RegimeDetector:
 
         # Trading signal
         stressed_prob = current_probs[stressed_idx]
-        if stressed_prob >= 0.7:
+        # If label assignment is ambiguous, emit NEUTRAL regardless of probabilities
+        if label_confidence == 'AMBIGUOUS':
+            signal = 'NEUTRAL'
+            signal_desc = 'Regime label ambiguous — insufficient volatility separation between states'
+        elif stressed_prob >= 0.7:
             signal = 'RISK_OFF'
             signal_desc = 'High stress probability — consider defensive positioning'
-        elif stressed_prob >= 0.4:
-            signal = 'NEUTRAL'
-            signal_desc = 'Uncertain regime — maintain balanced exposure'
-        else:
+        elif stressed_prob <= 0.3:
             signal = 'RISK_ON'
             signal_desc = 'Calm regime detected — risk assets favored'
+        else:
+            signal = 'NEUTRAL'
+            signal_desc = 'Uncertain regime — maintain balanced exposure'
 
         # Feller condition equivalent: not applicable for returns HMM, but
         # record calibration quality via log-likelihood
@@ -364,4 +401,6 @@ class RegimeDetector:
             'signal_description': signal_desc,
             'stress_fraction_historical': float(stress_fraction),
             'recent_filtered_probs': recent_filtered,
+            'label_confidence': label_confidence,
+            'filtered_probs_full': self.filtered_probs.tolist(),  # expose full series for MATH-04/MATH-05 validation
         }
