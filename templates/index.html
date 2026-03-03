@@ -650,6 +650,9 @@
                 <button class="main-tab-button" onclick="switchMainTab('volatilitySurface')">
                     📈 Volatility Surface
                 </button>
+                <button class="main-tab-button" onclick="switchMainTab('stochasticModels')">
+                    🔬 Stochastic Models
+                </button>
             </div>
         </div>
 
@@ -801,10 +804,12 @@
             <div class="form-group">
                 <label for="optionCalcType">Calculator Type</label>
                 <select id="optionCalcType" onchange="toggleCalculatorType()">
-                    <option value="pricing">Option Pricing</option>
+                    <option value="pricing">Option Pricing (BS/Binomial/Trinomial)</option>
                     <option value="implied_vol">Implied Volatility</option>
                     <option value="greeks">Greeks Calculator</option>
                     <option value="comparison">Model Comparison</option>
+                    <option value="heston">Heston Stochastic Volatility</option>
+                    <option value="merton">Merton Jump-Diffusion</option>
                 </select>
             </div>
 
@@ -986,6 +991,120 @@
                 </button>
             </div>
 
+            <!-- Heston Model Calculator -->
+            <div id="hestonCalculator" style="display: none;">
+                <p style="margin-bottom: 15px; color: #666;">
+                    Price options under the <strong>Heston (1993) stochastic volatility model</strong>
+                    via Lewis (2001) Fourier integration. Captures volatility smile that Black-Scholes cannot.
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="hestonSpot">Current Stock Price (S)</label>
+                        <input type="number" id="hestonSpot" step="0.01" value="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonStrike">Strike Price (K)</label>
+                        <input type="number" id="hestonStrike" step="0.01" value="105">
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonMaturity">Time to Maturity (Years)</label>
+                        <input type="number" id="hestonMaturity" step="0.01" value="0.25">
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonRate">Risk-Free Rate (%)</label>
+                        <input type="number" id="hestonRate" step="0.01" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonV0">Initial Variance ν₀ (%²)</label>
+                        <input type="number" id="hestonV0" step="0.001" value="4">
+                        <small>v0 = σ_impl² × 100. e.g. 20% vol → 4</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonKappa">Mean-Reversion Speed κ</label>
+                        <input type="number" id="hestonKappa" step="0.1" value="2.0">
+                        <small>Typical range: 0.5–5</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonTheta">Long-Run Variance θ (%²)</label>
+                        <input type="number" id="hestonTheta" step="0.001" value="4">
+                        <small>Same units as v0</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonSigmaV">Vol of Variance σᵥ</label>
+                        <input type="number" id="hestonSigmaV" step="0.01" value="0.3">
+                        <small>Typical range: 0.1–1.0</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonRho">Correlation ρ</label>
+                        <input type="number" id="hestonRho" step="0.01" min="-0.999" max="0.999" value="-0.7">
+                        <small>Negative for equity (leverage effect)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="hestonType">Option Type</label>
+                        <select id="hestonType">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" class="primary-btn" onclick="calculateHestonPrice()">
+                    ⚡ Price with Heston Model
+                </button>
+            </div>
+
+            <!-- Merton Jump-Diffusion Calculator -->
+            <div id="mertonCalculator" style="display: none;">
+                <p style="margin-bottom: 15px; color: #666;">
+                    Price options under <strong>Merton (1976) jump-diffusion</strong> — captures sudden price jumps
+                    (earnings surprises, macro shocks) via Poisson-distributed log-normal jumps.
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                    <div class="form-group">
+                        <label for="mertonSpot">Current Stock Price (S)</label>
+                        <input type="number" id="mertonSpot" step="0.01" value="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonStrike">Strike Price (K)</label>
+                        <input type="number" id="mertonStrike" step="0.01" value="105">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonMaturity">Time to Maturity (Years)</label>
+                        <input type="number" id="mertonMaturity" step="0.01" value="0.25">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonRate">Risk-Free Rate (%)</label>
+                        <input type="number" id="mertonRate" step="0.01" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonSigma">Diffusion Volatility (%)</label>
+                        <input type="number" id="mertonSigma" step="0.01" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonLambda">Jump Intensity λ (jumps/year)</label>
+                        <input type="number" id="mertonLambda" step="0.1" value="2.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonMuJ">Mean Log-Jump μⱼ</label>
+                        <input type="number" id="mertonMuJ" step="0.01" value="-0.05">
+                        <small>Negative for downward-biased jumps</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonDeltaJ">Std Log-Jump δⱼ</label>
+                        <input type="number" id="mertonDeltaJ" step="0.01" value="0.10">
+                    </div>
+                    <div class="form-group">
+                        <label for="mertonType">Option Type</label>
+                        <select id="mertonType">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" class="primary-btn" onclick="calculateMertonPrice()">
+                    🦘 Price with Merton Jump-Diffusion
+                </button>
+            </div>
+
             <!-- Results Display -->
             <div id="optionResults" style="display: none; margin-top: 30px;">
                 <h3>Results</h3>
@@ -1083,6 +1202,213 @@
         </div>
         <!-- End Volatility Surface Tab -->
 
+        <!-- Stochastic Models Tab -->
+        <div id="stochasticModelsTab" class="main-tab-content">
+            <div class="input-section">
+                <h2>🔬 Stochastic Models</h2>
+                <p style="color:#666; margin-bottom: 20px;">
+                    Advanced quantitative finance tools from stochastic modelling theory:
+                    market regime detection, Heston calibration, CIR yield curves, and credit risk.
+                </p>
+
+                <!-- Sub-tabs -->
+                <div class="tabs-container" style="margin-bottom: 20px;">
+                    <div class="tabs">
+                        <button class="tab-button active" onclick="switchStochasticTab('regime')" id="stochTab_regime">
+                            🌡️ Market Regime
+                        </button>
+                        <button class="tab-button" onclick="switchStochasticTab('heston_cal')" id="stochTab_heston_cal">
+                            ⚙️ Heston Calibration
+                        </button>
+                        <button class="tab-button" onclick="switchStochasticTab('merton_cal')" id="stochTab_merton_cal">
+                            🦘 Merton Calibration
+                        </button>
+                        <button class="tab-button" onclick="switchStochasticTab('cir')" id="stochTab_cir">
+                            📐 CIR Yield Curve
+                        </button>
+                        <button class="tab-button" onclick="switchStochasticTab('credit')" id="stochTab_credit">
+                            💳 Credit Risk
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Regime Detection -->
+                <div id="stochContent_regime" class="stoch-content">
+                    <h3 style="margin-bottom: 10px;">🌡️ Market Regime Detection (HMM)</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        Fits a 2-state Hidden Markov Model (calm / stressed) to historical returns
+                        using the Hamilton filter + L-BFGS-B MLE. Outputs regime probabilities and a trading signal.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="regimeTicker">Stock Ticker</label>
+                            <input type="text" id="regimeTicker" value="SPY" placeholder="e.g. SPY, QQQ, AAPL">
+                            <small>SPY recommended for broad market regime</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="regimeDays">History (calendar days)</label>
+                            <input type="number" id="regimeDays" value="1260" min="252" max="5000">
+                            <small>1260 ≈ 5 years</small>
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runRegimeDetection()">
+                        🧠 Detect Market Regime
+                    </button>
+                    <div id="regimeResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- Heston Calibration -->
+                <div id="stochContent_heston_cal" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">⚙️ Heston Model Calibration</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        Two-stage calibration (brute-force grid + Nelder-Mead) of Heston parameters
+                        {κ, θ, σᵥ, ρ, ν₀} against real market options. Reports MSE fit quality.
+                    </p>
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                        <strong>⏰ Note:</strong> Calibration may take 30–120 seconds depending on options liquidity.
+                        Use liquid tickers (SPY, QQQ, AAPL) for best results. Market hours recommended.
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="calTicker">Stock Ticker</label>
+                            <input type="text" id="calTicker" value="AAPL" placeholder="e.g. AAPL, MSFT, SPY">
+                        </div>
+                        <div class="form-group">
+                            <label for="calRate">Risk-Free Rate (%)</label>
+                            <input type="number" id="calRate" value="5" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="calOptionType">Option Type</label>
+                            <select id="calOptionType">
+                                <option value="call">Call</option>
+                                <option value="put">Put</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runHestonCalibration()">
+                        🔧 Calibrate Heston Parameters
+                    </button>
+                    <div id="calibrationResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- Merton Calibration -->
+                <div id="stochContent_merton_cal" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">🦘 Merton Jump-Diffusion Calibration</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        Two-stage calibration (brute-force grid + Nelder-Mead) of Merton parameters
+                        {σ, λ, μⱼ, δⱼ} against real market options. Captures fat tails and jump risk.
+                    </p>
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                        <strong>⏰ Note:</strong> Calibration may take 30–90 seconds depending on options liquidity.
+                        Use liquid tickers (SPY, QQQ, AAPL) for best results.
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="mertonCalTicker">Stock Ticker</label>
+                            <input type="text" id="mertonCalTicker" value="AAPL" placeholder="e.g. AAPL, MSFT, SPY">
+                        </div>
+                        <div class="form-group">
+                            <label for="mertonCalRate">Risk-Free Rate (%)</label>
+                            <input type="number" id="mertonCalRate" value="5" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="mertonCalOptionType">Option Type</label>
+                            <select id="mertonCalOptionType">
+                                <option value="call">Call</option>
+                                <option value="put">Put</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runMertonCalibration()">
+                        🔧 Calibrate Merton Parameters
+                    </button>
+                    <div id="mertonCalResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- CIR Yield Curve -->
+                <div id="stochContent_cir" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">📐 CIR Interest Rate Model</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        Cox-Ingersoll-Ross (1985) stochastic rate model: dr = κ(θ−r)dt + σ√r dW.
+                        Computes zero-coupon bond prices B(0,T) and implied yield curve.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="cirR0">Current Short Rate r₀ (%)</label>
+                            <input type="number" id="cirR0" value="5.3" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="cirKappa">Mean-Reversion κ</label>
+                            <input type="number" id="cirKappa" value="1.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="cirTheta">Long-Run Rate θ (%)</label>
+                            <input type="number" id="cirTheta" value="5.0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="cirSigma">Rate Volatility σ (%)</label>
+                            <input type="number" id="cirSigma" value="10" step="0.01">
+                        </div>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>
+                            <input type="checkbox" id="cirCalibrateTreasuries">
+                            Auto-calibrate to approximate US Treasury yields instead
+                        </label>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runCIRModel()">
+                        📈 Compute Yield Curve
+                    </button>
+                    <div id="cirResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- Credit Risk -->
+                <div id="stochContent_credit" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">💳 Credit Risk (Markov Chain)</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        S&P-style credit rating transition matrix (Markov chain). Computes default probabilities
+                        over multiple horizons, expected bond value, and Monte Carlo time-to-default simulation.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="creditRating">Current Credit Rating</label>
+                            <select id="creditRating">
+                                <option value="AAA">AAA</option>
+                                <option value="AA">AA</option>
+                                <option value="A">A</option>
+                                <option value="BBB" selected>BBB</option>
+                                <option value="BB">BB</option>
+                                <option value="B">B</option>
+                                <option value="CCC">CCC</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="creditHorizon">Investment Horizon (years)</label>
+                            <input type="number" id="creditHorizon" value="5" min="1" max="30">
+                        </div>
+                        <div class="form-group">
+                            <label for="creditRecovery">Recovery Rate (%)</label>
+                            <input type="number" id="creditRecovery" value="40" step="1" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="creditFaceValue">Face Value ($)</label>
+                            <input type="number" id="creditFaceValue" value="1000">
+                        </div>
+                        <div class="form-group">
+                            <label for="creditCoupon">Coupon Rate (%)</label>
+                            <input type="number" id="creditCoupon" value="5" step="0.1">
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runCreditRisk()">
+                        💳 Analyse Credit Risk
+                    </button>
+                    <div id="creditResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+            </div>
+        </div>
+        <!-- End Stochastic Models Tab -->
+
         <div class="loading" id="loadingSection">
             <div class="spinner"></div>
             <p>Scraping financial data... This may take a moment.</p>
@@ -1091,7 +1417,7 @@
         <div id="alertContainer"></div>
 
         <div class="footer">
-            <p>© 2024 Stock Financial Metrics Scraper | Powered by Multiple Financial Data Sources</p>
+            <p>© 2024–2026 Stock Financial Metrics Scraper | Powered by Multiple Financial Data Sources</p>
             <p style="margin-top: 10px; font-size: 14px;">Disclaimer: This tool is for educational purposes only. Not financial advice.</p>
         </div>
     </div>
@@ -1109,6 +1435,7 @@
     <script src="/static/js/stockScraper.js"></script>
     <script src="/static/js/optionsPricing.js"></script>
     <script src="/static/js/volatilitySurface.js"></script>
+    <script src="/static/js/stochasticModels.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>

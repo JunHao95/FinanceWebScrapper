@@ -1101,6 +1101,284 @@ def atm_term_structure():
             'error': str(e)
         }), 500
 
+@app.route('/api/heston_price', methods=['POST'])
+def heston_price_endpoint():
+    """
+    Price a European option under Heston (1993) stochastic volatility model.
+
+    Expected JSON payload:
+    {
+        "spot": 100, "strike": 105, "maturity": 0.25, "risk_free_rate": 0.05,
+        "v0": 0.04, "kappa": 2.0, "theta": 0.04, "sigma_v": 0.3, "rho": -0.7,
+        "option_type": "call"
+    }
+    """
+    try:
+        from src.derivatives.fourier_pricer import heston_price
+
+        data = request.json
+        required = ['spot', 'strike', 'maturity', 'risk_free_rate',
+                    'v0', 'kappa', 'theta', 'sigma_v', 'rho']
+        for f in required:
+            if f not in data:
+                return jsonify({'success': False, 'error': f'Missing field: {f}'}), 400
+
+        result = heston_price(
+            S=float(data['spot']),
+            K=float(data['strike']),
+            T=float(data['maturity']),
+            r=float(data['risk_free_rate']),
+            v0=float(data['v0']),
+            kappa=float(data['kappa']),
+            theta=float(data['theta']),
+            sigma_v=float(data['sigma_v']),
+            rho=float(data['rho']),
+            option_type=data.get('option_type', 'call')
+        )
+
+        # Black-Scholes comparison
+        from src.derivatives.options_pricer import OptionsPricer
+        pricer = OptionsPricer()
+        sigma = float(data.get('vol_for_bs', data.get('sigma_v', 0.2)))
+        bs = pricer.black_scholes(
+            float(data['spot']), float(data['strike']),
+            float(data['maturity']), float(data['risk_free_rate']),
+            sigma,
+            data.get('option_type', 'call')
+        )
+        bs = convert_numpy_types(bs)
+
+        result = convert_numpy_types(result)
+        return jsonify({
+            'success': True,
+            'heston': result,
+            'black_scholes_comparison': {'price': bs['price']},
+            'price_difference': abs(result['price'] - bs['price'])
+        })
+
+    except Exception as e:
+        logger.error(f"Error in Heston pricing: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/merton_price', methods=['POST'])
+def merton_price_endpoint():
+    """
+    Price a European option under Merton (1976) jump-diffusion.
+
+    Expected JSON payload:
+    {
+        "spot": 100, "strike": 105, "maturity": 0.25, "risk_free_rate": 0.05,
+        "sigma": 0.2, "lambda": 2.0, "mu_j": -0.05, "delta_j": 0.10,
+        "option_type": "call"
+    }
+    """
+    try:
+        from src.derivatives.fourier_pricer import merton_price
+
+        data = request.json
+        required = ['spot', 'strike', 'maturity', 'risk_free_rate',
+                    'sigma', 'lambda', 'mu_j', 'delta_j']
+        for f in required:
+            if f not in data:
+                return jsonify({'success': False, 'error': f'Missing field: {f}'}), 400
+
+        result = merton_price(
+            S=float(data['spot']),
+            K=float(data['strike']),
+            T=float(data['maturity']),
+            r=float(data['risk_free_rate']),
+            sigma=float(data['sigma']),
+            lam=float(data['lambda']),
+            mu_j=float(data['mu_j']),
+            delta_j=float(data['delta_j']),
+            option_type=data.get('option_type', 'call')
+        )
+
+        result = convert_numpy_types(result)
+        return jsonify({'success': True, 'result': result})
+
+    except Exception as e:
+        logger.error(f"Error in Merton pricing: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/regime_detection', methods=['POST'])
+def regime_detection_endpoint():
+    """
+    Detect market regime using 2-state HMM (Hamilton filter).
+
+    Expected JSON payload:
+    {
+        "tickers": ["SPY", "AAPL"],
+        "days": 1260
+    }
+    """
+    try:
+        from src.analytics.regime_detection import RegimeDetector
+
+        data = request.json or {}
+        tickers = data.get('tickers', ['SPY'])
+        days = int(data.get('days', 1260))
+
+        detector = RegimeDetector()
+        result = detector.analyze(tickers, days=days)
+        result = convert_numpy_types(result)
+
+        return jsonify({'success': True, 'regime': result})
+
+    except Exception as e:
+        logger.error(f"Error in regime detection: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/calibrate_heston', methods=['POST'])
+def calibrate_heston_endpoint():
+    """
+    Calibrate Heston parameters to real market options data.
+
+    Expected JSON payload:
+    {
+        "ticker": "AAPL",
+        "risk_free_rate": 0.05,
+        "option_type": "call"
+    }
+    """
+    try:
+        from src.derivatives.model_calibration import HestonCalibrator
+
+        data = request.json or {}
+        ticker = data.get('ticker', 'AAPL').upper()
+        risk_free_rate = float(data.get('risk_free_rate', 0.05))
+        option_type = data.get('option_type', 'call')
+
+        calibrator = HestonCalibrator()
+        result = calibrator.calibrate(ticker, risk_free_rate, option_type)
+        result = convert_numpy_types(result)
+
+        return jsonify({'success': True, 'calibration': result})
+
+    except Exception as e:
+        logger.error(f"Error in Heston calibration: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/calibrate_merton', methods=['POST'])
+def calibrate_merton_endpoint():
+    """
+    Calibrate Merton jump-diffusion parameters to real market options data.
+
+    Expected JSON payload:
+    {
+        "ticker": "AAPL",
+        "risk_free_rate": 0.05,
+        "option_type": "call"
+    }
+    """
+    try:
+        from src.derivatives.model_calibration import MertonCalibrator
+
+        data = request.json or {}
+        ticker = data.get('ticker', 'AAPL').upper()
+        risk_free_rate = float(data.get('risk_free_rate', 0.05))
+        option_type = data.get('option_type', 'call')
+
+        calibrator = MertonCalibrator()
+        result = calibrator.calibrate(ticker, risk_free_rate, option_type)
+        result = convert_numpy_types(result)
+
+        return jsonify({'success': True, 'calibration': result})
+
+    except Exception as e:
+        logger.error(f"Error in Merton calibration: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/interest_rate_model', methods=['POST'])
+def interest_rate_model_endpoint():
+    """
+    CIR interest rate model: bond pricing and yield curve.
+
+    Expected JSON payload:
+    {
+        "r0": 0.053,
+        "kappa": 1.5,
+        "theta": 0.05,
+        "sigma": 0.1,
+        "maturities": [0.25, 0.5, 1, 2, 5, 10, 30],
+        "calibrate_to_treasuries": false
+    }
+    """
+    try:
+        from src.analytics.interest_rate_models import (
+            CIRCalibrator, cir_yield_curve, calibrate_to_treasuries
+        )
+
+        data = request.json or {}
+
+        if data.get('calibrate_to_treasuries', False):
+            r0 = float(data.get('r0', 0.053))
+            result = calibrate_to_treasuries(r0=r0)
+        else:
+            r0     = float(data.get('r0', 0.053))
+            kappa  = float(data.get('kappa', 1.5))
+            theta  = float(data.get('theta', 0.05))
+            sigma  = float(data.get('sigma', 0.1))
+            mats   = data.get('maturities', [0.25, 0.5, 1, 2, 5, 10, 30])
+
+            curve = cir_yield_curve(r0, mats, kappa, theta, sigma)
+            feller = 2 * kappa * theta > sigma ** 2
+            result = {
+                'model': 'CIR (1985)',
+                'params': {'r0': r0, 'kappa': kappa, 'theta': theta, 'sigma': sigma},
+                'feller_condition_satisfied': feller,
+                'yield_curve': curve
+            }
+
+        result = convert_numpy_types(result)
+        return jsonify({'success': True, 'result': result})
+
+    except Exception as e:
+        logger.error(f"Error in interest rate model: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/credit_risk', methods=['POST'])
+def credit_risk_endpoint():
+    """
+    Credit risk analysis using Markov chain credit transitions.
+
+    Expected JSON payload:
+    {
+        "rating": "BBB",
+        "horizon": 5,
+        "recovery_rate": 0.40,
+        "face_value": 1000,
+        "coupon_rate": 0.05
+    }
+    """
+    try:
+        from src.analytics.credit_transitions import credit_risk_analysis
+
+        data = request.json or {}
+        rating        = data.get('rating', 'BBB').upper()
+        horizon       = int(data.get('horizon', 5))
+        recovery_rate = float(data.get('recovery_rate', 0.40))
+        face_value    = float(data.get('face_value', 1000.0))
+        coupon_rate   = float(data.get('coupon_rate', 0.05))
+
+        result = credit_risk_analysis(
+            rating, horizon, recovery_rate, face_value, coupon_rate
+        )
+        result = convert_numpy_types(result)
+
+        return jsonify({'success': True, 'result': result})
+
+    except Exception as e:
+        logger.error(f"Error in credit risk analysis: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""

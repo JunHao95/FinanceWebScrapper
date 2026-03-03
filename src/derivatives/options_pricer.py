@@ -357,6 +357,40 @@ class OptionsPricer:
             'rho': result['rho']
         }
     
+    def heston_price(
+        self,
+        S: float,
+        K: float,
+        T: float,
+        r: float,
+        v0: float,
+        kappa: float,
+        theta: float,
+        sigma_v: float,
+        rho: float,
+        option_type: str = 'call'
+    ) -> Dict[str, float]:
+        """
+        Heston (1993) stochastic volatility option price via Lewis (2001) Fourier method.
+
+        Args:
+            S:        Current stock price
+            K:        Strike price
+            T:        Time to maturity (years)
+            r:        Risk-free rate
+            v0:       Initial variance (σ_impl²)
+            kappa:    Mean-reversion speed of variance
+            theta:    Long-run variance
+            sigma_v:  Volatility of variance (vol-of-vol)
+            rho:      Correlation stock-variance (-1 to 1)
+            option_type: 'call' or 'put'
+
+        Returns:
+            dict with 'price', 'feller_condition_satisfied', and inputs
+        """
+        from .fourier_pricer import heston_price as _heston_price
+        return _heston_price(S, K, T, r, v0, kappa, theta, sigma_v, rho, option_type)
+
     def compare_models(
         self,
         S: float,
@@ -365,20 +399,23 @@ class OptionsPricer:
         r: float,
         sigma: float,
         option_type: str = 'call',
-        N: int = 100
+        N: int = 100,
+        heston_params: Optional[Dict] = None
     ) -> Dict[str, Dict[str, float]]:
         """
-        Compare prices across different pricing models
-        
+        Compare prices across different pricing models.
+
         Args:
             S (float): Current stock price
             K (float): Strike price
             T (float): Time to maturity
             r (float): Risk-free rate
-            sigma (float): Volatility
+            sigma (float): Volatility (used for BS/tree models and as sqrt(v0) for Heston)
             option_type (str): 'call' or 'put'
             N (int): Number of steps for tree models
-            
+            heston_params (dict): Optional Heston parameters. If None, uses
+                v0=sigma², kappa=2, theta=sigma², sigma_v=0.3, rho=-0.7.
+
         Returns:
             dict: Comparison of all models
         """
@@ -386,8 +423,29 @@ class OptionsPricer:
             bs_result = self.black_scholes(S, K, T, r, sigma, option_type)
             binomial_result = self.binomial_tree(S, K, T, r, sigma, N, option_type, 'european')
             trinomial_result = self.trinomial_tree(S, K, T, r, sigma, N, option_type, 'european')
-            
-            return {
+
+            # Heston defaults: treat sigma as sqrt(v0); use typical risk-neutral params
+            hp = heston_params or {}
+            v0      = float(hp.get('v0',      sigma ** 2))
+            kappa   = float(hp.get('kappa',   2.0))
+            theta   = float(hp.get('theta',   sigma ** 2))
+            sigma_v = float(hp.get('sigma_v', 0.3))
+            rho     = float(hp.get('rho',     -0.7))
+
+            try:
+                heston_result = self.heston_price(
+                    S, K, T, r, v0, kappa, theta, sigma_v, rho, option_type
+                )
+                heston_entry = {
+                    'price': heston_result['price'],
+                    'feller_condition_satisfied': heston_result['feller_condition_satisfied'],
+                    'model': 'Heston (Lewis 2001)'
+                }
+            except Exception as he:
+                self.logger.warning(f"Heston pricing failed in compare_models: {he}")
+                heston_entry = {'price': None, 'model': 'Heston (Lewis 2001)', 'error': str(he)}
+
+            result = {
                 'black_scholes': {
                     'price': bs_result['price'],
                     'model': 'Black-Scholes'
@@ -402,12 +460,19 @@ class OptionsPricer:
                     'steps': trinomial_result['steps'],
                     'model': 'Trinomial Tree'
                 },
+                'heston': heston_entry,
                 'differences': {
                     'binomial_vs_bs': abs(binomial_result['price'] - bs_result['price']),
                     'trinomial_vs_bs': abs(trinomial_result['price'] - bs_result['price']),
                     'binomial_vs_trinomial': abs(binomial_result['price'] - trinomial_result['price'])
                 }
             }
+
+            if heston_entry.get('price') is not None:
+                result['differences']['heston_vs_bs'] = abs(heston_entry['price'] - bs_result['price'])
+
+            return result
+
         except Exception as e:
             self.logger.error(f"Error comparing models: {e}")
             raise

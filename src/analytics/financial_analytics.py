@@ -522,11 +522,13 @@ class FinancialAnalytics:
         simulations: int = 10000,
         forecast_days: int = 252,
         confidence_level: float = 0.95,
-        initial_investment: float = 100000
+        initial_investment: float = 100000,
+        model: str = 'gbm',
+        jump_params: Optional[Dict] = None
     ) -> Dict:
         """
         Monte Carlo simulation for Value at Risk (VaR) and Expected Shortfall (ES)
-        
+
         Args:
             tickers (list): List of stock ticker symbols
             portfolio_weights (dict): Portfolio weights for each ticker (uses config or equal weights if None)
@@ -535,30 +537,36 @@ class FinancialAnalytics:
             forecast_days (int): Days to forecast
             confidence_level (float): Confidence level (e.g., 0.95 for 95%)
             initial_investment (float): Initial portfolio value
-            
+            model (str): 'gbm' for standard GBM (default) or 'merton' for jump-diffusion
+            jump_params (dict): Jump parameters for Merton model:
+                {'lambda': 2.0, 'mu_j': -0.05, 'delta_j': 0.10}
+                lambda  = jumps per year (Poisson intensity)
+                mu_j    = mean log-jump size (negative for downward jumps)
+                delta_j = std dev of log-jump size
+
         Returns:
             dict: VaR and ES estimates with simulation details
         """
         try:
-            self.logger.info(f"Running Monte Carlo simulation: {simulations} scenarios")
-            
+            self.logger.info(f"Running Monte Carlo simulation ({model.upper()}): {simulations} scenarios")
+
             # Get historical returns
             returns = self.get_historical_returns(tickers, days=days)
-            
+
             if returns.empty:
                 return {"error": "Could not fetch returns data"}
-            
+
             # Clean data
             returns = returns.dropna(axis=1)
             tickers = list(returns.columns)
-            
+
             if len(tickers) == 0:
                 return {"error": "No valid tickers with data"}
-            
+
             # Get portfolio weights from config if not provided
             if portfolio_weights is None:
                 portfolio_weights = self._get_portfolio_weights(tickers)
-            
+
             # Normalize weights to ensure they sum to 1.0
             total_weight = sum(portfolio_weights.values())
             if total_weight > 0:
@@ -568,28 +576,71 @@ class FinancialAnalytics:
             else:
                 # Fall back to equal weights if all weights are zero
                 portfolio_weights = {ticker: 1.0/len(tickers) for ticker in tickers}
-            
+
             # Ensure all tickers have weights
             weights = np.array([portfolio_weights.get(ticker, 0) for ticker in tickers])
-            
+
             # Calculate portfolio statistics
             mean_returns = returns.mean()
             cov_matrix = returns.cov()
-            
+
             # Portfolio mean and std
             portfolio_mean = np.dot(weights, mean_returns)
             portfolio_std = np.sqrt(np.dot(weights, np.dot(cov_matrix, weights)))
-            
-            # Run Monte Carlo simulations
-            simulated_returns = np.random.normal(
-                portfolio_mean,
-                portfolio_std,
-                (simulations, forecast_days)
-            )
-            
+
+            # ----------------------------------------------------------------
+            # Simulate returns based on model choice
+            # ----------------------------------------------------------------
+            _supported_models = {'merton', 'gbm', 'black-scholes'}
+            if model.lower() not in _supported_models:
+                raise ValueError(
+                    f"Unknown simulation model '{model}'. "
+                    f"Supported values: {sorted(_supported_models)}"
+                )
+
+            if model.lower() == 'merton':
+                # Merton jump-diffusion: dS/S = (μ − λ μ̄_j)dt + σ dZ + J dN
+                jp = jump_params or {}
+                lam     = float(jp.get('lambda', 2.0))    # jumps/year
+                mu_j    = float(jp.get('mu_j', -0.05))    # mean log-jump
+                delta_j = float(jp.get('delta_j', 0.10))  # std log-jump
+                mu_bar  = np.exp(mu_j + 0.5 * delta_j**2) - 1  # compensator
+
+                dt = 1.0 / 252  # one trading day
+
+                # Drift adjusted for jump risk: μ − λ μ̄_j
+                drift = portfolio_mean - lam * mu_bar * dt
+
+                # GBM component (daily)
+                gbm_daily = np.random.normal(drift, portfolio_std,
+                                             (simulations, forecast_days))
+
+                # Poisson jump counts per day: N_t ~ Poisson(λ dt)
+                n_jumps = np.random.poisson(lam * dt, (simulations, forecast_days))
+
+                # For each jump: aggregate log-jump = sum of N log-normal jumps
+                # Efficient: since N is small, use Poisson-weighted approach
+                log_jump = (n_jumps * mu_j
+                            + np.sqrt(n_jumps * delta_j**2)
+                            * np.random.standard_normal((simulations, forecast_days)))
+                # Guard divide-by-zero: set to 0 where n_jumps==0
+                log_jump = np.where(n_jumps == 0, 0.0, log_jump)
+                jump_return = np.expm1(log_jump)  # e^(log_jump) - 1
+
+                simulated_returns = gbm_daily + jump_return
+                model_label = 'Merton Jump-Diffusion'
+            else:  # 'gbm' or 'black-scholes'
+                # Standard GBM (original behaviour)
+                simulated_returns = np.random.normal(
+                    portfolio_mean,
+                    portfolio_std,
+                    (simulations, forecast_days)
+                )
+                model_label = 'GBM (Black-Scholes)'
+
             # Calculate cumulative returns for each simulation
             cumulative_returns = np.cumprod(1 + simulated_returns, axis=1)
-            
+
             # Final portfolio values
             final_values = initial_investment * cumulative_returns[:, -1]
             
@@ -654,7 +705,8 @@ class FinancialAnalytics:
                     "Forecast Days": forecast_days,
                     "Initial Investment": initial_investment,
                     "Confidence Level": confidence_level,
-                    "Historical Days": days
+                    "Historical Days": days,
+                    "Model": model_label
                 },
                 "Portfolio Statistics": {
                     "Daily Mean Return": round(float(portfolio_mean), 6),

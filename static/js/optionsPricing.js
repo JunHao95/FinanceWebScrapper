@@ -67,22 +67,22 @@ const OptionsPricing = {
     toggleCalculatorType() {
         const calcTypeElement = this.getElement('optionCalcType');
         if (!calcTypeElement) return;
-        
+
         const calcType = calcTypeElement.value;
-        
+
         // Get all calculator elements
         const pricingCalc = this.getElement('pricingCalculator');
         const impliedVolCalc = this.getElement('impliedVolCalculator');
         const greeksCalc = this.getElement('greeksCalculator');
         const comparisonCalc = this.getElement('comparisonCalculator');
+        const hestonCalc = this.getElement('hestonCalculator');
+        const mertonCalc = this.getElement('mertonCalculator');
         const resultsDiv = this.getElement('optionResults');
-        
+
         // Hide all calculators
-        if (pricingCalc) pricingCalc.style.display = 'none';
-        if (impliedVolCalc) impliedVolCalc.style.display = 'none';
-        if (greeksCalc) greeksCalc.style.display = 'none';
-        if (comparisonCalc) comparisonCalc.style.display = 'none';
-        
+        [pricingCalc, impliedVolCalc, greeksCalc, comparisonCalc, hestonCalc, mertonCalc]
+            .forEach(el => { if (el) el.style.display = 'none'; });
+
         // Show the selected calculator
         if (calcType === 'pricing' && pricingCalc) {
             pricingCalc.style.display = 'block';
@@ -92,8 +92,12 @@ const OptionsPricing = {
             greeksCalc.style.display = 'block';
         } else if (calcType === 'comparison' && comparisonCalc) {
             comparisonCalc.style.display = 'block';
+        } else if (calcType === 'heston' && hestonCalc) {
+            hestonCalc.style.display = 'block';
+        } else if (calcType === 'merton' && mertonCalc) {
+            mertonCalc.style.display = 'block';
         }
-        
+
         // Hide results when switching
         if (resultsDiv) {
             resultsDiv.style.display = 'none';
