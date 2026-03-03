@@ -135,6 +135,33 @@ def cir_yield_curve(
 
 
 # ---------------------------------------------------------------------------
+# Feller Reparameterisation Helper
+# ---------------------------------------------------------------------------
+
+def _feller_safe_params(alpha: float, theta: float, sigma: float):
+    """
+    Unpack reparameterised CIR params that guarantee Feller condition (2*kappa*theta >= sigma^2).
+
+    Optimise over (alpha, theta, sigma). alpha is unconstrained; kappa recovered from it.
+    kappa = sigma^2/(2*theta) + exp(alpha) is always > sigma^2/(2*theta) for all real alpha,
+    which ensures 2*kappa*theta > sigma^2 by construction.
+
+    Args:
+        alpha: Unconstrained log-space surplus above Feller floor
+        theta: Long-run mean rate (must be > 0)
+        sigma: Volatility (must be > 0)
+
+    Returns:
+        (kappa, theta, sigma) tuple, or None if theta <= 0 or sigma <= 0
+    """
+    if theta <= 0 or sigma <= 0:
+        return None
+    # kappa = sigma^2/(2*theta) + exp(alpha) is always > sigma^2/(2*theta) for all real alpha
+    kappa = (sigma ** 2) / (2.0 * theta) + np.exp(alpha)
+    return kappa, theta, sigma
+
+
+# ---------------------------------------------------------------------------
 # CIR Calibrator
 # ---------------------------------------------------------------------------
 
@@ -149,12 +176,10 @@ class CIRCalibrator:
     """
 
     BRUTE_RANGES = (
-        slice(0.01, 5.0, 1.0),    # kappa
-        slice(0.01, 0.15, 0.03),  # theta
-        slice(0.01, 0.30, 0.07),  # sigma
+        slice(-2.0, 2.0, 0.5),    # alpha (log-space kappa surplus over Feller floor)
+        slice(0.01, 0.15, 0.02),  # theta
+        slice(0.05, 0.5, 0.1),    # sigma
     )
-    BOUNDS_LOW  = np.array([0.001, 0.001, 0.001])
-    BOUNDS_HIGH = np.array([20.0, 0.5, 1.0])
 
     def calibrate(
         self,
@@ -178,27 +203,27 @@ class CIRCalibrator:
         yields = np.array([y for _, y in market_yields])
 
         def mse_fn(params: np.ndarray) -> float:
-            kappa, theta, sigma = params
-            if kappa <= 0 or theta <= 0 or sigma <= 0:
+            # Reparameterised (alpha, theta, sigma): Feller guaranteed by construction.
+            # kappa = sigma^2/(2*theta) + exp(alpha) > sigma^2/(2*theta) for all real alpha.
+            alpha, theta, sigma = params
+            unpacked = _feller_safe_params(alpha, theta, sigma)
+            if unpacked is None:
                 return 1e10
-            # Feller condition: penalise violations
-            feller_penalty = 0.0
-            if 2 * kappa * theta <= sigma**2:
-                feller_penalty = 10.0
+            kappa, theta_val, sigma_val = unpacked
             errors = []
             for T, y_mkt in zip(Ts, yields):
                 try:
-                    y_mod = cir_spot_rate(r0, T, kappa, theta, sigma)
-                    errors.append((y_mod - y_mkt)**2)
+                    y_mod = cir_spot_rate(r0, T, kappa, theta_val, sigma_val)
+                    errors.append((y_mod - y_mkt) ** 2)
                 except Exception:
                     errors.append(1.0)
-            return float(np.mean(errors)) + feller_penalty
+            return float(np.mean(errors))
 
-        # Stage 1: brute grid search
+        # Stage 1: brute grid search over (alpha, theta, sigma)
         try:
             x0 = brute(mse_fn, self.BRUTE_RANGES, finish=None)
         except Exception:
-            x0 = np.array([1.0, 0.05, 0.1])
+            x0 = np.array([0.0, 0.05, 0.1])  # alpha=0 corresponds to kappa = sigma^2/(2*theta) + 1
 
         # Stage 2: Nelder-Mead
         try:
@@ -208,11 +233,17 @@ class CIRCalibrator:
         except Exception:
             opt_params, opt_mse = x0, mse_fn(x0)
 
-        opt_params = np.clip(opt_params, self.BOUNDS_LOW, self.BOUNDS_HIGH)
-        kappa, theta, sigma = opt_params
-        feller = 2 * kappa * theta > sigma**2
+        # Unpack reparameterised (alpha, theta, sigma) to physical (kappa, theta, sigma)
+        alpha_opt, theta_opt, sigma_opt = opt_params
+        # Positivity clip on theta and sigma (alpha is unconstrained)
+        theta_opt = max(theta_opt, 1e-6)
+        sigma_opt = max(sigma_opt, 1e-6)
+        unpacked = _feller_safe_params(alpha_opt, theta_opt, sigma_opt)
+        if unpacked is None:
+            return {'error': 'CIR calibration produced invalid parameters'}
+        kappa, theta, sigma = unpacked
 
-        # Recompute pure MSE (no Feller penalty) for the clipped parameters
+        # Recompute pure MSE for the unpacked physical parameters
         pure_errors = []
         for T_mat, y_mkt in zip(Ts, yields):
             try:
@@ -226,6 +257,10 @@ class CIRCalibrator:
         std_mats = [0.083, 0.25, 0.5, 1, 2, 3, 5, 7, 10, 20, 30]
         curve = cir_yield_curve(r0, std_mats, kappa, theta, sigma)
 
+        # Feller is always satisfied by construction (reparameterisation guarantee)
+        feller_lhs = float(2 * kappa * theta)
+        feller_rhs = float(sigma ** 2)
+
         return {
             'model': 'CIR (1985)',
             'calibrated_params': {
@@ -234,9 +269,9 @@ class CIRCalibrator:
                 'sigma': float(sigma),
             },
             'r0': float(r0),
-            'feller_condition_satisfied': bool(feller),
-            'feller_lhs': float(2 * kappa * theta),
-            'feller_rhs': float(sigma**2),
+            'feller_condition_satisfied': True,  # always True by construction
+            'feller_lhs': feller_lhs,
+            'feller_rhs': feller_rhs,
             'mse':  pure_mse,
             'rmse': float(np.sqrt(max(pure_mse, 0))),
             'implied_yield_curve': curve,
