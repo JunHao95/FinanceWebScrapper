@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Math Correctness | 1/3 | In Progress|  |
+| 1. Math Correctness | 2/3 | In Progress|  |
 | 2. Backend Completeness | 0/TBD | Not started | - |
 | 3. Frontend Wiring and Visualization | 0/TBD | Not started | - |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |
