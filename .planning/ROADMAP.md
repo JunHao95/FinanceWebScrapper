@@ -12,7 +12,7 @@ This milestone completes the Stochastic Models section and builds the ML-in-Fina
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Math Correctness** - Fix all recruiter-visible model errors in the stochastic model backends before any UI is wired
+- [x] **Phase 1: Math Correctness** - Fix all recruiter-visible model errors in the stochastic model backends before any UI is wired (completed 2026-03-03)
 - [ ] **Phase 2: Backend Completeness** - Close backend gaps so every planned stochastic feature has a callable Flask API
 - [ ] **Phase 3: Frontend Wiring and Visualization** - Wire all stochastic model sub-tabs with interactive inputs and Plotly charts
 - [ ] **Phase 4: ML-in-Finance Module** - Build the new ML main tab with supervised, unsupervised, and time-series models
@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Math Correctness | 2/3 | In Progress|  |
+| 1. Math Correctness | 3/3 | Complete   | 2026-03-03 |
 | 2. Backend Completeness | 0/TBD | Not started | - |
 | 3. Frontend Wiring and Visualization | 0/TBD | Not started | - |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |

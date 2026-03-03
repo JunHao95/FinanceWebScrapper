@@ -13,7 +13,7 @@ Requirements for the current milestone: completing the Stochastic Models section
 - [x] **MATH-02**: Heston calibration uses relative/percentage MSE weighting so OTM options contribute to the smile (dollar-MSE bug fixed)
 - [x] **MATH-03**: CIR calibration enforces Feller condition (2κθ ≥ σ²) as a hard constraint, not a soft penalty
 - [x] **MATH-04**: HMM regime labels are stable and correctly identify high-volatility state as RISK_OFF (label-switching robustness)
-- [ ] **MATH-05**: All stochastic model outputs validated against textbook benchmarks or closed-form solutions before UI wiring
+- [x] **MATH-05**: All stochastic model outputs validated against textbook benchmarks or closed-form solutions before UI wiring
 
 ### Markov Chain & MDP Module
 
@@ -111,7 +111,7 @@ Deferred to future semesters/milestones.
 | MATH-02 | Phase 1: Math Correctness | Complete |
 | MATH-03 | Phase 1: Math Correctness | Complete |
 | MATH-04 | Phase 1: Math Correctness | Complete |
-| MATH-05 | Phase 1: Math Correctness | Pending |
+| MATH-05 | Phase 1: Math Correctness | Complete |
 | MARKOV-01 | Phase 2: Backend Completeness | Pending |
 | MARKOV-02 | Phase 2: Backend Completeness | Pending |
 | MARKOV-03 | Phase 2: Backend Completeness | Pending |

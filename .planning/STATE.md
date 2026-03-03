@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T14:56:07.463Z"
+last_updated: "2026-03-03T15:01:55.420Z"
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,32 +23,33 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 1 of 4 (Math Correctness)
-Plan: 2 of 3 in current phase
-Status: In Progress
-Last activity: 2026-03-03 — Completed plan 02 (MATH-02 relative MSE, MATH-04 dual-criterion HMM labelling)
+Plan: 3 of 3 in current phase — COMPLETE
+Status: Phase 1 Complete
+Last activity: 2026-03-03 — Completed plan 03 (MATH-05 Fourier benchmark suite, full Phase 1 gate passed)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: ~3 min
-- Total execution time: ~6 min
+- Total execution time: ~9 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-math-correctness | 2 | ~6 min | ~3 min |
+| 01-math-correctness | 3 | ~9 min | ~3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min)
+- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min), 01-03 (~3 min)
 - Trend: Stable
 
 *Updated after each plan completion*
 | Phase 01-math-correctness P02 | 3 | 2 tasks | 4 files |
 | Phase 01-math-correctness P01 | 6 | 2 tasks | 4 files |
+| Phase 01-math-correctness P03 | 3 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - [Phase 01-math-correctness]: HMM dual-criterion labelling: sigma primary, mu secondary, 20% separation guard; AMBIGUOUS confidence forces NEUTRAL signal
 - [Phase 01-math-correctness]: MATH-01: Par bond requires both coupon discounting AND principal discounting in state_bond_values; used continuous-discounting annuity PV formula
 - [Phase 01-math-correctness]: MATH-03: CIR Feller guaranteed by construction via alpha reparameterisation: kappa=sigma^2/(2*theta)+exp(alpha) always satisfies Feller condition
+- [Phase 01-math-correctness]: MATH-05: Fourier put-call parity holds within S*1e-4; BS convergence confirmed with sigma_v=0.001; intrinsic floor validated across 7 strikes
+- [Phase 01-math-correctness]: Test strategy: black_scholes module-level wrapper added to options_pricer.py; slow marker isolates network-dependent SPY test from CI fast runs
 
 ### Pending Todos
 
@@ -79,5 +82,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 01-math-correctness 01-01-PLAN.md (MATH-01 coupon discounting, MATH-03 CIR Feller constraint)
+Stopped at: Completed 01-math-correctness 01-03-PLAN.md (MATH-05 benchmark suite — Phase 1 gate passed, all 16 fast tests green)
 Resume file: None
