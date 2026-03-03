@@ -476,3 +476,35 @@ class OptionsPricer:
         except Exception as e:
             self.logger.error(f"Error comparing models: {e}")
             raise
+
+
+# ---------------------------------------------------------------------------
+# Module-level convenience wrapper — allows `from options_pricer import black_scholes`
+# ---------------------------------------------------------------------------
+
+def black_scholes(
+    S: float,
+    K: float,
+    T: float,
+    r: float,
+    sigma: float,
+    option_type: str = 'call'
+) -> Dict[str, float]:
+    """
+    Module-level Black-Scholes convenience wrapper.
+
+    Delegates to OptionsPricer.black_scholes — exposes the same function
+    as a standalone callable so test modules can import it directly.
+
+    Args:
+        S:           Current stock price
+        K:           Strike price
+        T:           Time to maturity (years)
+        r:           Risk-free rate (annualised)
+        sigma:       Volatility (annualised)
+        option_type: 'call' or 'put'
+
+    Returns:
+        dict with 'price', 'delta', 'gamma', 'theta', 'vega', 'rho', 'd1', 'd2'
+    """
+    return OptionsPricer().black_scholes(S, K, T, r, sigma, option_type)
