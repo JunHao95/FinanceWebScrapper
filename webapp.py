@@ -1294,6 +1294,63 @@ def calibrate_merton_endpoint():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/calibrate_bcc', methods=['POST'])
+def calibrate_bcc_endpoint():
+    """
+    Calibrate BCC (Bates-Chan-Chang) parameters to real market options data.
+
+    Expected JSON payload:
+    {
+        "ticker": "AAPL",
+        "risk_free_rate": 0.05,
+        "option_type": "call"
+    }
+
+    Returns:
+    {
+        "success": true,
+        "result": {
+            "calibrated_params": {...heston params...},
+            "jump_params": {"lambda_j": float, "mu_j": float, "sigma_j": float},
+            "rmse": float,
+            "spot": float
+        }
+    }
+    """
+    try:
+        from src.derivatives.model_calibration import BCCCalibrator
+
+        data = request.json or {}
+        ticker         = data.get('ticker', 'AAPL').upper()
+        risk_free_rate = float(data.get('risk_free_rate', 0.05))
+        option_type    = data.get('option_type', 'call')
+
+        calibrator = BCCCalibrator()
+        result = calibrator.calibrate(ticker, risk_free_rate=risk_free_rate,
+                                      option_type=option_type)
+
+        # Propagate market data errors gracefully
+        if 'error' in result:
+            return jsonify({'success': False, 'error': result['error']}), 500
+
+        # Normalize jump parameters from calibrator's internal field names
+        # BCCCalibrator returns 'jump': {'lam': ..., 'mu_j': ..., 'delta_j': ...}
+        # Response convention: 'jump_params': {'lambda_j': ..., 'mu_j': ..., 'sigma_j': ...}
+        jump_raw = result.get('calibrated_params', {}).get('jump', {})
+        result['jump_params'] = {
+            'lambda_j': jump_raw.get('lam', jump_raw.get('lambda_j')),
+            'mu_j':     jump_raw.get('mu_j'),
+            'sigma_j':  jump_raw.get('delta_j', jump_raw.get('sigma_j')),
+        }
+
+        result = convert_numpy_types(result)
+        return jsonify({'success': True, 'result': result})
+
+    except Exception as e:
+        logger.error(f"Error in BCC calibration: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/interest_rate_model', methods=['POST'])
 def interest_rate_model_endpoint():
     """
