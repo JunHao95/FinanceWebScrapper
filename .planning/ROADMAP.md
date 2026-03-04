@@ -46,7 +46,13 @@ Plans:
   3. A POST to `/api/calibrate_bcc` returns calibrated BCC parameters and a fitted vs. market IV comparison JSON — the route exists and returns 200.
   4. A POST to `/api/regime` returns a `filtered_probs` time series (not just a final signal) suitable for rendering a probability chart over time.
   5. CIR and Vasicek route responses include a `feller_satisfied` boolean and `feller_ratio` value that the frontend can display as a badge.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Markov chain Python functions: steady_state_distribution, absorption_probabilities, portfolio_mdp_value_iteration (MARKOV-01 through MARKOV-05, CREDIT-02, CREDIT-03)
+- [ ] 02-02-PLAN.md — Vasicek model functions + extend /api/interest_rate_model with model selector and feller_ratio (RATE-01 through RATE-05)
+- [ ] 02-03-PLAN.md — /api/calibrate_bcc Flask route wrapping BCCCalibrator (CREDIT-01, CREDIT-04, CREDIT-05)
+- [ ] 02-04-PLAN.md — /api/markov_chain unified Flask route for all five modes (MARKOV-06, CREDIT-01, CREDIT-02, CREDIT-03, CREDIT-05) [depends on 02-01]
 
 ### Phase 3: Frontend Wiring and Visualization
 **Goal**: The Stochastic Models tab is fully interactive — every sub-tab has parameter inputs, a working submit button, and Plotly chart output matching the quality of the existing Volatility Surface tab. A recruiter can run any stochastic model live without touching code.
@@ -81,6 +87,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Math Correctness | 3/3 | Complete   | 2026-03-03 |
-| 2. Backend Completeness | 0/TBD | Not started | - |
+| 2. Backend Completeness | 0/4 | Not started | - |
 | 3. Frontend Wiring and Visualization | 0/TBD | Not started | - |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |
