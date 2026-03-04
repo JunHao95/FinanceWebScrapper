@@ -135,6 +135,63 @@ def cir_yield_curve(
 
 
 # ---------------------------------------------------------------------------
+# Vasicek Closed-Form Formulae (Vasicek 1977)
+# ---------------------------------------------------------------------------
+
+def vasicek_bond_price(r0: float, T: float, kappa: float, theta: float, sigma: float) -> float:
+    """
+    Zero-coupon bond price under Vasicek (1977) model:
+        B(T) = (1 - exp(-kappa*T)) / kappa
+        log A(T) = (theta - sigma^2/(2*kappa^2)) * (B(T) - T) - sigma^2*B(T)^2/(4*kappa)
+        P(0,T) = A(T) * exp(-B(T) * r0)
+
+    Args:
+        r0:    Current short rate
+        T:     Maturity (years)
+        kappa: Mean-reversion speed (must be > 0)
+        theta: Long-run mean rate
+        sigma: Volatility of short rate
+
+    Returns:
+        Bond price P(0,T)
+    """
+    if T <= 0:
+        return 1.0
+    if kappa <= 0:
+        raise ValueError("Vasicek kappa must be positive")
+    B_T = (1.0 - np.exp(-kappa * T)) / kappa
+    log_A = (theta - sigma**2 / (2.0 * kappa**2)) * (B_T - T) \
+            - sigma**2 * B_T**2 / (4.0 * kappa)
+    return float(np.exp(log_A - B_T * r0))
+
+
+def vasicek_yield_curve(
+    r0: float,
+    maturities: List[float],
+    kappa: float,
+    theta: float,
+    sigma: float
+) -> List[Dict]:
+    """
+    Compute the full Vasicek yield curve for a list of maturities.
+    Mirrors cir_yield_curve() signature and return shape.
+
+    Returns:
+        List of dicts {'maturity': float, 'bond_price': float, 'spot_rate': float}
+    """
+    curve = []
+    for T in maturities:
+        B = vasicek_bond_price(r0, T, kappa, theta, sigma)
+        r_impl = -np.log(B) / T if T > 0 and B > 0 else r0
+        curve.append({
+            'maturity':   float(T),
+            'bond_price': float(B),
+            'spot_rate':  float(r_impl),
+        })
+    return curve
+
+
+# ---------------------------------------------------------------------------
 # Feller Reparameterisation Helper
 # ---------------------------------------------------------------------------
 
