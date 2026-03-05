@@ -34,11 +34,11 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Interest Rate Models Module
 
-- [ ] **RATE-01**: User can simulate CIR (Cox-Ingersoll-Ross) interest rate paths with chosen parameters
-- [ ] **RATE-02**: User can simulate Vasicek interest rate paths with chosen parameters
-- [ ] **RATE-03**: User can view yield curve generated from the selected model
-- [ ] **RATE-04**: UI displays whether Feller condition is satisfied for CIR parameters
-- [ ] **RATE-05**: Interest rate model results display in dedicated UI sub-tab with Plotly chart output
+- [x] **RATE-01**: User can simulate CIR (Cox-Ingersoll-Ross) interest rate paths with chosen parameters
+- [x] **RATE-02**: User can simulate Vasicek interest rate paths with chosen parameters
+- [x] **RATE-03**: User can view yield curve generated from the selected model
+- [x] **RATE-04**: UI displays whether Feller condition is satisfied for CIR parameters
+- [x] **RATE-05**: Interest rate model results display in dedicated UI sub-tab with Plotly chart output
 
 ### Regime Detection Module
 
@@ -123,11 +123,11 @@ Deferred to future semesters/milestones.
 | CREDIT-03 | Phase 2: Backend Completeness | Complete |
 | CREDIT-04 | Phase 2: Backend Completeness | Pending |
 | CREDIT-05 | Phase 2: Backend Completeness | Pending |
-| RATE-01 | Phase 2: Backend Completeness | Pending |
-| RATE-02 | Phase 2: Backend Completeness | Pending |
-| RATE-03 | Phase 2: Backend Completeness | Pending |
-| RATE-04 | Phase 2: Backend Completeness | Pending |
-| RATE-05 | Phase 2: Backend Completeness | Pending |
+| RATE-01 | Phase 2: Backend Completeness | Complete |
+| RATE-02 | Phase 2: Backend Completeness | Complete |
+| RATE-03 | Phase 2: Backend Completeness | Complete |
+| RATE-04 | Phase 2: Backend Completeness | Complete |
+| RATE-05 | Phase 2: Backend Completeness | Complete |
 | REGIME-01 | Phase 3: Frontend Wiring and Visualization | Pending |
 | REGIME-02 | Phase 3: Frontend Wiring and Visualization | Pending |
 | REGIME-03 | Phase 3: Frontend Wiring and Visualization | Pending |

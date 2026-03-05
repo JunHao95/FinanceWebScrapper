@@ -23,31 +23,32 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 2 of 4 (Backend Completeness)
-Plan: 1 of 4 in current phase — COMPLETE
+Plan: 2 of 4 in current phase — COMPLETE
 Status: Phase 2 In Progress
-Last activity: 2026-03-05 — Completed plan 02-01 (Markov chain analytics module: steady_state, absorption, MDP — 8/8 tests green)
+Last activity: 2026-03-05 — Completed plan 02-02 (Vasicek closed-form bond pricing + extended /api/interest_rate_model with model=vasicek dispatch and feller_ratio)
 
-Progress: [████░░░░░░] 40%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~4 min
-- Total execution time: ~14 min
+- Total execution time: ~19 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-math-correctness | 3 | ~9 min | ~3 min |
-| 02-backend-completeness | 1 | ~5 min | ~5 min |
+| 02-backend-completeness | 2 | ~10 min | ~5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min), 01-03 (~3 min), 02-01 (~5 min)
+- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min), 01-03 (~3 min), 02-01 (~5 min), 02-02 (~5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 02-backend-completeness P02 | 5 | 2 tasks | 3 files |
 | Phase 02-backend-completeness P01 | 5 | 2 tasks | 2 files |
 | Phase 01-math-correctness P02 | 3 | 2 tasks | 4 files |
 | Phase 01-math-correctness P01 | 6 | 2 tasks | 4 files |
@@ -60,6 +61,9 @@ Progress: [████░░░░░░] 40%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 02-02]: Vasicek feller_ratio returns None (not a number) — Vasicek allows negative rates so Feller condition does not apply
+- [Phase 02-02]: Route dispatch uses data.get('model','cir').lower() — backward-compatible; missing model field defaults to CIR
+- [Phase 02-02]: vasicek_yield_curve mirrors cir_yield_curve signature exactly for Phase 3 frontend wiring compatibility
 - [Phase 02-01]: Absorption detection threshold P[i,i] > 0.9999 and row_sum within 1e-6; linalg.solve for B, linalg.inv for N display
 - [Phase 02-01]: Power iteration fallback for steady-state when eigenvector imaginary part exceeds 1e-6
 - [Phase 02-01]: MDP gamma capped at 0.999, n_periods capped at 10000 as guard inputs; symmetric reward matrix encodes regime-aligned portfolio incentives
@@ -86,5 +90,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 02-backend-completeness 02-01-PLAN.md (Markov chain analytics module — 8/8 tests green, 54 total tests passing)
+Stopped at: Completed 02-backend-completeness 02-02-PLAN.md (Vasicek model + extended interest rate route — 8/8 tests green, feller_ratio in CIR response)
 Resume file: None
