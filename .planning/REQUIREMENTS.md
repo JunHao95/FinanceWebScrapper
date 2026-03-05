@@ -17,18 +17,18 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Markov Chain & MDP Module
 
-- [ ] **MARKOV-01**: User can input a transition matrix and compute steady-state distribution
-- [ ] **MARKOV-02**: User can compute absorption probabilities for absorbing Markov chains
-- [ ] **MARKOV-03**: User can visualize state transition diagram or heatmap of transition matrix
-- [ ] **MARKOV-04**: User can define a portfolio rebalancing Markov Decision Process (states, actions, rewards)
-- [ ] **MARKOV-05**: User can compute optimal policy via value iteration or policy iteration for the MDP
+- [x] **MARKOV-01**: User can input a transition matrix and compute steady-state distribution
+- [x] **MARKOV-02**: User can compute absorption probabilities for absorbing Markov chains
+- [x] **MARKOV-03**: User can visualize state transition diagram or heatmap of transition matrix
+- [x] **MARKOV-04**: User can define a portfolio rebalancing Markov Decision Process (states, actions, rewards)
+- [x] **MARKOV-05**: User can compute optimal policy via value iteration or policy iteration for the MDP
 - [ ] **MARKOV-06**: Markov/MDP results display in dedicated UI sub-tab with interactive parameters
 
 ### Credit Transitions Module
 
 - [ ] **CREDIT-01**: User can select a rating transition matrix (Moody's/S&P style) and simulate credit migration
-- [ ] **CREDIT-02**: User can view credit migration heatmap showing transition probabilities
-- [ ] **CREDIT-03**: User can compute and view default probability / survival curve chart over time
+- [x] **CREDIT-02**: User can view credit migration heatmap showing transition probabilities
+- [x] **CREDIT-03**: User can compute and view default probability / survival curve chart over time
 - [ ] **CREDIT-04**: User can compute bond valuation with corrected time-discounted coupons
 - [ ] **CREDIT-05**: Credit transitions results display in dedicated UI sub-tab
 
@@ -112,15 +112,15 @@ Deferred to future semesters/milestones.
 | MATH-03 | Phase 1: Math Correctness | Complete |
 | MATH-04 | Phase 1: Math Correctness | Complete |
 | MATH-05 | Phase 1: Math Correctness | Complete |
-| MARKOV-01 | Phase 2: Backend Completeness | Pending |
-| MARKOV-02 | Phase 2: Backend Completeness | Pending |
-| MARKOV-03 | Phase 2: Backend Completeness | Pending |
-| MARKOV-04 | Phase 2: Backend Completeness | Pending |
-| MARKOV-05 | Phase 2: Backend Completeness | Pending |
+| MARKOV-01 | Phase 2: Backend Completeness | Complete |
+| MARKOV-02 | Phase 2: Backend Completeness | Complete |
+| MARKOV-03 | Phase 2: Backend Completeness | Complete |
+| MARKOV-04 | Phase 2: Backend Completeness | Complete |
+| MARKOV-05 | Phase 2: Backend Completeness | Complete |
 | MARKOV-06 | Phase 2: Backend Completeness | Pending |
 | CREDIT-01 | Phase 2: Backend Completeness | Pending |
-| CREDIT-02 | Phase 2: Backend Completeness | Pending |
-| CREDIT-03 | Phase 2: Backend Completeness | Pending |
+| CREDIT-02 | Phase 2: Backend Completeness | Complete |
+| CREDIT-03 | Phase 2: Backend Completeness | Complete |
 | CREDIT-04 | Phase 2: Backend Completeness | Pending |
 | CREDIT-05 | Phase 2: Backend Completeness | Pending |
 | RATE-01 | Phase 2: Backend Completeness | Pending |

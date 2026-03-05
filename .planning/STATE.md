@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-03T15:07:32.577Z"
+status: in_progress
+last_updated: "2026-03-05T00:15:00.000Z"
 progress:
-  total_phases: 1
+  total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 5
 ---
 
 # Project State
@@ -18,35 +18,37 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
-**Current focus:** Phase 1 — Math Correctness
+**Current focus:** Phase 2 — Backend Completeness
 
 ## Current Position
 
-Phase: 1 of 4 (Math Correctness)
-Plan: 3 of 3 in current phase — COMPLETE
-Status: Phase 1 Complete
-Last activity: 2026-03-03 — Completed plan 03 (MATH-05 Fourier benchmark suite, full Phase 1 gate passed)
+Phase: 2 of 4 (Backend Completeness)
+Plan: 1 of 4 in current phase — COMPLETE
+Status: Phase 2 In Progress
+Last activity: 2026-03-05 — Completed plan 02-01 (Markov chain analytics module: steady_state, absorption, MDP — 8/8 tests green)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~3 min
-- Total execution time: ~9 min
+- Total plans completed: 4
+- Average duration: ~4 min
+- Total execution time: ~14 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-math-correctness | 3 | ~9 min | ~3 min |
+| 02-backend-completeness | 1 | ~5 min | ~5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min), 01-03 (~3 min)
+- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min), 01-03 (~3 min), 02-01 (~5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 02-backend-completeness P01 | 5 | 2 tasks | 2 files |
 | Phase 01-math-correctness P02 | 3 | 2 tasks | 4 files |
 | Phase 01-math-correctness P01 | 6 | 2 tasks | 4 files |
 | Phase 01-math-correctness P03 | 3 | 2 tasks | 9 files |
@@ -58,6 +60,9 @@ Progress: [███░░░░░░░] 30%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 02-01]: Absorption detection threshold P[i,i] > 0.9999 and row_sum within 1e-6; linalg.solve for B, linalg.inv for N display
+- [Phase 02-01]: Power iteration fallback for steady-state when eigenvector imaginary part exceeds 1e-6
+- [Phase 02-01]: MDP gamma capped at 0.999, n_periods capped at 10000 as guard inputs; symmetric reward matrix encodes regime-aligned portfolio incentives
 - [Roadmap]: Fix math correctness before frontend wiring — wiring UI to incorrect backends wastes all subsequent work and produces recruiter-visible failures
 - [Roadmap]: MDP scope is unresolved — whether MARKOV-04/MARKOV-05 (MDP) belong in Phase 2 or are deferred to v2 should be decided before Phase 2 planning begins
 - [Roadmap]: Calibration progress strategy (SSE streaming vs. pre-cached demo results) should be decided during Phase 2 planning, as it affects Phase 3 implementation
@@ -75,12 +80,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 2]: MDP backend does not exist and complexity is high — explicit scoping decision needed before Phase 2 planning begins (keep in v1 or defer to v2)
-- [Phase 1]: numpy 2.x compatibility not confirmed — run import tests against all WIP files before Phase 1 work begins
+- [Phase 2]: MDP backend resolved — portfolio_mdp_value_iteration implemented in plan 02-01; blocker cleared
 - [Phase 3]: Calibration latency on Render free tier unconfirmed (estimated 60-120s) — measure during Phase 1 to choose between SSE streaming vs. pre-caching
 
 ## Session Continuity
 
-Last session: 2026-03-03
-Stopped at: Completed 01-math-correctness 01-03-PLAN.md (MATH-05 benchmark suite — Phase 1 gate passed, all 16 fast tests green)
+Last session: 2026-03-05
+Stopped at: Completed 02-backend-completeness 02-01-PLAN.md (Markov chain analytics module — 8/8 tests green, 54 total tests passing)
 Resume file: None
