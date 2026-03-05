@@ -1458,6 +1458,93 @@ def credit_risk_endpoint():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/markov_chain', methods=['POST'])
+def markov_chain_endpoint():
+    """
+    Unified Markov chain endpoint. Dispatches on mode field.
+
+    Expected JSON payload:
+    {
+        "mode": "steady_state" | "absorption" | "nstep" | "term_structure" | "mdp",
+        "transition_matrix": [[...], ...],  // optional; defaults to S&P 8-rating matrix
+        "n": 5,                             // for mode=nstep
+        "current_rating": "BBB",           // for mode=nstep, term_structure
+        "horizons": [1,3,5,10],            // for mode=term_structure (optional)
+        "gamma": 0.95,                     // for mode=mdp
+        "n_periods": 1000                  // for mode=mdp
+    }
+    """
+    try:
+        from src.analytics.markov_chains import (
+            steady_state_distribution,
+            absorption_probabilities,
+            portfolio_mdp_value_iteration,
+        )
+        from src.analytics.credit_transitions import (
+            n_year_transition,
+            default_probability_term_structure,
+            SP_TRANSITION_MATRIX,
+            RATINGS,
+        )
+        import numpy as np
+
+        data = request.json or {}
+        mode = data.get('mode', 'steady_state')
+        raw_matrix = data.get('transition_matrix')
+        P = np.array(raw_matrix) if raw_matrix is not None else SP_TRANSITION_MATRIX.copy()
+
+        if mode == 'steady_state':
+            pi = steady_state_distribution(P)
+            result = {'mode': mode, 'steady_state': pi.tolist(), 'ratings': RATINGS}
+
+        elif mode == 'absorption':
+            result = absorption_probabilities(P)
+            result['mode'] = mode
+            if 'error' in result:
+                # Not an exception — just no absorbing states; return as success with error field
+                pass
+
+        elif mode == 'nstep':
+            n = int(data.get('n', 5))
+            Pn = n_year_transition(P, n)
+            term = default_probability_term_structure(
+                data.get('current_rating', 'BBB'), P=P
+            )
+            result = {
+                'mode': mode,
+                'n': n,
+                'transition_matrix_n': Pn.tolist(),
+                'term_structure': term,
+                'ratings': RATINGS,
+            }
+
+        elif mode == 'term_structure':
+            rating = data.get('current_rating', 'BBB').upper()
+            horizons = data.get('horizons')
+            term = default_probability_term_structure(rating, horizons=horizons, P=P)
+            result = {
+                'mode': mode,
+                'current_rating': rating,
+                'term_structure': term,
+            }
+
+        elif mode == 'mdp':
+            gamma     = float(data.get('gamma', 0.95))
+            n_periods = int(data.get('n_periods', 1000))
+            result = portfolio_mdp_value_iteration(gamma=gamma, n_periods=n_periods)
+            result['mode'] = mode
+
+        else:
+            return jsonify({'success': False, 'error': f"Unknown mode: {mode}"}), 400
+
+        result = convert_numpy_types(result)
+        return jsonify({'success': True, 'result': result})
+
+    except Exception as e:
+        logger.error(f"Error in markov_chain endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""

@@ -109,8 +109,9 @@ def test_term_structure_mode(client):
     assert len(ts) > 0, "term_structure must be non-empty"
 
     first = ts[0]
-    assert 'horizon' in first, "Each term_structure entry must have 'horizon'"
-    assert 'default_probability' in first, "Each entry must have 'default_probability'"
+    # default_probability_term_structure returns 'horizon_years' and 'cumulative_default_prob'
+    assert 'horizon_years' in first, "Each term_structure entry must have 'horizon_years'"
+    assert 'cumulative_default_prob' in first, "Each entry must have 'cumulative_default_prob'"
 
 
 # ---------------------------------------------------------------------------
