@@ -1354,10 +1354,11 @@ def calibrate_bcc_endpoint():
 @app.route('/api/interest_rate_model', methods=['POST'])
 def interest_rate_model_endpoint():
     """
-    CIR interest rate model: bond pricing and yield curve.
+    CIR / Vasicek interest rate model: bond pricing and yield curve.
 
     Expected JSON payload:
     {
+        "model": "cir",            // "cir" (default) or "vasicek"
         "r0": 0.053,
         "kappa": 1.5,
         "theta": 0.05,
@@ -1368,28 +1369,49 @@ def interest_rate_model_endpoint():
     """
     try:
         from src.analytics.interest_rate_models import (
-            CIRCalibrator, cir_yield_curve, calibrate_to_treasuries
+            CIRCalibrator, cir_yield_curve, calibrate_to_treasuries, vasicek_yield_curve
         )
 
         data = request.json or {}
+        model = data.get('model', 'cir').lower()
 
         if data.get('calibrate_to_treasuries', False):
             r0 = float(data.get('r0', 0.053))
             result = calibrate_to_treasuries(r0=r0)
-        else:
-            r0     = float(data.get('r0', 0.053))
-            kappa  = float(data.get('kappa', 1.5))
-            theta  = float(data.get('theta', 0.05))
-            sigma  = float(data.get('sigma', 0.1))
-            mats   = data.get('maturities', [0.25, 0.5, 1, 2, 5, 10, 30])
-
+            # Add feller_ratio to calibrate_to_treasuries result
+            kappa = result['calibrated_params']['kappa']
+            theta_val = result['calibrated_params']['theta']
+            sigma_val = result['calibrated_params']['sigma']
+            result['feller_ratio'] = float((2 * kappa * theta_val) / (sigma_val ** 2))
+        elif model == 'vasicek':
+            r0    = float(data.get('r0', 0.053))
+            kappa = float(data.get('kappa', 0.5))
+            theta = float(data.get('theta', 0.06))
+            sigma = float(data.get('sigma', 0.02))
+            mats  = data.get('maturities', [0.25, 0.5, 1, 2, 5, 10, 30])
+            curve = vasicek_yield_curve(r0, mats, kappa, theta, sigma)
+            result = {
+                'model': 'Vasicek (1977)',
+                'params': {'r0': r0, 'kappa': kappa, 'theta': theta, 'sigma': sigma},
+                'feller_condition_satisfied': True,
+                'feller_ratio': None,
+                'yield_curve': curve,
+            }
+        else:  # CIR (default)
+            r0    = float(data.get('r0', 0.053))
+            kappa = float(data.get('kappa', 1.5))
+            theta = float(data.get('theta', 0.05))
+            sigma = float(data.get('sigma', 0.1))
+            mats  = data.get('maturities', [0.25, 0.5, 1, 2, 5, 10, 30])
             curve = cir_yield_curve(r0, mats, kappa, theta, sigma)
             feller = 2 * kappa * theta > sigma ** 2
+            feller_ratio = float((2 * kappa * theta) / (sigma ** 2))
             result = {
                 'model': 'CIR (1985)',
                 'params': {'r0': r0, 'kappa': kappa, 'theta': theta, 'sigma': sigma},
                 'feller_condition_satisfied': feller,
-                'yield_curve': curve
+                'feller_ratio': feller_ratio,
+                'yield_curve': curve,
             }
 
         result = convert_numpy_types(result)
