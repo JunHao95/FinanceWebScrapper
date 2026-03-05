@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-03-05T00:15:00.000Z"
+status: unknown
+last_updated: "2026-03-05T13:42:23.795Z"
 progress:
-  total_phases: 4
-  completed_phases: 1
+  total_phases: 2
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 2 of 4 (Backend Completeness)
-Plan: 2 of 4 in current phase — COMPLETE
-Status: Phase 2 In Progress
-Last activity: 2026-03-05 — Completed plan 02-02 (Vasicek closed-form bond pricing + extended /api/interest_rate_model with model=vasicek dispatch and feller_ratio)
+Plan: 4 of 4 in current phase — COMPLETE
+Status: Phase 2 Complete
+Last activity: 2026-03-05 — Completed plan 02-04 (POST /api/markov_chain route — 7/7 tests green, all 5 modes working)
 
-Progress: [████░░░░░░] 43%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [████░░░░░░] 43%
 | Phase 01-math-correctness P02 | 3 | 2 tasks | 4 files |
 | Phase 01-math-correctness P01 | 6 | 2 tasks | 4 files |
 | Phase 01-math-correctness P03 | 3 | 2 tasks | 9 files |
+| Phase 02-backend-completeness P04 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 01-math-correctness]: MATH-03: CIR Feller guaranteed by construction via alpha reparameterisation: kappa=sigma^2/(2*theta)+exp(alpha) always satisfies Feller condition
 - [Phase 01-math-correctness]: MATH-05: Fourier put-call parity holds within S*1e-4; BS convergence confirmed with sigma_v=0.001; intrinsic floor validated across 7 strikes
 - [Phase 01-math-correctness]: Test strategy: black_scholes module-level wrapper added to options_pricer.py; slow marker isolates network-dependent SPY test from CI fast runs
+- [Phase 02-04]: Mode dispatch uses data.get('mode','steady_state') — defaults to steady_state when mode missing
+- [Phase 02-04]: nstep mode returns both transition_matrix_n AND term_structure in single response per plan spec
+- [Phase 02-04]: Test assertions use horizon_years/cumulative_default_prob — actual credit_transitions output keys
 
 ### Pending Todos
 
@@ -90,5 +94,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 02-backend-completeness 02-02-PLAN.md (Vasicek model + extended interest rate route — 8/8 tests green, feller_ratio in CIR response)
+Stopped at: Completed 02-backend-completeness 02-04-PLAN.md (markov_chain route — 7/7 tests green, all 5 modes working)
 Resume file: None
