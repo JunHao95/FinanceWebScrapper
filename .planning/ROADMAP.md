@@ -64,7 +64,14 @@ Plans:
   3. A user can click Calibrate Heston for a default ticker and see a calibration progress indicator (iteration count or stage label) while the calibration runs, then see a fitted vs. market IV comparison and relative RMSE with a qualitative label (Good / Acceptable / Poor).
   4. The BCC calibration sub-tab exists, accepts inputs, and returns calibrated parameters and a fitted vs. market IV chart — the route is wired end-to-end.
   5. Every stochastic model sub-tab (Markov, Credit, Rates, Regime, Heston, Calibration) displays results as Plotly charts (not raw tables) and shows a CIR Feller condition badge where applicable.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Regime Detection tab: webapp.py patch (prices/dates/regime_sequence) + two Plotly charts (REGIME-01 through REGIME-05)
+- [ ] 03-02-PLAN.md — Heston Pricing tab: new sub-tab, /api/heston_iv_surface route, price cards, 3D IV surface (HESTON-01 through HESTON-05)
+- [ ] 03-03-PLAN.md — Heston Calibration SSE: callback in HestonCalibrator, /api/calibrate_heston_stream, EventSource JS, IV chart + RMSE badge (CALIB-01, CALIB-03, CALIB-04)
+- [ ] 03-04-PLAN.md — BCC Calibration tab: new sub-tab HTML + runBCCCalibration JS wiring to existing /api/calibrate_bcc (CALIB-02, CALIB-05)
+- [ ] 03-05-PLAN.md — Markov/Credit/Rates Plotly upgrade: heatmap, survival curve, yield curve + Feller badge; full integration smoke test checkpoint (all 15 requirements verified)
 
 ### Phase 4: ML-in-Finance Module
 **Goal**: A new Machine Learning in Finance main tab exists in the UI, contains sub-tabs for each model category, and allows a user to run all required ML analyses with interactive parameter inputs and Plotly output — without data leakage.
@@ -88,5 +95,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Math Correctness | 3/3 | Complete   | 2026-03-03 |
 | 2. Backend Completeness | 4/4 | Complete   | 2026-03-05 |
-| 3. Frontend Wiring and Visualization | 0/TBD | Not started | - |
+| 3. Frontend Wiring and Visualization | 0/5 | Not started | - |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |
