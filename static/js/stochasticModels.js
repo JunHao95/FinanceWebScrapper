@@ -608,6 +608,110 @@ async function calculateHestonPrice() {
 }
 
 // ---------------------------------------------------------------------------
+// Heston Pricing sub-tab (Stochastic Models tab)
+// ---------------------------------------------------------------------------
+async function runHestonPricing() {
+    const params = {
+        S: parseFloat(document.getElementById('hestonS').value),
+        K: parseFloat(document.getElementById('hestonK').value),
+        T: parseFloat(document.getElementById('hestonT').value),
+        r: parseFloat(document.getElementById('hestonR').value),
+        v0: parseFloat(document.getElementById('hestonV0').value),
+        kappa: parseFloat(document.getElementById('hestonKappa').value),
+        theta: parseFloat(document.getElementById('hestonTheta').value),
+        sigma_v: parseFloat(document.getElementById('hestonSigmaV').value),
+        rho: parseFloat(document.getElementById('hestonRho').value),
+        option_type: document.getElementById('hestonOptionType').value
+    };
+    const resultsDiv = document.getElementById('hestonPriceResults');
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<p style="color:#666;">Pricing...</p>';
+
+    try {
+        // Map to field names expected by /api/heston_price route
+        const priceResp = await fetch('/api/heston_price', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                spot: params.S,
+                strike: params.K,
+                maturity: params.T,
+                risk_free_rate: params.r,
+                v0: params.v0,
+                kappa: params.kappa,
+                theta: params.theta,
+                sigma_v: params.sigma_v,
+                rho: params.rho,
+                option_type: params.option_type
+            })
+        });
+        if (!priceResp.ok) { resultsDiv.innerHTML = renderAlert(`Server error ${priceResp.status}`); return; }
+        const priceData = await priceResp.json();
+        if (!priceData.success) { resultsDiv.innerHTML = renderAlert(priceData.error || 'Pricing error'); return; }
+
+        const hestonPrice = priceData.heston.price;
+        const bsPrice = priceData.black_scholes_comparison.price;
+
+        resultsDiv.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+                <div style="background:#d4edda; border-radius:8px; padding:16px; text-align:center;">
+                    <div style="font-size:12px; color:#666;">Heston Price</div>
+                    <div style="font-size:28px; font-weight:bold; color:#155724;">$${escapeHTML(hestonPrice.toFixed(4))}</div>
+                </div>
+                <div style="background:#cce5ff; border-radius:8px; padding:16px; text-align:center;">
+                    <div style="font-size:12px; color:#666;">Black-Scholes Price</div>
+                    <div style="font-size:28px; font-weight:bold; color:#004085;">$${escapeHTML(bsPrice.toFixed(4))}</div>
+                </div>
+            </div>
+            <p style="color:#666; font-size:13px;">Loading IV surface...</p>
+            <div id="hestonIVSurface"></div>`;
+
+        // Fetch IV surface
+        const surfaceResp = await fetch('/api/heston_iv_surface', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                S: params.S, r: params.r, v0: params.v0, kappa: params.kappa,
+                theta: params.theta, sigma_v: params.sigma_v, rho: params.rho,
+                option_type: params.option_type,
+                K_min: params.S * 0.8, K_max: params.S * 1.2, K_steps: 10,
+                T_min: 0.1, T_max: 2.0, T_steps: 8
+            })
+        });
+        if (!surfaceResp.ok) { return; }
+        const surfaceData = await surfaceResp.json();
+        if (!surfaceData.success) { return; }
+
+        // Clear loading text
+        const surfaceContainer = document.getElementById('hestonIVSurface');
+        if (!surfaceContainer) return;
+        const prevP = surfaceContainer.previousElementSibling;
+        if (prevP && prevP.tagName === 'P') prevP.remove();
+
+        Plotly.newPlot('hestonIVSurface', [{
+            type: 'surface',
+            x: surfaceData.strikes,
+            y: surfaceData.maturities,
+            z: surfaceData.iv_grid,
+            colorscale: 'Viridis',
+            colorbar: { title: 'IV' }
+        }], {
+            title: 'Heston Implied Volatility Surface',
+            scene: {
+                xaxis: { title: 'Strike' },
+                yaxis: { title: 'Maturity (yrs)' },
+                zaxis: { title: 'Implied Vol' }
+            },
+            height: 450,
+            margin: { t: 50, l: 0, r: 0, b: 0 }
+        });
+
+    } catch (err) {
+        resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // BCC Calibration
 // ---------------------------------------------------------------------------
 async function runBCCCalibration() {
