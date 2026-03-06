@@ -1208,24 +1208,138 @@ def regime_detection_endpoint():
     """
     Detect market regime using 2-state HMM (Hamilton filter).
 
-    Expected JSON payload:
-    {
-        "tickers": ["SPY", "AAPL"],
-        "days": 1260
-    }
+    Supports two calling conventions:
+    1. New (ticker + date range):
+       {"ticker": "SPY", "start_date": "2020-01-01", "end_date": "2021-12-31"}
+    2. Legacy (tickers list + days):
+       {"tickers": ["SPY", "AAPL"], "days": 1260}
+
+    Always returns top-level fields:
+      filtered_probs  — list of P(stressed) per trading day
+      signal          — RISK_ON / RISK_OFF / NEUTRAL
+      transition_matrix, parameters, current_probabilities
+      dates           — ISO date strings aligned with filtered_probs
+      prices          — closing prices aligned with filtered_probs
+      regime_sequence — list of 0/1 per day (1 = stressed)
     """
     try:
+        import yfinance as yf
         from src.analytics.regime_detection import RegimeDetector
 
         data = request.json or {}
-        tickers = data.get('tickers', ['SPY'])
-        days = int(data.get('days', 1260))
 
+        # --- Determine ticker and fetch price data ---
+        if 'ticker' in data or 'start_date' in data or 'end_date' in data:
+            # New API: ticker + date range
+            ticker = str(data.get('ticker', 'SPY')).upper()
+            start_date = data.get('start_date', '2019-01-01')
+            end_date = data.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+
+            df = yf.download(ticker, start=start_date, end=end_date,
+                             auto_adjust=True, progress=False)
+            if df.empty:
+                return jsonify({'success': False, 'error': f'No data for {ticker}'}), 400
+
+            closes = df['Close']
+            if hasattr(closes, 'squeeze'):
+                closes = closes.squeeze()
+            closes = closes.dropna()
+
+            # Align index (dates correspond to returns, which are 1 shorter)
+            price_dates = closes.index.strftime('%Y-%m-%d').tolist()
+            price_values = closes.values.tolist()
+
+            import numpy as np
+            log_ret = np.log(closes / closes.shift(1)).dropna().values
+            # dates/prices aligned to returns (drop first row)
+            ret_dates = price_dates[1:]
+            ret_prices = price_values[1:]
+
+        else:
+            # Legacy API: tickers list + days
+            tickers = data.get('tickers', ['SPY'])
+            ticker = tickers[0] if tickers else 'SPY'
+            days = int(data.get('days', 1260))
+
+            from datetime import timedelta
+            end_dt = datetime.now()
+            start_dt = end_dt - timedelta(days=int(days * 1.5))
+
+            df = yf.download(ticker, start=start_dt.strftime('%Y-%m-%d'),
+                             end=end_dt.strftime('%Y-%m-%d'),
+                             auto_adjust=True, progress=False)
+            if df.empty:
+                return jsonify({'success': False, 'error': f'No data for {ticker}'}), 400
+
+            closes = df['Close']
+            if hasattr(closes, 'squeeze'):
+                closes = closes.squeeze()
+            closes = closes.dropna()
+
+            price_dates = closes.index.strftime('%Y-%m-%d').tolist()
+            price_values = closes.values.tolist()
+
+            import numpy as np
+            log_ret = np.log(closes / closes.shift(1)).dropna().values
+            ret_dates = price_dates[1:]
+            ret_prices = price_values[1:]
+
+        # --- Fit HMM ---
         detector = RegimeDetector()
-        result = detector.analyze(tickers, days=days)
-        result = convert_numpy_types(result)
+        result = detector.fit(log_ret, n_restarts=3)
+        result['ticker_used'] = ticker
 
-        return jsonify({'success': True, 'regime': result})
+        # --- Determine stressed state index ---
+        # filtered_probs_full is (T, 2); column order matches internal state indices
+        full_probs = np.array(result.get('filtered_probs_full', []))
+        if full_probs.ndim == 2 and full_probs.shape[1] == 2:
+            # Use current_probabilities to identify which column is stressed
+            # by comparing last row to reported current_probabilities
+            current_probs = result.get('current_probabilities', {})
+            stressed_prob_value = current_probs.get('stressed', None)
+            if stressed_prob_value is not None:
+                last_row = full_probs[-1]
+                # The stressed column is whichever col is closer to stressed_prob_value
+                if abs(last_row[0] - stressed_prob_value) < abs(last_row[1] - stressed_prob_value):
+                    stressed_col = 0
+                else:
+                    stressed_col = 1
+            else:
+                stressed_col = 1  # fallback
+
+            filtered_probs_stressed = full_probs[:, stressed_col].tolist()
+        else:
+            filtered_probs_stressed = []
+
+        # regime_sequence: 1 if P(stressed) >= 0.5, else 0
+        regime_sequence = [1 if p >= 0.5 else 0 for p in filtered_probs_stressed]
+
+        # Truncate dates/prices to match number of returns if needed
+        n = len(log_ret)
+        ret_dates = ret_dates[:n]
+        ret_prices = ret_prices[:n]
+
+        # Build flat response compatible with new frontend
+        response = {
+            'success': True,
+            # New flat fields for Plotly charts
+            'dates': ret_dates,
+            'prices': [float(p) for p in ret_prices],
+            'filtered_probs': filtered_probs_stressed,
+            'regime_sequence': regime_sequence,
+            'signal': result.get('signal', 'NEUTRAL'),
+            'signal_description': result.get('signal_description', ''),
+            'current_probabilities': result.get('current_probabilities', {}),
+            'transition_matrix': result.get('transition_matrix', {}),
+            'parameters': result.get('parameters', {}),
+            'log_likelihood': result.get('log_likelihood', None),
+            'n_observations': result.get('n_observations', None),
+            'label_confidence': result.get('label_confidence', None),
+            # Legacy nested field for backward compatibility
+            'regime': convert_numpy_types(result),
+        }
+
+        return jsonify(convert_numpy_types(response))
 
     except Exception as e:
         logger.error(f"Error in regime detection: {e}")
