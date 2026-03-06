@@ -50,11 +50,11 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Heston / Fourier Pricing Module
 
-- [ ] **HESTON-01**: User can price European options using the Fourier/Heston model with chosen parameters
-- [ ] **HESTON-02**: User can view implied volatility surface (strike vs. maturity) as a Plotly chart
-- [ ] **HESTON-03**: User can compare Heston price vs. Black-Scholes price for the same contract
-- [ ] **HESTON-04**: IV surface shows non-flat smile (volatility skew visible)
-- [ ] **HESTON-05**: Heston pricing results display in dedicated UI sub-tab
+- [x] **HESTON-01**: User can price European options using the Fourier/Heston model with chosen parameters
+- [x] **HESTON-02**: User can view implied volatility surface (strike vs. maturity) as a Plotly chart
+- [x] **HESTON-03**: User can compare Heston price vs. Black-Scholes price for the same contract
+- [x] **HESTON-04**: IV surface shows non-flat smile (volatility skew visible)
+- [x] **HESTON-05**: Heston pricing results display in dedicated UI sub-tab
 
 ### Model Calibration Module
 
@@ -133,11 +133,11 @@ Deferred to future semesters/milestones.
 | REGIME-03 | Phase 3: Frontend Wiring and Visualization | Complete |
 | REGIME-04 | Phase 3: Frontend Wiring and Visualization | Complete |
 | REGIME-05 | Phase 3: Frontend Wiring and Visualization | Complete |
-| HESTON-01 | Phase 3: Frontend Wiring and Visualization | Pending |
-| HESTON-02 | Phase 3: Frontend Wiring and Visualization | Pending |
-| HESTON-03 | Phase 3: Frontend Wiring and Visualization | Pending |
-| HESTON-04 | Phase 3: Frontend Wiring and Visualization | Pending |
-| HESTON-05 | Phase 3: Frontend Wiring and Visualization | Pending |
+| HESTON-01 | Phase 3: Frontend Wiring and Visualization | Complete |
+| HESTON-02 | Phase 3: Frontend Wiring and Visualization | Complete |
+| HESTON-03 | Phase 3: Frontend Wiring and Visualization | Complete |
+| HESTON-04 | Phase 3: Frontend Wiring and Visualization | Complete |
+| HESTON-05 | Phase 3: Frontend Wiring and Visualization | Complete |
 | CALIB-01 | Phase 3: Frontend Wiring and Visualization | Pending |
 | CALIB-02 | Phase 3: Frontend Wiring and Visualization | Complete |
 | CALIB-03 | Phase 3: Frontend Wiring and Visualization | Pending |

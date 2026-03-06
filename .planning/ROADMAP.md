@@ -95,5 +95,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Math Correctness | 3/3 | Complete   | 2026-03-03 |
 | 2. Backend Completeness | 4/4 | Complete   | 2026-03-05 |
-| 3. Frontend Wiring and Visualization | 2/5 | In Progress|  |
+| 3. Frontend Wiring and Visualization | 3/5 | In Progress|  |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |

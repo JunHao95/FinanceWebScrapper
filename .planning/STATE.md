@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 3 of 4 (Frontend Wiring)
-Plan: 1 of 5 in current phase — COMPLETE
+Plan: 2 of 5 in current phase — COMPLETE
 Status: Phase 3 In Progress
-Last activity: 2026-03-06 — Completed plan 03-01 (Regime Detection tab wired: date pickers + dual Plotly charts)
+Last activity: 2026-03-06 — Completed plan 03-02 (Heston Pricing sub-tab: price cards + 3D IV surface, /api/heston_iv_surface route)
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 70%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [███████░░░] 67%
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 03-frontend-wiring P02 | 8 | 2 tasks | 3 files |
 | Phase 03-frontend-wiring P01 | 15 | 2 tasks | 3 files |
 | Phase 02-backend-completeness P02 | 5 | 2 tasks | 3 files |
 | Phase 02-backend-completeness P01 | 5 | 2 tasks | 2 files |
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 03-01]: Identify stressed column in filtered_probs_full by comparing last row to current_probabilities.stressed value — avoids hardcoding internal state index
 - [Phase 03-01]: regime_sequence derived as [1 if p >= 0.5 else 0 for p in filtered_probs_stressed] per plan spec
 - [Phase 03-01]: Replace regimeDays input with start/end date pickers for precise date range control
+- [Phase 03-02]: runHestonPricing sends spot/strike/maturity/risk_free_rate to /api/heston_price (not S/K/T/r) to match existing route field names
+- [Phase 03-02]: /api/heston_iv_surface iv_grid shape is T_steps x K_steps; brentq back-solves IV floored at 0.001, capped at 2.0
 - [Phase 03-04]: Inline RMSE quality label (Good/Acceptable/Poor) instead of calling rmseLabel helper — not defined in scope; plan already flagged it as optional fallback
 
 ### Pending Todos
