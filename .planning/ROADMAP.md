@@ -67,7 +67,7 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Regime Detection tab: webapp.py patch (prices/dates/regime_sequence) + two Plotly charts (REGIME-01 through REGIME-05)
+- [x] 03-01-PLAN.md — Regime Detection tab: webapp.py patch (prices/dates/regime_sequence) + two Plotly charts (REGIME-01 through REGIME-05)
 - [ ] 03-02-PLAN.md — Heston Pricing tab: new sub-tab, /api/heston_iv_surface route, price cards, 3D IV surface (HESTON-01 through HESTON-05)
 - [ ] 03-03-PLAN.md — Heston Calibration SSE: callback in HestonCalibrator, /api/calibrate_heston_stream, EventSource JS, IV chart + RMSE badge (CALIB-01, CALIB-03, CALIB-04)
 - [ ] 03-04-PLAN.md — BCC Calibration tab: new sub-tab HTML + runBCCCalibration JS wiring to existing /api/calibrate_bcc (CALIB-02, CALIB-05)
@@ -95,5 +95,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Math Correctness | 3/3 | Complete   | 2026-03-03 |
 | 2. Backend Completeness | 4/4 | Complete   | 2026-03-05 |
-| 3. Frontend Wiring and Visualization | 0/5 | Not started | - |
+| 3. Frontend Wiring and Visualization | 1/5 | In progress | - |
 | 4. ML-in-Finance Module | 0/TBD | Not started | - |

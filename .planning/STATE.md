@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-05T13:46:11.820Z"
+status: in_progress
+last_updated: "2026-03-06T00:15:00.000Z"
 progress:
-  total_phases: 2
+  total_phases: 4
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 12
+  completed_plans: 8
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
-**Current focus:** Phase 2 — Backend Completeness
+**Current focus:** Phase 3 — Frontend Wiring
 
 ## Current Position
 
-Phase: 2 of 4 (Backend Completeness)
-Plan: 4 of 4 in current phase — COMPLETE
-Status: Phase 2 Complete
-Last activity: 2026-03-05 — Completed plan 02-04 (POST /api/markov_chain route — 7/7 tests green, all 5 modes working)
+Phase: 3 of 4 (Frontend Wiring)
+Plan: 1 of 5 in current phase — COMPLETE
+Status: Phase 3 In Progress
+Last activity: 2026-03-06 — Completed plan 03-01 (Regime Detection tab wired: date pickers + dual Plotly charts)
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Progress: [██████░░░░] 57%
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 03-frontend-wiring P01 | 15 | 2 tasks | 3 files |
 | Phase 02-backend-completeness P02 | 5 | 2 tasks | 3 files |
 | Phase 02-backend-completeness P01 | 5 | 2 tasks | 2 files |
 | Phase 01-math-correctness P02 | 3 | 2 tasks | 4 files |
@@ -81,6 +82,10 @@ Recent decisions affecting current work:
 - [Phase 02-04]: Mode dispatch uses data.get('mode','steady_state') — defaults to steady_state when mode missing
 - [Phase 02-04]: nstep mode returns both transition_matrix_n AND term_structure in single response per plan spec
 - [Phase 02-04]: Test assertions use horizon_years/cumulative_default_prob — actual credit_transitions output keys
+- [Phase 03-01]: Retain backward-compatible 'regime' nested field in API response while adding flat dates/prices/regime_sequence/filtered_probs fields
+- [Phase 03-01]: Identify stressed column in filtered_probs_full by comparing last row to current_probabilities.stressed value — avoids hardcoding internal state index
+- [Phase 03-01]: regime_sequence derived as [1 if p >= 0.5 else 0 for p in filtered_probs_stressed] per plan spec
+- [Phase 03-01]: Replace regimeDays input with start/end date pickers for precise date range control
 
 ### Pending Todos
 
@@ -93,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Completed 02-backend-completeness 02-04-PLAN.md (markov_chain route — 7/7 tests green, all 5 modes working)
+Last session: 2026-03-06
+Stopped at: Completed 03-frontend-wiring 03-01-PLAN.md (Regime Detection tab: date pickers + dual Plotly charts)
 Resume file: None

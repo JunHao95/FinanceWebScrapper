@@ -42,11 +42,11 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Regime Detection Module
 
-- [ ] **REGIME-01**: User can run HMM regime detection on a selected ticker and date range
-- [ ] **REGIME-02**: User can view filtered probability time series chart (bull/bear/crisis states over time)
-- [ ] **REGIME-03**: User can view regime-annotated price chart (price series with regime background shading)
-- [ ] **REGIME-04**: Model correctly identifies crisis periods (e.g., SPY March 2020 = RISK_OFF)
-- [ ] **REGIME-05**: Regime detection results display in dedicated UI sub-tab
+- [x] **REGIME-01**: User can run HMM regime detection on a selected ticker and date range
+- [x] **REGIME-02**: User can view filtered probability time series chart (bull/bear/crisis states over time)
+- [x] **REGIME-03**: User can view regime-annotated price chart (price series with regime background shading)
+- [x] **REGIME-04**: Model correctly identifies crisis periods (e.g., SPY March 2020 = RISK_OFF)
+- [x] **REGIME-05**: Regime detection results display in dedicated UI sub-tab
 
 ### Heston / Fourier Pricing Module
 
@@ -128,11 +128,11 @@ Deferred to future semesters/milestones.
 | RATE-03 | Phase 2: Backend Completeness | Complete |
 | RATE-04 | Phase 2: Backend Completeness | Complete |
 | RATE-05 | Phase 2: Backend Completeness | Complete |
-| REGIME-01 | Phase 3: Frontend Wiring and Visualization | Pending |
-| REGIME-02 | Phase 3: Frontend Wiring and Visualization | Pending |
-| REGIME-03 | Phase 3: Frontend Wiring and Visualization | Pending |
-| REGIME-04 | Phase 3: Frontend Wiring and Visualization | Pending |
-| REGIME-05 | Phase 3: Frontend Wiring and Visualization | Pending |
+| REGIME-01 | Phase 3: Frontend Wiring and Visualization | Complete |
+| REGIME-02 | Phase 3: Frontend Wiring and Visualization | Complete |
+| REGIME-03 | Phase 3: Frontend Wiring and Visualization | Complete |
+| REGIME-04 | Phase 3: Frontend Wiring and Visualization | Complete |
+| REGIME-05 | Phase 3: Frontend Wiring and Visualization | Complete |
 | HESTON-01 | Phase 3: Frontend Wiring and Visualization | Pending |
 | HESTON-02 | Phase 3: Frontend Wiring and Visualization | Pending |
 | HESTON-03 | Phase 3: Frontend Wiring and Visualization | Pending |
