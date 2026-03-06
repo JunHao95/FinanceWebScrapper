@@ -63,114 +63,87 @@ function renderAlert(msg, type = 'error') {
 // Regime Detection
 // ---------------------------------------------------------------------------
 async function runRegimeDetection() {
-    const ticker = (document.getElementById('regimeTicker')?.value || 'SPY').trim().toUpperCase();
-    const days   = parseInt(document.getElementById('regimeDays')?.value || 1260, 10);
-
+    const ticker = document.getElementById('regimeTicker').value.trim().toUpperCase();
+    const startDate = document.getElementById('regimeStartDate').value;
+    const endDate = document.getElementById('regimeEndDate').value;
     const resultsDiv = document.getElementById('regimeResults');
-    if (!resultsDiv) return;
-
     resultsDiv.style.display = 'block';
-    resultsDiv.innerHTML = `<p style="color:#666;">⏳ Running Hamilton filter HMM on ${ticker} (${days} days of history)…
-        <br><small>This usually takes 10–30 seconds.</small></p>`;
-
+    resultsDiv.innerHTML = '<p style="color:#666;">Running HMM regime detection...</p>';
     try {
         const resp = await fetch('/api/regime_detection', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tickers: [ticker], days })
+            body: JSON.stringify({ ticker, start_date: startDate, end_date: endDate })
         });
-        if (!resp.ok) {
-            resultsDiv.innerHTML = renderAlert(`Server error ${resp.status}: ${await resp.text()}`);
-            return;
-        }
+        if (!resp.ok) { resultsDiv.innerHTML = renderAlert(`Server error ${resp.status}`); return; }
         const data = await resp.json();
+        if (!data.success) { resultsDiv.innerHTML = renderAlert(data.error || 'Unknown error'); return; }
 
-        if (!data.success) {
-            resultsDiv.innerHTML = renderAlert(`Error: ${data.error}`);
-            return;
-        }
-
-        const r = data.regime;
-        if (r.error) {
-            resultsDiv.innerHTML = renderAlert(`Error: ${r.error}`);
-            return;
-        }
-
-        const signalColor = r.signal === 'RISK_OFF' ? '#dc3545'
-                          : r.signal === 'RISK_ON'  ? '#28a745'
-                          : '#ffc107';
-
-        const currentProbs = r.current_probabilities || {};
-        const calmPct   = ((currentProbs.calm   || 0) * 100).toFixed(1);
-        const stressedPct = ((currentProbs.stressed || 0) * 100).toFixed(1);
-
-        // Build parameter table
-        const params = r.parameters || {};
-        let paramsHtml = '';
-        for (const [sid, sp] of Object.entries(params)) {
-            paramsHtml += `<tr>
-                <td>${sp.regime === 'calm' ? '🟢 Calm' : '🔴 Stressed'}</td>
-                <td>${(sp.mu_annualized * 100).toFixed(2)}%</td>
-                <td>${(sp.sigma_annualized * 100).toFixed(2)}%</td>
-            </tr>`;
-        }
-
-        // Transition matrix
-        const P = r.transition_matrix || {};
-        const K = 2;
-        let pHtml = '<table style="font-size:12px; border-collapse:collapse; margin-top:8px;">';
-        pHtml += '<tr><th></th><th>→ Calm</th><th>→ Stressed</th></tr>';
-        const p00 = (P['P(0->0)'] || 0) * 100, p01 = (P['P(0->1)'] || 0) * 100;
-        const p10 = (P['P(1->0)'] || 0) * 100, p11 = (P['P(1->1)'] || 0) * 100;
-        pHtml += `<tr><td>From Calm</td><td>${p00.toFixed(1)}%</td><td>${p01.toFixed(1)}%</td></tr>`;
-        pHtml += `<tr><td>From Stressed</td><td>${p10.toFixed(1)}%</td><td>${p11.toFixed(1)}%</td></tr>`;
-        pHtml += '</table>';
-
+        // Inject chart containers (purge first to avoid double-trace on re-run)
         resultsDiv.innerHTML = `
-            <div class="result-card">
-                <h3>🌡️ Market Regime — ${ticker}</h3>
+            <p><strong>Signal:</strong> ${escapeHTML(String(data.signal))}</p>
+            <div id="regimeProbChart" style="margin-bottom:20px;"></div>
+            <div id="regimePriceChart"></div>`;
 
-                <!-- Signal Banner -->
-                <div style="background:${signalColor}; color:white; padding:12px 16px;
-                    border-radius:6px; margin: 12px 0; font-size:16px; font-weight:bold;">
-                    ${r.signal} — ${r.signal_description}
-                </div>
+        // Chart 1: Filtered probability time series
+        Plotly.newPlot('regimeProbChart', [{
+            x: data.dates,
+            y: data.filtered_probs,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozeroy',
+            name: 'P(Stressed)',
+            line: { color: '#dc3545' }
+        }], {
+            title: `Regime Probability — ${ticker}`,
+            xaxis: { title: 'Date' },
+            yaxis: { title: 'P(Stressed)', range: [0, 1] },
+            height: 300,
+            margin: { t: 40, l: 60, r: 20, b: 50 }
+        });
 
-                <!-- Current Probabilities -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;">
-                    <div style="background:#d4edda; border-radius:6px; padding:12px; text-align:center;">
-                        <div style="font-size:24px; font-weight:bold;">${calmPct}%</div>
-                        <div>🟢 Calm Regime</div>
-                    </div>
-                    <div style="background:#f8d7da; border-radius:6px; padding:12px; text-align:center;">
-                        <div style="font-size:24px; font-weight:bold;">${stressedPct}%</div>
-                        <div>🔴 Stressed Regime</div>
-                    </div>
-                </div>
-
-                <!-- Model Parameters -->
-                <h4>Regime Parameters</h4>
-                <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                    <thead>
-                        <tr style="background:#f8f9fa;">
-                            <th>State</th><th>Ann. Return μ</th><th>Ann. Volatility σ</th>
-                        </tr>
-                    </thead>
-                    <tbody>${paramsHtml}</tbody>
-                </table>
-
-                <!-- Transition Matrix -->
-                <h4 style="margin-top:12px;">Transition Matrix (daily)</h4>
-                ${pHtml}
-
-                <!-- Historical stats -->
-                <div style="margin-top:12px; font-size:13px; color:#555;">
-                    <strong>Historical stress fraction:</strong>
-                    ${((r.stress_fraction_historical || 0) * 100).toFixed(1)}% of observations<br>
-                    <strong>Log-likelihood:</strong> ${(r.log_likelihood || 0).toFixed(2)}<br>
-                    <strong>Observations:</strong> ${r.n_observations || 'N/A'}
-                </div>
-            </div>`;
+        // Chart 2: Price chart with regime shading
+        const shapes = [];
+        let start = null, prevState = null;
+        const dates = data.dates;
+        const regSeq = data.regime_sequence;
+        dates.forEach((d, i) => {
+            const state = regSeq[i];
+            if (state !== prevState) {
+                if (prevState === 1 && start !== null) {
+                    shapes.push({
+                        type: 'rect', xref: 'x', yref: 'paper',
+                        x0: start, x1: d, y0: 0, y1: 1,
+                        fillcolor: 'rgba(220,53,69,0.15)', line: { width: 0 }
+                    });
+                }
+                start = d;
+            }
+            prevState = state;
+        });
+        // Close final stressed block if still open at end
+        if (prevState === 1 && start !== null && dates.length > 0) {
+            shapes.push({
+                type: 'rect', xref: 'x', yref: 'paper',
+                x0: start, x1: dates[dates.length - 1], y0: 0, y1: 1,
+                fillcolor: 'rgba(220,53,69,0.15)', line: { width: 0 }
+            });
+        }
+        Plotly.newPlot('regimePriceChart', [{
+            x: dates,
+            y: data.prices,
+            type: 'scatter',
+            mode: 'lines',
+            name: ticker,
+            line: { color: '#667eea', width: 1.5 }
+        }], {
+            title: `${ticker} Price with Regime Shading`,
+            shapes: shapes,
+            xaxis: { title: 'Date' },
+            yaxis: { title: 'Price' },
+            height: 350,
+            margin: { t: 40, l: 60, r: 20, b: 50 }
+        });
 
     } catch (err) {
         resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);

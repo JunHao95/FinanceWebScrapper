@@ -1239,16 +1239,21 @@
                         Fits a 2-state Hidden Markov Model (calm / stressed) to historical returns
                         using the Hamilton filter + L-BFGS-B MLE. Outputs regime probabilities and a trading signal.
                     </p>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                         <div class="form-group">
                             <label for="regimeTicker">Stock Ticker</label>
                             <input type="text" id="regimeTicker" value="SPY" placeholder="e.g. SPY, QQQ, AAPL">
                             <small>SPY recommended for broad market regime</small>
                         </div>
                         <div class="form-group">
-                            <label for="regimeDays">History (calendar days)</label>
-                            <input type="number" id="regimeDays" value="1260" min="252" max="5000">
-                            <small>1260 ≈ 5 years</small>
+                            <label for="regimeStartDate">Start Date</label>
+                            <input type="date" id="regimeStartDate" value="2019-01-01">
+                            <small>Beginning of analysis window</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="regimeEndDate">End Date</label>
+                            <input type="date" id="regimeEndDate" value="2021-12-31">
+                            <small>End of analysis window</small>
                         </div>
                     </div>
                     <button type="button" class="primary-btn" onclick="runRegimeDetection()">
