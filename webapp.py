@@ -1455,6 +1455,38 @@ def calibrate_heston_endpoint():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/calibrate_heston_stream', methods=['GET'])
+def calibrate_heston_stream():
+    """
+    SSE endpoint for Heston calibration with live progress events.
+
+    Query params: ticker, risk_free_rate, option_type
+    Emits: data: {"iteration": N, "error": float}\\n\\n per step,
+           data: {"done": true}\\n\\n as terminal event.
+    """
+    from flask import Response, stream_with_context
+
+    ticker = request.args.get('ticker', 'AAPL').upper()
+    rate = float(request.args.get('risk_free_rate', 0.05))
+    option_type = request.args.get('option_type', 'call')
+
+    def generate():
+        try:
+            from src.derivatives.model_calibration import HestonCalibrator
+            calibrator = HestonCalibrator()
+            for event in calibrator.calibrate_stream(ticker, rate, option_type=option_type):
+                yield event
+        except Exception as e:
+            import json
+            yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
+    )
+
+
 @app.route('/api/calibrate_merton', methods=['POST'])
 def calibrate_merton_endpoint():
     """

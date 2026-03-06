@@ -56,7 +56,8 @@ class HestonCalibrator:
         ticker: str,
         risk_free_rate: float = 0.05,
         option_type: str = 'call',
-        max_contracts: int = 40
+        max_contracts: int = 40,
+        callback=None
     ) -> Dict:
         """
         Full two-stage calibration.
@@ -66,6 +67,8 @@ class HestonCalibrator:
             risk_free_rate: Constant risk-free rate
             option_type:    'call' or 'put'
             max_contracts:  Maximum number of options to use for speed
+            callback:       Optional callable(iteration: int, error: float) fired after each
+                            Nelder-Mead iteration via scipy fmin callback mechanism.
 
         Returns:
             dict with calibrated parameters and fit quality
@@ -137,10 +140,20 @@ class HestonCalibrator:
 
         # ---- 3. Stage 2: Nelder-Mead refinement ----
         logger.info("Stage 2: Nelder-Mead fine-tuning…")
+
+        # Build scipy callback wrapper if caller supplied one
+        iteration_count = [0]
+        def _scipy_callback(xk):
+            iteration_count[0] += 1
+            if callback is not None:
+                current_error = mse_fn(xk)
+                callback(iteration_count[0], float(current_error))
+
         try:
             fmin_result = fmin(mse_fn, brute_result, disp=False,
                                maxiter=2000, ftol=1e-8, xtol=1e-6,
-                               full_output=True)
+                               full_output=True,
+                               callback=_scipy_callback)
             opt_params, opt_mse = fmin_result[0], fmin_result[1]
         except Exception as e:
             logger.warning(f"Nelder-Mead failed: {e}; using brute result")
@@ -158,6 +171,45 @@ class HestonCalibrator:
 
         feller = 2 * kappa * theta > sigma_v ** 2
 
+        # Compute market and fitted implied volatilities for IV comparison chart (CALIB-04)
+        market_ivs: List[float] = []
+        fitted_ivs: List[float] = []
+        strikes_out: List[float] = []
+        for K_i, T_i, mp_i in zip(Ks, Ts, mkt_p):
+            try:
+                fitted_price = heston_price(S, K_i, T_i, risk_free_rate,
+                                            v0, kappa, theta, sigma_v, rho,
+                                            option_type)['price']
+                # Convert prices to implied vols via Black-Scholes inversion (Newton-Raphson)
+                def _bs_price(sig, S_=S, K_=K_i, T_=T_i, r_=risk_free_rate, ot=option_type):
+                    if sig <= 0 or T_ <= 0:
+                        return 0.0
+                    from scipy.stats import norm
+                    d1 = (np.log(S_ / K_) + (r_ + 0.5 * sig ** 2) * T_) / (sig * np.sqrt(T_))
+                    d2 = d1 - sig * np.sqrt(T_)
+                    if ot == 'call':
+                        return float(S_ * norm.cdf(d1) - K_ * np.exp(-r_ * T_) * norm.cdf(d2))
+                    else:
+                        return float(K_ * np.exp(-r_ * T_) * norm.cdf(-d2) - S_ * norm.cdf(-d1))
+
+                def _iv(price):
+                    lo, hi = 1e-4, 5.0
+                    for _ in range(50):
+                        mid = (lo + hi) / 2.0
+                        if _bs_price(mid) > price:
+                            hi = mid
+                        else:
+                            lo = mid
+                        if hi - lo < 1e-6:
+                            break
+                    return float((lo + hi) / 2.0)
+
+                strikes_out.append(float(K_i))
+                market_ivs.append(_iv(mp_i))
+                fitted_ivs.append(_iv(max(fitted_price, 1e-8)))
+            except Exception:
+                pass
+
         return {
             'model': 'Heston (1993)',
             'ticker': ticker,
@@ -174,7 +226,33 @@ class HestonCalibrator:
             'rmse': float(np.sqrt(recomputed_mse)),
             'spot': float(S),
             'risk_free_rate': risk_free_rate,
+            'strikes': strikes_out,
+            'market_ivs': market_ivs,
+            'fitted_ivs': fitted_ivs,
         }
+
+
+    def calibrate_stream(self, ticker: str, risk_free_rate: float = 0.05,
+                         option_type: str = 'call'):
+        """
+        Generator that yields SSE-formatted progress strings, then a terminal done event.
+
+        Buffers callback events during calibration, then emits them all followed by a
+        ``{"done": true}`` sentinel.  This satisfies CALIB-03 (iteration count visible)
+        without requiring an async server — compatible with Render's free tier.
+        """
+        import json
+        events: List[str] = []
+
+        def _cb(iteration: int, error: float) -> None:
+            events.append(json.dumps({'iteration': iteration, 'error': error}))
+
+        self.calibrate(ticker, risk_free_rate, option_type=option_type, callback=_cb)
+
+        for msg in events:
+            yield f"data: {msg}\n\n"
+
+        yield f"data: {json.dumps({'done': True})}\n\n"
 
 
 # ---------------------------------------------------------------------------
