@@ -449,7 +449,25 @@ async function runCIRModel() {
                 <p style="font-size:12px; color:#888; margin-top:8px;">
                     B(0,T) = zero-coupon bond price. Spot rate = −ln B(0,T)/T.
                 </p>
+                <div id="yieldCurveChart" style="margin-top:16px;"></div>
             </div>`;
+
+        if (curve.length > 0) {
+            Plotly.newPlot('yieldCurveChart', [{
+                x: curve.map(pt => pt.maturity),
+                y: curve.map(pt => pt.spot_rate * 100),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: `${escapeHTML(r.model || 'CIR')} Yield Curve`,
+                line: { color: '#667eea', width: 2 }
+            }], {
+                title: `${escapeHTML(r.model || 'CIR')} Yield Curve`,
+                xaxis: { title: 'Maturity (years)' },
+                yaxis: { title: 'Yield (%)', tickformat: '.2f' },
+                height: 350,
+                margin: { t: 40, l: 70, r: 20, b: 50 }
+            }, { responsive: true });
+        }
 
     } catch (err) {
         resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);
@@ -496,22 +514,8 @@ async function runCreditRisk() {
         const ttd  = r.time_to_default || {};
         const term = r.default_probability_term_structure || [];
 
-        // Term structure table (first 10 entries)
-        let termRows = term.slice(0, 10).map(t => {
-            const dp = (t.cumulative_default_prob * 100).toFixed(3);
-            const color = t.cumulative_default_prob > 0.05 ? '#dc3545'
-                        : t.cumulative_default_prob > 0.01 ? '#fd7e14' : '#28a745';
-            return `<tr>
-                <td>${t.horizon_years}Y</td>
-                <td style="color:${color}; font-weight:bold;">${dp}%</td>
-            </tr>`;
-        }).join('');
-
-        // Survival curve (first 20 years)
+        // Survival curve data for chart
         const survival = (ttd.survival_curve || []).slice(0, 21);
-        let survRows = survival.map(s =>
-            `<tr><td>${s.year}Y</td><td>${(s.survival_prob * 100).toFixed(2)}%</td></tr>`
-        ).join('');
 
         resultsDiv.innerHTML = `
             <div class="result-card">
@@ -539,25 +543,9 @@ async function runCreditRisk() {
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:15px;">
-                    <!-- Default term structure -->
-                    <div>
-                        <h4>Default Probability Term Structure</h4>
-                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                            <thead><tr style="background:#f8f9fa;"><th>Horizon</th><th>Cum. Default Prob.</th></tr></thead>
-                            <tbody>${termRows}</tbody>
-                        </table>
-                    </div>
-
-                    <!-- Survival curve -->
-                    <div>
-                        <h4>Survival Curve (MC)</h4>
-                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                            <thead><tr style="background:#f8f9fa;"><th>Year</th><th>Survival Prob.</th></tr></thead>
-                            <tbody>${survRows}</tbody>
-                        </table>
-                    </div>
-                </div>
+                <div id="defaultProbChart" style="margin-top:16px;"></div>
+                <div id="creditSurvivalChart" style="margin-top:8px;"></div>
+                <div id="markovHeatmap" style="margin-top:8px;"></div>
 
                 <div style="margin-top:12px; font-size:13px; color:#555;">
                     <strong>Bond face value:</strong> $${faceValue.toFixed(0)} |
@@ -567,6 +555,72 @@ async function runCreditRisk() {
                     <strong>Model:</strong> ${r.model || 'S&P Markov Chain'}
                 </div>
             </div>`;
+
+        // Default probability term structure line chart
+        if (term.length > 0) {
+            Plotly.newPlot('defaultProbChart', [{
+                x: term.map(t => t.horizon_years),
+                y: term.map(t => t.cumulative_default_prob * 100),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Default Probability',
+                line: { color: '#dc3545', width: 2 }
+            }], {
+                title: 'Default Probability Term Structure',
+                xaxis: { title: 'Horizon (years)' },
+                yaxis: { title: 'Cumulative Default Prob. (%)', tickformat: '.2f' },
+                height: 320,
+                margin: { t: 40, l: 70, r: 20, b: 50 }
+            }, { responsive: true });
+        }
+
+        // Survival curve chart
+        if (survival.length > 0) {
+            Plotly.newPlot('creditSurvivalChart', [{
+                x: survival.map(s => s.year),
+                y: survival.map(s => s.survival_prob * 100),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Survival Probability',
+                line: { color: '#28a745', width: 2 },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(40,167,69,0.1)'
+            }], {
+                title: 'Survival Curve (Monte Carlo)',
+                xaxis: { title: 'Year' },
+                yaxis: { title: 'Survival Probability (%)', tickformat: '.1f' },
+                height: 320,
+                margin: { t: 40, l: 70, r: 20, b: 50 }
+            }, { responsive: true });
+        }
+
+        // Markov transition matrix heatmap (S&P 1-year matrix via nstep n=1)
+        try {
+            const mResp = await fetch('/api/markov_chain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: 'nstep', n: 1, current_rating: rating })
+            });
+            const mData = await mResp.json();
+            if (mData.success) {
+                const mr = mData.result;
+                const labels = mr.ratings || mr.labels || mr.transition_matrix_n.map((_, i) => `S${i}`);
+                Plotly.newPlot('markovHeatmap', [{
+                    z: mr.transition_matrix_n,
+                    x: labels,
+                    y: labels,
+                    type: 'heatmap',
+                    colorscale: 'Blues',
+                    text: mr.transition_matrix_n.map(row => row.map(v => (v * 100).toFixed(1) + '%')),
+                    texttemplate: '%{text}',
+                    showscale: true
+                }], {
+                    title: 'S&P 1-Year Rating Transition Matrix',
+                    height: 420,
+                    margin: { t: 50, l: 80, r: 20, b: 80 }
+                }, { responsive: true });
+            }
+        } catch (_) { /* heatmap is bonus — swallow errors */ }
 
     } catch (err) {
         resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);
