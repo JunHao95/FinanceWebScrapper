@@ -608,6 +608,77 @@ async function calculateHestonPrice() {
 }
 
 // ---------------------------------------------------------------------------
+// BCC Calibration
+// ---------------------------------------------------------------------------
+async function runBCCCalibration() {
+    const ticker = document.getElementById('bccTicker').value.trim().toUpperCase();
+    const rate = parseFloat(document.getElementById('bccRate').value) || 0.05;
+    const optionType = document.getElementById('bccOptionType').value;
+    const resultsDiv = document.getElementById('bccResults');
+    const ivChartDiv = document.getElementById('bccIVChart');
+
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<p style="color:#666;">Calibrating BCC model... (may take 30–90 seconds)</p>';
+    if (ivChartDiv) ivChartDiv.innerHTML = '';
+
+    try {
+        const resp = await fetch('/api/calibrate_bcc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ticker, risk_free_rate: rate, option_type: optionType })
+        });
+        if (!resp.ok) { resultsDiv.innerHTML = renderAlert(`Server error ${resp.status}`); return; }
+        const data = await resp.json();
+        if (!data.success) { resultsDiv.innerHTML = renderAlert(data.error || 'BCC calibration failed'); return; }
+
+        const rmse = data.rmse || 0;
+        const ql = {
+            label: (rmse < 0.01 ? 'Good' : rmse < 0.03 ? 'Acceptable' : 'Poor'),
+            color: (rmse < 0.01 ? '#28a745' : rmse < 0.03 ? '#ffc107' : '#dc3545')
+        };
+        const paramsHtml = Object.entries(data.params || {})
+            .map(([k, v]) => `<tr><td style="padding:4px 12px;">${escapeHTML(k)}</td><td style="padding:4px 12px;">${typeof v === 'number' ? v.toFixed(4) : escapeHTML(String(v))}</td></tr>`)
+            .join('');
+
+        resultsDiv.innerHTML = `
+            <div style="margin-bottom:15px;">
+                <strong>Relative RMSE: </strong>
+                <span style="background:${ql.color}; color:#fff; padding:3px 10px; border-radius:12px; font-size:13px;">${escapeHTML(ql.label)}</span>
+                <span style="margin-left:8px; font-size:13px;">${(rmse * 100).toFixed(2)}%</span>
+            </div>
+            <table style="border-collapse:collapse; font-size:13px;">
+                <thead><tr><th style="text-align:left; padding:4px 12px; border-bottom:1px solid #dee2e6;">Parameter</th><th style="padding:4px 12px; border-bottom:1px solid #dee2e6;">Value</th></tr></thead>
+                <tbody>${paramsHtml}</tbody>
+            </table>`;
+
+        // IV comparison chart
+        if (ivChartDiv && data.strikes && data.market_ivs && data.fitted_ivs) {
+            Plotly.newPlot('bccIVChart', [
+                {
+                    x: data.strikes, y: data.market_ivs,
+                    type: 'scatter', mode: 'markers',
+                    name: 'Market IV', marker: { color: '#667eea', size: 8 }
+                },
+                {
+                    x: data.strikes, y: data.fitted_ivs,
+                    type: 'scatter', mode: 'lines+markers',
+                    name: 'BCC Fitted IV', line: { color: '#fd7e14', width: 2 }
+                }
+            ], {
+                title: `BCC Calibration — ${escapeHTML(ticker)}`,
+                xaxis: { title: 'Strike' },
+                yaxis: { title: 'Implied Volatility', tickformat: '.1%' },
+                height: 380,
+                margin: { t: 50, l: 70, r: 20, b: 50 }
+            });
+        }
+
+    } catch (err) {
+        resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Merton Jump-Diffusion Pricing (Options Pricing tab)
 // ---------------------------------------------------------------------------
 async function calculateMertonPrice() {
