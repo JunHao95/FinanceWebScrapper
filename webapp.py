@@ -1161,6 +1161,86 @@ def heston_price_endpoint():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/heston_iv_surface', methods=['POST'])
+def heston_iv_surface_endpoint():
+    """
+    Compute Heston implied volatility surface across a grid of strikes and maturities.
+
+    Expected JSON payload:
+    {
+        "S": 100, "r": 0.05, "v0": 0.04, "kappa": 2.0, "theta": 0.04,
+        "sigma_v": 0.3, "rho": -0.7, "option_type": "call",
+        "K_min": 80, "K_max": 120, "K_steps": 10,
+        "T_min": 0.1, "T_max": 2.0, "T_steps": 8
+    }
+    Returns:
+    {
+        "success": true, "strikes": [...], "maturities": [...], "iv_grid": [[...], ...]
+    }
+    """
+    try:
+        from src.derivatives.fourier_pricer import heston_price
+        from src.derivatives.options_pricer import black_scholes as bs_func
+        from scipy.optimize import brentq
+
+        data = request.json or {}
+
+        S = float(data.get('S', 100))
+        r = float(data.get('r', 0.05))
+        v0 = float(data.get('v0', 0.04))
+        kappa = float(data.get('kappa', 2.0))
+        theta = float(data.get('theta', 0.04))
+        sigma_v = float(data.get('sigma_v', 0.3))
+        rho = float(data.get('rho', -0.7))
+        option_type = data.get('option_type', 'call')
+        K_min = float(data.get('K_min', 80))
+        K_max = float(data.get('K_max', 120))
+        K_steps = int(data.get('K_steps', 10))
+        T_min = float(data.get('T_min', 0.1))
+        T_max = float(data.get('T_max', 2.0))
+        T_steps = int(data.get('T_steps', 8))
+
+        strikes = np.linspace(K_min, K_max, K_steps).tolist()
+        maturities = np.linspace(T_min, T_max, T_steps).tolist()
+
+        iv_grid = []
+        for T in maturities:
+            row = []
+            for K in strikes:
+                try:
+                    heston_result = heston_price(
+                        S=S, K=K, T=T, r=r,
+                        v0=v0, kappa=kappa, theta=theta,
+                        sigma_v=sigma_v, rho=rho,
+                        option_type=option_type
+                    )
+                    hp = float(heston_result['price'])
+
+                    def bs_diff(sigma):
+                        return bs_func(S, K, T, r, sigma, option_type)['price'] - hp
+
+                    try:
+                        iv = brentq(bs_diff, 0.001, 2.0, xtol=1e-6, maxiter=100)
+                        iv = max(0.001, min(2.0, iv))
+                    except Exception:
+                        iv = 0.001
+                except Exception:
+                    iv = 0.001
+                row.append(iv)
+            iv_grid.append(row)
+
+        return jsonify({
+            'success': True,
+            'strikes': strikes,
+            'maturities': maturities,
+            'iv_grid': iv_grid
+        })
+
+    except Exception as e:
+        logger.error(f"Error in Heston IV surface: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/merton_price', methods=['POST'])
 def merton_price_endpoint():
     """
@@ -1240,17 +1320,16 @@ def regime_detection_endpoint():
             if df.empty:
                 return jsonify({'success': False, 'error': f'No data for {ticker}'}), 400
 
-            closes = df['Close']
-            if hasattr(closes, 'squeeze'):
-                closes = closes.squeeze()
-            closes = closes.dropna()
+            import pandas as pd
+            import numpy as np
+            df_close: pd.DataFrame = pd.DataFrame(df)
+            closes: pd.Series = pd.Series(df_close['Close'].squeeze()).dropna()
 
             # Align index (dates correspond to returns, which are 1 shorter)
-            price_dates = closes.index.strftime('%Y-%m-%d').tolist()
-            price_values = closes.values.tolist()
+            price_dates = pd.DatetimeIndex(closes.index).strftime('%Y-%m-%d').tolist()
+            price_values = closes.tolist()
 
-            import numpy as np
-            log_ret = np.log(closes / closes.shift(1)).dropna().values
+            log_ret = np.asarray(pd.Series(np.log(closes / closes.shift(1))).dropna())
             # dates/prices aligned to returns (drop first row)
             ret_dates = price_dates[1:]
             ret_prices = price_values[1:]
@@ -1271,16 +1350,15 @@ def regime_detection_endpoint():
             if df.empty:
                 return jsonify({'success': False, 'error': f'No data for {ticker}'}), 400
 
-            closes = df['Close']
-            if hasattr(closes, 'squeeze'):
-                closes = closes.squeeze()
-            closes = closes.dropna()
-
-            price_dates = closes.index.strftime('%Y-%m-%d').tolist()
-            price_values = closes.values.tolist()
-
+            import pandas as pd
             import numpy as np
-            log_ret = np.log(closes / closes.shift(1)).dropna().values
+            df_close: pd.DataFrame = pd.DataFrame(df)
+            closes: pd.Series = pd.Series(df_close['Close'].squeeze()).dropna()
+
+            price_dates = pd.DatetimeIndex(closes.index).strftime('%Y-%m-%d').tolist()
+            price_values = closes.tolist()
+
+            log_ret = np.asarray(pd.Series(np.log(closes / closes.shift(1))).dropna())
             ret_dates = price_dates[1:]
             ret_prices = price_values[1:]
 
@@ -1307,9 +1385,9 @@ def regime_detection_endpoint():
             else:
                 stressed_col = 1  # fallback
 
-            filtered_probs_stressed = full_probs[:, stressed_col].tolist()
+            filtered_probs_stressed: list = full_probs[:, stressed_col].tolist()
         else:
-            filtered_probs_stressed = []
+            filtered_probs_stressed: list = []
 
         # regime_sequence: 1 if P(stressed) >= 0.5, else 0
         regime_sequence = [1 if p >= 0.5 else 0 for p in filtered_probs_stressed]
