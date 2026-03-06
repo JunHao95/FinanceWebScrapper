@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-frontend-wiring 03-04-PLAN.md (BCC Calibration sub-tab wired end-to-end)
-last_updated: "2026-03-06T14:25:51.568Z"
-last_activity: "2026-03-06 — Completed plan 03-01 (Regime Detection tab wired: date pickers + dual Plotly charts)"
+stopped_at: "Completed 03-frontend-wiring 03-03-PLAN.md (Heston Calibration SSE: callback, calibrate_stream, IV chart + RMSE badge)"
+last_updated: "2026-03-06T14:28:59.863Z"
+last_activity: "2026-03-06 — Completed plan 03-02 (Heston Pricing sub-tab: price cards + 3D IV surface, /api/heston_iv_surface route)"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 9
-  percent: 67
+  completed_plans: 11
+  percent: 70
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Progress: [████████░░] 70%
 | Phase 01-math-correctness P03 | 3 | 2 tasks | 9 files |
 | Phase 02-backend-completeness P04 | 2 | 2 tasks | 2 files |
 | Phase 03-frontend-wiring P04 | 3 | 1 tasks | 2 files |
+| Phase 03-frontend-wiring P03 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,9 @@ Recent decisions affecting current work:
 - [Phase 03-02]: runHestonPricing sends spot/strike/maturity/risk_free_rate to /api/heston_price (not S/K/T/r) to match existing route field names
 - [Phase 03-02]: /api/heston_iv_surface iv_grid shape is T_steps x K_steps; brentq back-solves IV floored at 0.001, capped at 2.0
 - [Phase 03-04]: Inline RMSE quality label (Good/Acceptable/Poor) instead of calling rmseLabel helper — not defined in scope; plan already flagged it as optional fallback
+- [Phase 03-03]: calibrate_stream buffers all SSE events then emits post-calibration (batch-emit) to avoid async server requirement on Render free tier
+- [Phase 03-03]: IV inversion uses bisection over [1e-4, 5.0] — more robust than Newton-Raphson for edge cases
+- [Phase 03-03]: Final chart data fetched from /api/calibrate_heston POST after SSE done event — keeps SSE route thin
 
 ### Pending Todos
 
@@ -106,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T14:25:51.566Z
-Stopped at: Completed 03-frontend-wiring 03-04-PLAN.md (BCC Calibration sub-tab wired end-to-end)
+Last session: 2026-03-06T14:28:59.862Z
+Stopped at: Completed 03-frontend-wiring 03-03-PLAN.md (Heston Calibration SSE: callback, calibrate_stream, IV chart + RMSE badge)
 Resume file: None

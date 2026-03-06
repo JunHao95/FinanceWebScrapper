@@ -58,10 +58,10 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Model Calibration Module
 
-- [ ] **CALIB-01**: User can calibrate Heston model to market option prices for a selected ticker
+- [x] **CALIB-01**: User can calibrate Heston model to market option prices for a selected ticker
 - [x] **CALIB-02**: User can calibrate BCC (Bates-Chan-Chang) model to market option prices
-- [ ] **CALIB-03**: Calibration shows live progress streaming (iteration count, current error) via SSE
-- [ ] **CALIB-04**: Calibration results display relative RMSE and fitted vs. market IV comparison
+- [x] **CALIB-03**: Calibration shows live progress streaming (iteration count, current error) via SSE
+- [x] **CALIB-04**: Calibration results display relative RMSE and fitted vs. market IV comparison
 - [x] **CALIB-05**: BCC calibration has a Flask route and UI sub-tab (currently backend-complete, no route/UI)
 
 ### ML in Finance Module
@@ -138,10 +138,10 @@ Deferred to future semesters/milestones.
 | HESTON-03 | Phase 3: Frontend Wiring and Visualization | Complete |
 | HESTON-04 | Phase 3: Frontend Wiring and Visualization | Complete |
 | HESTON-05 | Phase 3: Frontend Wiring and Visualization | Complete |
-| CALIB-01 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-01 | Phase 3: Frontend Wiring and Visualization | Complete |
 | CALIB-02 | Phase 3: Frontend Wiring and Visualization | Complete |
-| CALIB-03 | Phase 3: Frontend Wiring and Visualization | Pending |
-| CALIB-04 | Phase 3: Frontend Wiring and Visualization | Pending |
+| CALIB-03 | Phase 3: Frontend Wiring and Visualization | Complete |
+| CALIB-04 | Phase 3: Frontend Wiring and Visualization | Complete |
 | CALIB-05 | Phase 3: Frontend Wiring and Visualization | Complete |
 | ML-01 | Phase 4: ML-in-Finance Module | Pending |
 | ML-02 | Phase 4: ML-in-Finance Module | Pending |
