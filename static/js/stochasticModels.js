@@ -151,88 +151,143 @@ async function runRegimeDetection() {
 }
 
 // ---------------------------------------------------------------------------
-// Heston Calibration
+// Heston Calibration — SSE-driven with live progress and IV comparison chart
 // ---------------------------------------------------------------------------
+function rmseLabel(rmse) {
+    if (rmse < 0.01) return { label: 'Good', color: '#28a745' };
+    if (rmse < 0.03) return { label: 'Acceptable', color: '#ffc107' };
+    return { label: 'Poor', color: '#dc3545' };
+}
+
 async function runHestonCalibration() {
     const ticker     = (document.getElementById('calTicker')?.value || 'AAPL').trim().toUpperCase();
     const rate       = parseFloat(document.getElementById('calRate')?.value || 5) / 100;
     const optionType = document.getElementById('calOptionType')?.value || 'call';
 
-    const resultsDiv = document.getElementById('calibrationResults');
-    if (!resultsDiv) return;
+    const resultsDiv  = document.getElementById('calibrationResults');
+    const progressDiv = document.getElementById('calibProgress');
+    const ivChartDiv  = document.getElementById('calibIVChart');
 
-    resultsDiv.style.display = 'block';
-    resultsDiv.innerHTML = `<p style="color:#666;">⏳ Calibrating Heston parameters for ${ticker}…
-        <br><small>Two-stage optimisation (brute grid + Nelder-Mead). May take 30–120s.</small></p>`;
+    if (resultsDiv) { resultsDiv.style.display = 'block'; resultsDiv.innerHTML = '<p style="color:#666;">Starting calibration...</p>'; }
+    if (progressDiv) { progressDiv.style.display = 'block'; progressDiv.textContent = 'Connecting...'; }
+    if (ivChartDiv) { ivChartDiv.innerHTML = ''; }
 
-    try {
-        const resp = await fetch('/api/calibrate_heston', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticker, risk_free_rate: rate, option_type: optionType })
-        });
-        const data = await resp.json();
+    const url = `/api/calibrate_heston_stream?ticker=${encodeURIComponent(ticker)}&risk_free_rate=${rate}&option_type=${encodeURIComponent(optionType)}`;
+    const src = new EventSource(url);
+    let lastIteration = 0;
 
-        if (!data.success) {
-            resultsDiv.innerHTML = renderAlert(`Error: ${data.error}`);
+    src.onmessage = async (e) => {
+        const d = JSON.parse(e.data);
+        if (d.error) {
+            src.close();
+            if (progressDiv) progressDiv.style.display = 'none';
+            if (resultsDiv) resultsDiv.innerHTML = renderAlert(`Calibration error: ${escapeHTML(d.error)}`);
             return;
         }
+        if (!d.done) {
+            lastIteration = d.iteration;
+            if (progressDiv) progressDiv.textContent = `Iteration ${d.iteration} — RMSE: ${d.error.toFixed(6)}`;
+        } else {
+            src.close();
+            if (progressDiv) progressDiv.textContent = `Calibration complete after ${lastIteration} iterations.`;
 
-        const cal = data.calibration;
-        const p = cal.calibrated_params || {};
-        const feller = cal.feller_condition_satisfied;
+            // Fetch final result from standard route for full chart data
+            try {
+                const resp = await fetch('/api/calibrate_heston', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker, risk_free_rate: rate, option_type: optionType })
+                });
+                if (!resp.ok) { if (resultsDiv) resultsDiv.innerHTML = renderAlert(`Server error ${resp.status}`); return; }
+                const data = await resp.json();
+                if (!data.success) { if (resultsDiv) resultsDiv.innerHTML = renderAlert(data.error || 'Calibration failed'); return; }
 
-        const fellerBadge = feller
-            ? `<span style="background:#d4edda; color:#155724; padding:2px 8px; border-radius:4px; font-size:12px;">✓ Feller satisfied</span>`
-            : `<span style="background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:4px; font-size:12px;">✗ Feller violated (variance may reach 0)</span>`;
+                const cal = data.calibration;
+                const p   = cal.calibrated_params || {};
+                const ql  = rmseLabel(cal.rmse || 0);
+                const feller = cal.feller_condition_satisfied;
 
-        resultsDiv.innerHTML = `
-            <div class="result-card">
-                <h3>⚙️ Heston Calibration — ${ticker}</h3>
-                <p style="color:#666; font-size:13px;">Calibrated to ${cal.n_contracts} options contracts</p>
+                const fellerBadge = feller
+                    ? `<span style="background:#d4edda; color:#155724; padding:2px 8px; border-radius:4px; font-size:12px;">Feller satisfied</span>`
+                    : `<span style="background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:4px; font-size:12px;">Feller violated (variance may reach 0)</span>`;
 
-                ${fellerBadge}
-                <br><br>
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = `
+                        <div class="result-card">
+                            <h3>Heston Calibration — ${escapeHTML(ticker)}</h3>
+                            <p style="color:#666; font-size:13px;">Calibrated to ${cal.n_contracts} options contracts</p>
+                            ${fellerBadge}
+                            <div style="margin:10px 0;">
+                                <strong>Relative RMSE: </strong>
+                                <span style="background:${ql.color}; color:#fff; padding:3px 10px; border-radius:12px; font-size:13px;">${escapeHTML(ql.label)}</span>
+                                <span style="margin-left:8px; font-size:13px;">${((cal.rmse || 0) * 100).toFixed(2)}%</span>
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                                <thead><tr style="background:#f8f9fa;">
+                                    <th>Parameter</th><th>Symbol</th><th>Value</th><th>Interpretation</th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr><td>Initial Variance</td><td>v0</td>
+                                        <td>${(p.v0 || 0).toFixed(4)}</td>
+                                        <td>Implied vol ~ ${(Math.sqrt(p.v0 || 0) * 100).toFixed(1)}%</td></tr>
+                                    <tr><td>Mean-Reversion Speed</td><td>kappa</td>
+                                        <td>${(p.kappa || 0).toFixed(4)}</td>
+                                        <td>Half-life ~ ${(Math.log(2) / (p.kappa || 1)).toFixed(1)} years</td></tr>
+                                    <tr><td>Long-Run Variance</td><td>theta</td>
+                                        <td>${(p.theta || 0).toFixed(4)}</td>
+                                        <td>LR vol ~ ${(Math.sqrt(p.theta || 0) * 100).toFixed(1)}%</td></tr>
+                                    <tr><td>Vol of Variance</td><td>sigma_v</td>
+                                        <td>${(p.sigma_v || 0).toFixed(4)}</td>
+                                        <td>Controls smile curvature</td></tr>
+                                    <tr><td>Correlation</td><td>rho</td>
+                                        <td>${(p.rho || 0).toFixed(4)}</td>
+                                        <td>${(p.rho || 0) < 0 ? 'Negative (leverage effect, skew)' : 'Positive'}</td></tr>
+                                </tbody>
+                            </table>
+                            <div style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:4px; font-size:13px;">
+                                <strong>Fit quality:</strong>
+                                MSE = ${(cal.mse || 0).toFixed(4)} |
+                                RMSE = ${(cal.rmse || 0).toFixed(4)}<br>
+                                <strong>Spot price:</strong> $${(cal.spot || 0).toFixed(2)} |
+                                <strong>Risk-free rate:</strong> ${((cal.risk_free_rate || 0) * 100).toFixed(2)}%
+                            </div>
+                            <div style="margin-top:10px; font-size:12px; color:#888;">
+                                Use these parameters in the Heston pricing calculator for smile-consistent pricing.
+                            </div>
+                        </div>`;
+                }
 
-                <table style="width:100%; border-collapse:collapse; font-size:14px;">
-                    <thead><tr style="background:#f8f9fa;">
-                        <th>Parameter</th><th>Symbol</th><th>Value</th><th>Interpretation</th>
-                    </tr></thead>
-                    <tbody>
-                        <tr><td>Initial Variance</td><td>ν₀</td>
-                            <td>${(p.v0 || 0).toFixed(4)}</td>
-                            <td>Implied vol ≈ ${(Math.sqrt(p.v0 || 0) * 100).toFixed(1)}%</td></tr>
-                        <tr><td>Mean-Reversion Speed</td><td>κ</td>
-                            <td>${(p.kappa || 0).toFixed(4)}</td>
-                            <td>Half-life ≈ ${(Math.log(2) / (p.kappa || 1)).toFixed(1)} years</td></tr>
-                        <tr><td>Long-Run Variance</td><td>θ</td>
-                            <td>${(p.theta || 0).toFixed(4)}</td>
-                            <td>LR vol ≈ ${(Math.sqrt(p.theta || 0) * 100).toFixed(1)}%</td></tr>
-                        <tr><td>Vol of Variance</td><td>σᵥ</td>
-                            <td>${(p.sigma_v || 0).toFixed(4)}</td>
-                            <td>Controls smile curvature</td></tr>
-                        <tr><td>Correlation</td><td>ρ</td>
-                            <td>${(p.rho || 0).toFixed(4)}</td>
-                            <td>${(p.rho || 0) < 0 ? 'Negative (leverage effect, skew)' : 'Positive'}</td></tr>
-                    </tbody>
-                </table>
+                // IV comparison chart
+                if (ivChartDiv && cal.strikes && cal.market_ivs && cal.fitted_ivs) {
+                    Plotly.newPlot('calibIVChart', [
+                        {
+                            x: cal.strikes, y: cal.market_ivs,
+                            type: 'scatter', mode: 'markers',
+                            name: 'Market IV', marker: { color: '#667eea', size: 8 }
+                        },
+                        {
+                            x: cal.strikes, y: cal.fitted_ivs,
+                            type: 'scatter', mode: 'lines+markers',
+                            name: 'Fitted IV', line: { color: '#dc3545', width: 2 }
+                        }
+                    ], {
+                        title: `Heston Calibration — ${escapeHTML(ticker)}`,
+                        xaxis: { title: 'Strike' },
+                        yaxis: { title: 'Implied Volatility', tickformat: '.1%' },
+                        height: 380,
+                        margin: { t: 50, l: 70, r: 20, b: 50 }
+                    });
+                }
+            } catch (err) {
+                if (resultsDiv) resultsDiv.innerHTML = renderAlert(`Result fetch failed: ${err.message}`);
+            }
+        }
+    };
 
-                <div style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:4px; font-size:13px;">
-                    <strong>Fit quality:</strong>
-                    MSE = ${(cal.mse || 0).toFixed(4)} |
-                    RMSE = $${(cal.rmse || 0).toFixed(4)} per contract<br>
-                    <strong>Spot price:</strong> $${(cal.spot || 0).toFixed(2)} |
-                    <strong>Risk-free rate:</strong> ${(cal.risk_free_rate * 100 || 0).toFixed(2)}%
-                </div>
-
-                <div style="margin-top:10px; font-size:12px; color:#888;">
-                    Use these parameters in the Heston pricing calculator for smile-consistent pricing.
-                </div>
-            </div>`;
-
-    } catch (err) {
-        resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);
-    }
+    src.onerror = () => {
+        src.close();
+        if (progressDiv) progressDiv.textContent = 'SSE connection closed.';
+    };
 }
 
 // ---------------------------------------------------------------------------
