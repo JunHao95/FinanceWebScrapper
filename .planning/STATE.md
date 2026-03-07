@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 03-frontend-wiring 03-03-PLAN.md (Heston Calibration SSE: callback, calibrate_stream, IV chart + RMSE badge)"
-last_updated: "2026-03-06T14:28:59.863Z"
+stopped_at: Completed 03-frontend-wiring 03-05-PLAN.md (Markov/Credit/Rates Plotly charts — awaiting human-verify checkpoint)
+last_updated: "2026-03-07T03:07:39.352Z"
 last_activity: "2026-03-06 — Completed plan 03-02 (Heston Pricing sub-tab: price cards + 3D IV surface, /api/heston_iv_surface route)"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 70
 ---
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 70%
 | Phase 02-backend-completeness P04 | 2 | 2 tasks | 2 files |
 | Phase 03-frontend-wiring P04 | 3 | 1 tasks | 2 files |
 | Phase 03-frontend-wiring P03 | 4 | 2 tasks | 4 files |
+| Phase 03-frontend-wiring P05 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 03-03]: calibrate_stream buffers all SSE events then emits post-calibration (batch-emit) to avoid async server requirement on Render free tier
 - [Phase 03-03]: IV inversion uses bisection over [1e-4, 5.0] — more robust than Newton-Raphson for edge cases
 - [Phase 03-03]: Final chart data fetched from /api/calibrate_heston POST after SSE done event — keeps SSE route thin
+- [Phase 03-05]: Markov heatmap fetched via secondary /api/markov_chain nstep n=1 call inside runCreditRisk — no separate Markov sub-tab needed
+- [Phase 03-05]: Yield curve chart uses pt.spot_rate * 100 from yield_curve array — matches actual /api/interest_rate_model response field shape
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-06T14:28:59.862Z
-Stopped at: Completed 03-frontend-wiring 03-03-PLAN.md (Heston Calibration SSE: callback, calibrate_stream, IV chart + RMSE badge)
+Last session: 2026-03-07T03:07:36.013Z
+Stopped at: Completed 03-frontend-wiring 03-05-PLAN.md (Markov/Credit/Rates Plotly charts — awaiting human-verify checkpoint)
 Resume file: None
