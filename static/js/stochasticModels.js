@@ -178,7 +178,7 @@ async function runHestonCalibration() {
 
     src.onmessage = async (e) => {
         const d = JSON.parse(e.data);
-        if (d.error) {
+        if (typeof d.error === 'string') {
             src.close();
             if (progressDiv) progressDiv.style.display = 'none';
             if (resultsDiv) resultsDiv.innerHTML = renderAlert(`Calibration error: ${escapeHTML(d.error)}`);
@@ -186,7 +186,7 @@ async function runHestonCalibration() {
         }
         if (!d.done) {
             lastIteration = d.iteration;
-            if (progressDiv) progressDiv.textContent = `Iteration ${d.iteration} — RMSE: ${d.error.toFixed(6)}`;
+            if (progressDiv) progressDiv.textContent = `Iteration ${d.iteration} — RMSE: ${(d.error || 0).toFixed(6)}`;
         } else {
             src.close();
             if (progressDiv) progressDiv.textContent = `Calibration complete after ${lastIteration} iterations.`;

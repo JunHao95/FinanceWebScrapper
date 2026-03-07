@@ -1568,7 +1568,18 @@ def calibrate_bcc_endpoint():
         }
 
         result = convert_numpy_types(result)
-        return jsonify({'success': True, 'result': result})
+
+        # Build flat params dict for frontend display
+        heston_p = result.get('calibrated_params', {}).get('heston', {})
+        jump_p   = result.get('calibrated_params', {}).get('jump', {})
+        flat_params = {**heston_p, **{k: v for k, v in jump_p.items()}}
+
+        return jsonify({
+            'success': True,
+            'rmse':   result.get('rmse', 0),
+            'params': flat_params,
+            'result': result,
+        })
 
     except Exception as e:
         logger.error(f"Error in BCC calibration: {e}")
