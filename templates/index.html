@@ -653,6 +653,9 @@
                 <button class="main-tab-button" onclick="switchMainTab('stochasticModels')">
                     🔬 Stochastic Models
                 </button>
+                <button class="main-tab-button" onclick="switchMainTab('rl')">
+                    🤖 Reinforcement Learning
+                </button>
             </div>
         </div>
 
@@ -1235,6 +1238,12 @@
                         <button class="tab-button" onclick="switchStochasticTab('bcc_calibration')" id="stochTab_bcc_calibration">
                             BCC Calibration
                         </button>
+                        <button class="tab-button" onclick="switchStochasticTab('portfolio_mdp')" id="stochTab_portfolio_mdp">
+                            📊 Portfolio MDP
+                        </button>
+                        <button class="tab-button" onclick="switchStochasticTab('gridworld')" id="stochTab_gridworld">
+                            🗺️ Gridworld PI
+                        </button>
                     </div>
                 </div>
 
@@ -1469,9 +1478,257 @@
                     <div id="bccIVChart" style="margin-top:20px;"></div>
                 </div>
 
+                <!-- Portfolio MDP -->
+                <div id="stochContent_portfolio_mdp" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom:10px;">📊 Portfolio MDP — Policy Iteration</h3>
+                    <p style="color:#666; margin-bottom:15px;">
+                        Builds a 12-state Markov Decision Process from monthly return data for any two assets.
+                        <strong>States</strong>: equity momentum × bond momentum × vol regime.
+                        <strong>Actions</strong>: 5 allocation strategies (100/0 → 0/100).
+                        Policy iteration solves for the optimal regime-conditional allocation. Signals are lagged 1 month to prevent look-ahead bias.
+                    </p>
+                    <div style="background:#d1ecf1; border-left:4px solid #17a2b8; padding:10px; margin-bottom:15px; border-radius:4px;">
+                        <strong>ℹ️ How to use:</strong> Enter any equity ticker (e.g. <code>SPY</code>, <code>QQQ</code>, <code>AAPL</code>) and a bond/hedge ticker (e.g. <code>IEF</code>, <code>TLT</code>, <code>GLD</code>). The model learns when to shift between them.
+                    </div>
+                    <div style="background:#fff3cd; border-left:4px solid #ffc107; padding:10px; margin-bottom:15px; border-radius:4px;">
+                        <strong>⏰ Note:</strong> Downloads monthly data from Yahoo Finance — may take 10–30 s.
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(155px, 1fr)); gap:12px; margin-bottom:15px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpEquityTicker">Equity Ticker</label>
+                            <input type="text" id="mdpEquityTicker" value="SPY" placeholder="e.g. SPY, QQQ" style="text-transform:uppercase;">
+                            <small>Primary risky asset</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpBondTicker">Bond / Hedge Ticker</label>
+                            <input type="text" id="mdpBondTicker" value="IEF" placeholder="e.g. IEF, TLT, GLD" style="text-transform:uppercase;">
+                            <small>Defensive asset</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpStartDate">Data start</label>
+                            <input type="date" id="mdpStartDate" value="2010-01-01">
+                            <small>History window</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpTrainEnd">Train end</label>
+                            <input type="date" id="mdpTrainEnd" value="2020-12-31">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpTestStart">Test start</label>
+                            <input type="date" id="mdpTestStart" value="2021-01-01">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpGamma">Discount γ</label>
+                            <input type="number" id="mdpGamma" value="0.99" min="0.9" max="0.9999" step="0.01">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="mdpCostBps">Transaction cost (bps)</label>
+                            <input type="number" id="mdpCostBps" value="10" min="0" max="100" step="1">
+                        </div>
+                    </div>
+                    <button type="button" onclick="runPortfolioMDP()" style="margin-bottom:15px;">
+                        ▶ Run Portfolio MDP
+                    </button>
+                    <div id="stochPortfolioMDPResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- Gridworld PI -->
+                <div id="stochContent_gridworld" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom:10px;">🗺️ Grid-world Policy Iteration</h3>
+                    <p style="color:#666; margin-bottom:15px;">
+                        Classic 4×4 grid-world. Terminal states at corners (top-left = 0, bottom-right = 15).
+                        Step cost = −1. Policy iteration converges to arrows pointing toward the nearest terminal.
+                        Enable <em>wind</em> to add a stochastic left-push per column.
+                    </p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; max-width:380px; margin-bottom:15px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="stochGridGamma">Discount γ</label>
+                            <input type="number" id="stochGridGamma" value="0.95" min="0.5" max="0.999" step="0.01">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0; display:flex; align-items:center; gap:8px; padding-top:22px;">
+                            <input type="checkbox" id="stochGridWind" style="width:auto;">
+                            <label for="stochGridWind" style="margin-bottom:0;">Enable wind</label>
+                        </div>
+                    </div>
+                    <button type="button" onclick="runStochGridworld()" style="margin-bottom:15px;">
+                        ▶ Run Grid-world
+                    </button>
+                    <div id="stochGridResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
             </div>
         </div>
         <!-- End Stochastic Models Tab -->
+
+        <!-- Reinforcement Learning Tab -->
+        <div id="rlTab" class="main-tab-content">
+            <div class="input-section">
+                <h2>🤖 Reinforcement Learning in Finance</h2>
+                <p style="color:#666; margin-bottom: 20px;">
+                    Four interactive RL demos: Investment MDP policy iteration, Gridworld planning,
+                    and Portfolio Rotation via both policy iteration and Q-learning.
+                    All models trained on historical data with no look-ahead bias.
+                </p>
+
+                <!-- RL Sub-tabs -->
+                <div class="tabs-container" style="margin-bottom: 20px;">
+                    <div class="tabs">
+                        <button class="tab-button active" onclick="switchRLTab('mdp')" id="rlTab_mdp">
+                            💼 Investment MDP
+                        </button>
+                        <button class="tab-button" onclick="switchRLTab('grid')" id="rlTab_grid">
+                            🗺️ Gridworld
+                        </button>
+                        <button class="tab-button" onclick="switchRLTab('pi')" id="rlTab_pi">
+                            📊 Portfolio Rotation (PI)
+                        </button>
+                        <button class="tab-button" onclick="switchRLTab('ql')" id="rlTab_ql">
+                            🧠 Portfolio Rotation (QL)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- L1: Investment MDP -->
+                <div id="rlContent_mdp" class="rl-content">
+                    <h3 style="margin-bottom: 10px;">💼 L1 — Investment MDP (Policy Iteration)</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        3-state MDP (Bull / Bear / Crash) with 3 actions (Buy / Hold / Sell).
+                        Solves (I − γP_π)V = r_π exactly via linear system. Expected optimal policy: Buy, Sell, Sell.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="rlMDPGamma">Discount Factor (γ)</label>
+                            <input type="range" id="rlMDPGamma" min="0.5" max="0.99" step="0.01" value="0.95"
+                                   oninput="document.getElementById('rlMDPGammaVal').textContent=this.value">
+                            <small>γ = <span id="rlMDPGammaVal">0.95</span></small>
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runInvestmentMDP()">
+                        ▶ Run Policy Iteration
+                    </button>
+                    <div id="rlMDPResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- L2: Gridworld -->
+                <div id="rlContent_grid" class="rl-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">🗺️ L2 — Gridworld Policy Iteration</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        4×4 grid with terminal states at top-left and bottom-right. Policy shown as
+                        arrows (↑→↓←). Optional stochastic wind pushes agent LEFT with column-dependent probability.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="rlGridGamma">Discount Factor (γ)</label>
+                            <input type="range" id="rlGridGamma" min="0.5" max="0.99" step="0.01" value="0.95"
+                                   oninput="document.getElementById('rlGridGammaVal').textContent=this.value">
+                            <small>γ = <span id="rlGridGammaVal">0.95</span></small>
+                        </div>
+                        <div class="form-group">
+                            <label>Wind</label>
+                            <div style="display:flex; align-items:center; gap:10px; padding-top:8px;">
+                                <input type="checkbox" id="rlGridWind" style="width:auto;">
+                                <label for="rlGridWind" style="font-weight:normal; margin:0;">
+                                    Enable stochastic wind (pushes LEFT)
+                                </label>
+                            </div>
+                            <small>Wind col probabilities: [0.2, 0.4, 0.5, 0.2]</small>
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runGridworld()">
+                        ▶ Run Gridworld PI
+                    </button>
+                    <div id="rlGridResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- L3: Portfolio Rotation — Policy Iteration -->
+                <div id="rlContent_pi" class="rl-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">📊 L3 — Portfolio Rotation (Policy Iteration)</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        12-state MDP on SPY/IEF/SHY monthly data (2004–present). States: equity momentum ×
+                        bond momentum × vol regime. 5 allocation actions from 100% equity to 100% bonds.
+                        Vol terciles and signals computed on training data only — no look-ahead bias.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="rlPITrainEnd">Train End Date</label>
+                            <input type="date" id="rlPITrainEnd" value="2016-12-31">
+                            <small>Last date of training window</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlPITestStart">Test Start Date</label>
+                            <input type="date" id="rlPITestStart" value="2017-01-01">
+                            <small>First date of out-of-sample test</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlPIGamma">Discount Factor (γ)</label>
+                            <input type="number" id="rlPIGamma" value="0.99" min="0.5" max="0.999" step="0.01">
+                            <small>Long-horizon γ = 0.99 recommended</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlPICostBps">Transaction Cost (bps)</label>
+                            <input type="number" id="rlPICostBps" value="10" min="0" max="100" step="1">
+                            <small>Basis points per rebalance trade</small>
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runPortfolioRotationPI()">
+                        ▶ Run Portfolio PI
+                    </button>
+                    <div id="rlPIResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- L4: Portfolio Rotation — Q-Learning -->
+                <div id="rlContent_ql" class="rl-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">🧠 L4 — Portfolio Rotation (Q-Learning)</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        Model-free ε-greedy TD learning on the same 12-state portfolio MDP.
+                        Train 2004–2017, test 2018+. Outputs Q-table heatmap (12×5) and
+                        cumulative return vs 60/40 benchmark.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="rlQLAlpha">Learning Rate (α)</label>
+                            <input type="number" id="rlQLAlpha" value="0.10" min="0.01" max="1.0" step="0.01">
+                            <small>TD update step size</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlQLEpochs">Epochs</label>
+                            <input type="number" id="rlQLEpochs" value="200" min="10" max="2000" step="10">
+                            <small>Full passes over training data</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlQLEpsStart">ε Start (exploration)</label>
+                            <input type="number" id="rlQLEpsStart" value="0.15" min="0.0" max="1.0" step="0.01">
+                            <small>Initial ε-greedy exploration rate</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlQLEpsEnd">ε End (exploitation)</label>
+                            <input type="number" id="rlQLEpsEnd" value="0.01" min="0.0" max="1.0" step="0.01">
+                            <small>Final exploration rate (linearly annealed)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlQLOptimistic">Optimistic Init (Q₀)</label>
+                            <input type="number" id="rlQLOptimistic" value="0.005" min="0.0" max="0.1" step="0.001">
+                            <small>Initial Q-table value (optimistic exploration)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="rlQLGamma">Discount Factor (γ)</label>
+                            <input type="number" id="rlQLGamma" value="0.99" min="0.5" max="0.999" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="rlQLCostBps">Transaction Cost (bps)</label>
+                            <input type="number" id="rlQLCostBps" value="10" min="0" max="100" step="1">
+                        </div>
+                    </div>
+                    <button type="button" class="primary-btn" onclick="runPortfolioRotationQL()">
+                        ▶ Run Q-Learning
+                    </button>
+                    <div id="rlQLResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+            </div>
+        </div>
+        <!-- End Reinforcement Learning Tab -->
+
 
         <div class="loading" id="loadingSection">
             <div class="spinner"></div>
@@ -1500,6 +1757,7 @@
     <script src="/static/js/optionsPricing.js"></script>
     <script src="/static/js/volatilitySurface.js"></script>
     <script src="/static/js/stochasticModels.js?v=2"></script>
+    <script src="/static/js/rlModels.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>
