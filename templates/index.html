@@ -1244,6 +1244,9 @@
                         <button class="tab-button" onclick="switchStochasticTab('gridworld')" id="stochTab_gridworld">
                             🗺️ Gridworld PI
                         </button>
+                        <button class="tab-button" onclick="switchStochasticTab('markov')" id="stochTab_markov">
+                            🔗 Markov Chain
+                        </button>
                     </div>
                 </div>
 
@@ -1372,6 +1375,14 @@
                             <input type="number" id="cirSigma" value="10" step="0.01">
                         </div>
                     </div>
+                        <div class="form-group">
+                            <label for="cirModel">Model</label>
+                            <select id="cirModel" onchange="updateCIRDefaults(this.value)">
+                                <option value="cir" selected>CIR (Cox-Ingersoll-Ross 1985)</option>
+                                <option value="vasicek">Vasicek (1977)</option>
+                            </select>
+                            <small>Vasicek allows negative rates (no Feller condition). CIR guarantees non-negative rates.</small>
+                        </div>
                     <div style="margin: 10px 0;">
                         <label>
                             <input type="checkbox" id="cirCalibrateTreasuries">
@@ -1425,6 +1436,75 @@
                         💳 Analyse Credit Risk
                     </button>
                     <div id="creditResults" style="display:none; margin-top:20px;"></div>
+                </div>
+
+                <!-- Markov Chain -->
+                <div id="stochContent_markov" class="stoch-content" style="display:none;">
+                    <h3 style="margin-bottom: 10px;">🔗 Markov Chain Analysis</h3>
+                    <p style="color:#666; margin-bottom: 15px;">
+                        Analyse discrete-time Markov chains: compute steady-state distributions,
+                        absorption probabilities, and solve portfolio MDP via value iteration.
+                    </p>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="markovMode">Analysis Mode</label>
+                        <select id="markovMode" onchange="showMarkovForm(this.value)">
+                            <option value="steady_state">Steady-State Distribution</option>
+                            <option value="absorption">Absorption Probabilities</option>
+                            <option value="mdp">MDP — Portfolio Value Iteration</option>
+                        </select>
+                    </div>
+
+                    <!-- Form: Steady-State -->
+                    <div id="markovForm_steady_state">
+                        <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                            Enter a row-stochastic transition matrix as a JSON array of arrays.
+                            Leave blank to use the 8-state S&amp;P credit rating matrix.
+                        </p>
+                        <div class="form-group">
+                            <label for="markovMatrixSS">Transition Matrix (JSON, optional)</label>
+                            <textarea id="markovMatrixSS" rows="4" style="width:100%; font-family:monospace; font-size:12px;"
+                                placeholder='e.g. [[0.9,0.1,0],[0.2,0.6,0.2],[0,0.1,0.9]]'></textarea>
+                            <small>Rows must sum to 1. Leave blank for default S&amp;P 8-state matrix.</small>
+                        </div>
+                    </div>
+
+                    <!-- Form: Absorption -->
+                    <div id="markovForm_absorption" style="display:none;">
+                        <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                            Enter a matrix where at least one state has P[i,i] = 1 (absorbing state).
+                        </p>
+                        <div class="form-group">
+                            <label for="markovMatrixAbs">Transition Matrix (JSON — must have absorbing state)</label>
+                            <textarea id="markovMatrixAbs" rows="4" style="width:100%; font-family:monospace; font-size:12px;">[[0.7,0.2,0.1],[0.3,0.5,0.2],[0,0,1.0]]</textarea>
+                            <small>State with row [0,…,0,1,0,…] is absorbing. Default: 3-state chain, state 2 absorbing.</small>
+                        </div>
+                    </div>
+
+                    <!-- Form: MDP -->
+                    <div id="markovForm_mdp" style="display:none;">
+                        <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                            3-state portfolio MDP (risk_off / neutral / risk_on) with 3 actions
+                            (underweight / neutral / overweight). Value iteration finds optimal policy.
+                        </p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div class="form-group">
+                                <label for="markovGamma">Discount Factor γ</label>
+                                <input type="number" id="markovGamma" value="0.95" step="0.01" min="0.01" max="0.999">
+                                <small>Typical range: 0.90 – 0.99</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="markovNPeriods">Max Iterations</label>
+                                <input type="number" id="markovNPeriods" value="1000" step="100" min="100" max="10000">
+                                <small>Value iteration stops earlier if converged</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="primary-btn" onclick="runMarkovChain()" style="margin-top:12px;">
+                        🔗 Run Markov Analysis
+                    </button>
+                    <div id="markovResults" style="display:none; margin-top:20px;"></div>
+                    <div id="markovTransitionHeatmap" style="display:none; margin-top:20px;"></div>
                 </div>
 
                 <!-- Heston Pricing -->
