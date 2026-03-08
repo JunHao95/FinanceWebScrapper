@@ -74,17 +74,20 @@ Plans:
 - [ ] 03-05-PLAN.md — Markov/Credit/Rates Plotly upgrade: heatmap, survival curve, yield curve + Feller badge; full integration smoke test checkpoint (all 15 requirements verified)
 
 ### Phase 4: ML-in-Finance Module
-**Goal**: A new Machine Learning in Finance main tab exists in the UI, contains sub-tabs for each model category, and allows a user to run all required ML analyses with interactive parameter inputs and Plotly output — without data leakage.
+**Goal**: A new Reinforcement Learning main tab exists in the UI, contains 4 interactive sub-tabs (Investment MDP, Gridworld, Portfolio Rotation PI, Portfolio Rotation QL), and allows a user to run all four RL demos with interactive parameter inputs and Plotly output — all backed by Python RL algorithms already implemented in rl_models.py.
 **Depends on**: Phase 3
 **Requirements**: ML-01, ML-02, ML-03, ML-04, ML-05, ML-06, ML-07, ML-08, ML-09
 **Success Criteria** (what must be TRUE):
-  1. A user can select a factor set, click Run OLS, and see a regression coefficient table with p-values and significance stars (not just coefficients), confirming statsmodels integration is live.
-  2. A user can run Random Forest return prediction and see a feature importance bar chart alongside out-of-sample accuracy metrics — the model uses TimeSeriesSplit and displays the split count so data leakage is visible to the reviewer.
-  3. A user can run PCA on a selected portfolio of tickers and see an explained variance chart and a loadings heatmap for the first three components.
-  4. A user can run ARIMA on a return series and see a forecast line chart with upper and lower confidence interval bands extending beyond the in-sample period.
-  5. A user can run GARCH volatility forecasting and see a conditional volatility time series chart that shows volatility clustering visible in the chart shape.
-  6. The ML tab appears as a top-level tab in the nav bar, consistent with the Options Pricing and Portfolio Analysis tabs.
-**Plans**: TBD
+  1. A user can adjust gamma and click Run Policy Iteration in the Investment MDP sub-tab, seeing Buy/Sell/Sell policy cards, a V* bar chart, and a Q-value heatmap.
+  2. A user can toggle wind and run Gridworld PI, seeing a 4×4 arrow policy grid and V* heatmap, converging in 4 iterations.
+  3. A user can set train/test dates and run Portfolio Rotation (PI), seeing a cumulative return line chart vs 60/40 benchmark with CAGR/Vol/Sharpe metrics.
+  4. A user can adjust alpha/epochs/epsilon and run Portfolio Rotation (QL), seeing the same line chart plus a 12×5 Q-table heatmap.
+  5. The Reinforcement Learning tab appears as a top-level tab in the nav bar after Stochastic Models.
+  6. All models use TimeSeriesSplit-equivalent leakage-free design: vol terciles on train data only, signals lagged 1 month.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md — Add RL nav button and complete rlTab HTML to index.html (ML-01 through ML-09)
 
 ## Progress
 
@@ -96,4 +99,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Math Correctness | 3/3 | Complete   | 2026-03-03 |
 | 2. Backend Completeness | 4/4 | Complete   | 2026-03-05 |
 | 3. Frontend Wiring and Visualization | 5/5 | Complete   | 2026-03-07 |
-| 4. ML-in-Finance Module | 0/TBD | Not started | - |
+| 4. ML-in-Finance Module | 0/1 | Not started | - |
