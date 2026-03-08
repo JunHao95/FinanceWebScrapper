@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 05-stochastic-models-ui-completion 05-01-PLAN.md (2/3 tasks — awaiting human-verify checkpoint)
-last_updated: "2026-03-08T12:49:57.001Z"
-last_activity: "2026-03-06 — Completed plan 03-02 (Heston Pricing sub-tab: price cards + 3D IV surface, /api/heston_iv_surface route)"
+milestone: v2.0
+milestone_name: One-Click Analysis Dashboard
+status: not_started
+stopped_at: —
+last_updated: "2026-03-08T00:00:00.000Z"
+last_activity: "2026-03-08 — Milestone v2.0 started"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
-  percent: 70
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 3 of 4 (Frontend Wiring)
-Plan: 2 of 5 in current phase — COMPLETE
-Status: Phase 3 In Progress
-Last activity: 2026-03-06 — Completed plan 03-02 (Heston Pricing sub-tab: price cards + 3D IV surface, /api/heston_iv_surface route)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-08 — Milestone v2.0 started
 
-Progress: [████████░░] 70%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

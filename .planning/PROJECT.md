@@ -18,13 +18,11 @@ Every completed MFE module becomes a working, interactive demo that a recruiter 
 
 ### Active
 
-- [ ] Markov Chain and Markov Decision Process models running in UI with validated results
-- [ ] Credit transition models (Markov-based) wired to frontend with charts
-- [ ] Regime detection (bull/bear/crisis state identification) with visual output
-- [ ] Interest rate models (stochastic) with yield curve visualization
-- [ ] Fourier-based option pricer and model calibration exposed in UI
-- [ ] All stochastic model results validated against known benchmarks or test cases
-- [ ] Machine learning in finance section (next semester module)
+- [ ] One-click analysis: ticker symbols as the only required input — sources, analytics, and regime/MDP run automatically
+- [ ] Advanced settings (data sources, API keys) collapsed behind a toggle — visible only when needed
+- [ ] Portfolio allocation supports both % Weight mode and Value mode (auto-computed weights with live %-display)
+- [ ] After scrape completes, Regime Detection and Portfolio MDP run automatically with inline results
+- [ ] Portfolio Health Card summarises VaR, Sharpe, and regime per ticker at the top of results
 
 ### Out of Scope
 
@@ -57,5 +55,15 @@ Every completed MFE module becomes a working, interactive demo that a recruiter 
 | Validate model results before shipping | Showcase app must be correct, not just functional | — Pending |
 | Python backend for all models | MFE work is Python-native, keeps implementation authentic | — Pending |
 
+## Current Milestone: v2.0 One-Click Analysis Dashboard
+
+**Goal:** From ticker symbols to full analysis in one click — smart defaults eliminate all required configuration beyond the ticker input.
+
+**Target features:**
+- Collapsed advanced settings (data sources, API keys hidden by default)
+- Portfolio allocation with % Weight / Value mode toggle + currency selector
+- Auto-run Regime Detection and Portfolio MDP after scrape completes
+- Portfolio Health Card with VaR, Sharpe, regime labels shown at top of results
+
 ---
-*Last updated: 2026-03-03 after initialization*
+*Last updated: 2026-03-08 after v2.0 milestone start*
