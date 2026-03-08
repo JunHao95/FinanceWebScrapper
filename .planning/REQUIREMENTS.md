@@ -17,26 +17,26 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Markov Chain & MDP Module
 
-- [x] **MARKOV-01**: User can input a transition matrix and compute steady-state distribution
-- [x] **MARKOV-02**: User can compute absorption probabilities for absorbing Markov chains
-- [x] **MARKOV-03**: User can visualize state transition diagram or heatmap of transition matrix
-- [x] **MARKOV-04**: User can define a portfolio rebalancing Markov Decision Process (states, actions, rewards)
-- [x] **MARKOV-05**: User can compute optimal policy via value iteration or policy iteration for the MDP
-- [x] **MARKOV-06**: Markov/MDP results display in dedicated UI sub-tab with interactive parameters
+- [ ] **MARKOV-01**: User can input a transition matrix and compute steady-state distribution
+- [ ] **MARKOV-02**: User can compute absorption probabilities for absorbing Markov chains
+- [ ] **MARKOV-03**: User can visualize state transition diagram or heatmap of transition matrix
+- [ ] **MARKOV-04**: User can define a portfolio rebalancing Markov Decision Process (states, actions, rewards)
+- [ ] **MARKOV-05**: User can compute optimal policy via value iteration or policy iteration for the MDP
+- [ ] **MARKOV-06**: Markov/MDP results display in dedicated UI sub-tab with interactive parameters
 
 ### Credit Transitions Module
 
 - [x] **CREDIT-01**: User can select a rating transition matrix (Moody's/S&P style) and simulate credit migration
 - [x] **CREDIT-02**: User can view credit migration heatmap showing transition probabilities
 - [x] **CREDIT-03**: User can compute and view default probability / survival curve chart over time
-- [ ] **CREDIT-04**: User can compute bond valuation with corrected time-discounted coupons
+- [x] **CREDIT-04**: User can compute bond valuation with corrected time-discounted coupons
 - [x] **CREDIT-05**: Credit transitions results display in dedicated UI sub-tab
 
 ### Interest Rate Models Module
 
 - [x] **RATE-01**: User can simulate CIR (Cox-Ingersoll-Ross) interest rate paths with chosen parameters
-- [x] **RATE-02**: User can simulate Vasicek interest rate paths with chosen parameters
-- [x] **RATE-03**: User can view yield curve generated from the selected model
+- [ ] **RATE-02**: User can simulate Vasicek interest rate paths with chosen parameters
+- [ ] **RATE-03**: User can view yield curve generated from the selected model
 - [x] **RATE-04**: UI displays whether Feller condition is satisfied for CIR parameters
 - [x] **RATE-05**: Interest rate model results display in dedicated UI sub-tab with Plotly chart output
 
@@ -66,15 +66,15 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### ML in Finance Module
 
-- [ ] **ML-01**: User can run linear regression on financial factors and view coefficient table with significance tests
-- [ ] **ML-02**: User can run logistic regression for return direction classification and view confusion matrix
-- [ ] **ML-03**: User can run Random Forest / XGBoost return prediction and view feature importance chart
-- [ ] **ML-04**: User can run PCA on a portfolio of stocks and view explained variance and component loadings
-- [ ] **ML-05**: User can run k-means clustering for portfolio grouping and view cluster assignments
-- [ ] **ML-06**: User can run ARIMA model on a return series and view forecast with confidence intervals
-- [ ] **ML-07**: User can run GARCH volatility forecasting and view conditional volatility chart
-- [ ] **ML-08**: All ML models use TimeSeriesSplit to prevent data leakage (no look-ahead bias)
-- [ ] **ML-09**: ML module appears as a new main tab in the UI consistent with existing tab structure
+- [x] **ML-01**: User can run linear regression on financial factors and view coefficient table with significance tests
+- [x] **ML-02**: User can run logistic regression for return direction classification and view confusion matrix
+- [x] **ML-03**: User can run Random Forest / XGBoost return prediction and view feature importance chart
+- [x] **ML-04**: User can run PCA on a portfolio of stocks and view explained variance and component loadings
+- [x] **ML-05**: User can run k-means clustering for portfolio grouping and view cluster assignments
+- [x] **ML-06**: User can run ARIMA model on a return series and view forecast with confidence intervals
+- [x] **ML-07**: User can run GARCH volatility forecasting and view conditional volatility chart
+- [x] **ML-08**: All ML models use TimeSeriesSplit to prevent data leakage (no look-ahead bias)
+- [x] **ML-09**: ML module appears as a new main tab in the UI consistent with existing tab structure
 
 ## v2 Requirements
 
@@ -112,20 +112,20 @@ Deferred to future semesters/milestones.
 | MATH-03 | Phase 1: Math Correctness | Complete |
 | MATH-04 | Phase 1: Math Correctness | Complete |
 | MATH-05 | Phase 1: Math Correctness | Complete |
-| MARKOV-01 | Phase 2: Backend Completeness | Complete |
-| MARKOV-02 | Phase 2: Backend Completeness | Complete |
-| MARKOV-03 | Phase 2: Backend Completeness | Complete |
-| MARKOV-04 | Phase 2: Backend Completeness | Complete |
-| MARKOV-05 | Phase 2: Backend Completeness | Complete |
-| MARKOV-06 | Phase 2: Backend Completeness | Complete |
+| MARKOV-01 | Phase 5: Stochastic Models UI Completion | Pending |
+| MARKOV-02 | Phase 5: Stochastic Models UI Completion | Pending |
+| MARKOV-03 | Phase 5: Stochastic Models UI Completion | Pending |
+| MARKOV-04 | Phase 5: Stochastic Models UI Completion | Pending |
+| MARKOV-05 | Phase 5: Stochastic Models UI Completion | Pending |
+| MARKOV-06 | Phase 5: Stochastic Models UI Completion | Pending |
 | CREDIT-01 | Phase 2: Backend Completeness | Complete |
 | CREDIT-02 | Phase 2: Backend Completeness | Complete |
 | CREDIT-03 | Phase 2: Backend Completeness | Complete |
-| CREDIT-04 | Phase 2: Backend Completeness | Pending |
+| CREDIT-04 | Phase 1: Math Correctness | Complete |
 | CREDIT-05 | Phase 2: Backend Completeness | Complete |
 | RATE-01 | Phase 2: Backend Completeness | Complete |
-| RATE-02 | Phase 2: Backend Completeness | Complete |
-| RATE-03 | Phase 2: Backend Completeness | Complete |
+| RATE-02 | Phase 5: Stochastic Models UI Completion | Pending |
+| RATE-03 | Phase 5: Stochastic Models UI Completion | Pending |
 | RATE-04 | Phase 2: Backend Completeness | Complete |
 | RATE-05 | Phase 2: Backend Completeness | Complete |
 | REGIME-01 | Phase 3: Frontend Wiring and Visualization | Complete |
@@ -143,20 +143,21 @@ Deferred to future semesters/milestones.
 | CALIB-03 | Phase 3: Frontend Wiring and Visualization | Complete |
 | CALIB-04 | Phase 3: Frontend Wiring and Visualization | Complete |
 | CALIB-05 | Phase 3: Frontend Wiring and Visualization | Complete |
-| ML-01 | Phase 4: ML-in-Finance Module | Pending |
-| ML-02 | Phase 4: ML-in-Finance Module | Pending |
-| ML-03 | Phase 4: ML-in-Finance Module | Pending |
-| ML-04 | Phase 4: ML-in-Finance Module | Pending |
-| ML-05 | Phase 4: ML-in-Finance Module | Pending |
-| ML-06 | Phase 4: ML-in-Finance Module | Pending |
-| ML-07 | Phase 4: ML-in-Finance Module | Pending |
-| ML-08 | Phase 4: ML-in-Finance Module | Pending |
-| ML-09 | Phase 4: ML-in-Finance Module | Pending |
+| ML-01 | Phase 4: ML-in-Finance Module | Complete |
+| ML-02 | Phase 4: ML-in-Finance Module | Complete |
+| ML-03 | Phase 4: ML-in-Finance Module | Complete |
+| ML-04 | Phase 4: ML-in-Finance Module | Complete |
+| ML-05 | Phase 4: ML-in-Finance Module | Complete |
+| ML-06 | Phase 4: ML-in-Finance Module | Complete |
+| ML-07 | Phase 4: ML-in-Finance Module | Complete |
+| ML-08 | Phase 4: ML-in-Finance Module | Complete |
+| ML-09 | Phase 4: ML-in-Finance Module | Complete |
 
 **Coverage:**
 - v1 requirements: 40 total
 - Mapped to phases: 40
 - Unmapped: 0
+- Pending (gap closure): 8 (MARKOV-01..06, RATE-02, RATE-03 → Phase 5)
 
 ---
 *Requirements defined: 2026-03-03*

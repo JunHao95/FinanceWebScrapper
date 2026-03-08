@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Backend Completeness** - Close backend gaps so every planned stochastic feature has a callable Flask API (completed 2026-03-05)
 - [x] **Phase 3: Frontend Wiring and Visualization** - Wire all stochastic model sub-tabs with interactive inputs and Plotly charts (completed 2026-03-07)
 - [x] **Phase 4: ML-in-Finance Module** - Build the new ML main tab with supervised, unsupervised, and time-series models (completed 2026-03-08)
+- [ ] **Phase 5: Stochastic Models UI Completion** - Wire Markov Chain sub-tab and Vasicek model selector (gap closure phase from v1.0 audit)
 
 ## Phase Details
 
@@ -89,10 +90,25 @@ Plans:
 Plans:
 - [ ] 04-01-PLAN.md — Add RL nav button and complete rlTab HTML to index.html (ML-01 through ML-09)
 
+### Phase 5: Stochastic Models UI Completion
+**Goal**: Every stochastic model feature that has a backend API is reachable by a user from the UI — Markov Chain modes (steady-state, absorption, MDP) have an interactive sub-tab, and the Interest Rate sub-tab exposes both CIR and Vasicek via a model selector.
+**Depends on**: Phase 2 (backends already complete), Phase 3 (UI structure already exists)
+**Requirements**: MARKOV-01, MARKOV-02, MARKOV-03, MARKOV-04, MARKOV-05, MARKOV-06, RATE-02, RATE-03
+**Gap Closure**: Closes gaps from v1.0 audit — Markov sub-tab missing, Vasicek UI path missing
+**Success Criteria** (what must be TRUE):
+  1. A user can open the Stochastic Models tab, navigate to a Markov Chain sub-tab, enter a transition matrix, and see the steady-state distribution rendered as a Plotly bar chart.
+  2. A user can switch to an absorption mode form, enter an absorbing Markov chain, and see absorption probabilities.
+  3. A user can switch to an MDP mode form and see the optimal policy and value function.
+  4. A user can select "Vasicek" from a model selector in the Interest Rate sub-tab, click Run, and see a Vasicek yield curve rendered as a Plotly chart.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — Markov Chain sub-tab HTML+JS + Vasicek model selector (MARKOV-01 to MARKOV-06, RATE-02, RATE-03)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -100,3 +116,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Backend Completeness | 4/4 | Complete   | 2026-03-05 |
 | 3. Frontend Wiring and Visualization | 5/5 | Complete   | 2026-03-07 |
 | 4. ML-in-Finance Module | 1/1 | Complete   | 2026-03-08 |
+| 5. Stochastic Models UI Completion | 0/1 | Not started | - |
