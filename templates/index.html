@@ -1426,11 +1426,11 @@
                         <div><label>Strike (K)</label><input type="number" id="hestonK" value="100" step="1"></div>
                         <div><label>Maturity T (yrs)</label><input type="number" id="hestonT" value="1.0" step="0.1"></div>
                         <div><label>Risk-free Rate r</label><input type="number" id="hestonR" value="0.05" step="0.01"></div>
-                        <div><label>Initial Var v0</label><input type="number" id="hestonV0" value="0.04" step="0.01"></div>
-                        <div><label>Mean Reversion &#954;</label><input type="number" id="hestonKappa" value="2.0" step="0.1"></div>
-                        <div><label>Long-run Var &#952;</label><input type="number" id="hestonTheta" value="0.04" step="0.01"></div>
-                        <div><label>Vol of Vol &#963;_v</label><input type="number" id="hestonSigmaV" value="0.3" step="0.01"></div>
-                        <div><label>Correlation &#961;</label><input type="number" id="hestonRho" value="-0.7" step="0.1" min="-1" max="1"></div>
+                        <div><label>Initial Var v0</label><input type="number" id="hestonPriceV0" value="0.04" step="0.01"></div>
+                        <div><label>Mean Reversion &#954;</label><input type="number" id="hestonPriceKappa" value="2.0" step="0.1"></div>
+                        <div><label>Long-run Var &#952;</label><input type="number" id="hestonPriceTheta" value="0.04" step="0.01"></div>
+                        <div><label>Vol of Vol &#963;_v</label><input type="number" id="hestonPriceSigmaV" value="0.3" step="0.01"></div>
+                        <div><label>Correlation &#961;</label><input type="number" id="hestonPriceRho" value="-0.7" step="0.1" min="-1" max="1"></div>
                     </div>
                     <div style="margin-bottom:12px;">
                         <label>Option Type: </label>
@@ -1499,7 +1499,7 @@
     <script src="/static/js/stockScraper.js"></script>
     <script src="/static/js/optionsPricing.js"></script>
     <script src="/static/js/volatilitySurface.js"></script>
-    <script src="/static/js/stochasticModels.js"></script>
+    <script src="/static/js/stochasticModels.js?v=2"></script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>

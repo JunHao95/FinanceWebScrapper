@@ -15,7 +15,7 @@ Based on Module 3/4 calibration workflow.
 import numpy as np
 import logging
 from typing import Dict, List, Optional, Tuple
-from scipy.optimize import brute, fmin
+from scipy.optimize import brute, fmin, minimize
 
 from .fourier_pricer import heston_price, bcc_price, merton_price
 
@@ -37,15 +37,15 @@ class HestonCalibrator:
 
     # Parameter bounds for brute search
     BRUTE_RANGES = (
-        slice(0.1, 10.0, 2.5),    # kappa:   [0.1, 10)
+        slice(0.1,  8.0, 2.0),     # kappa:   [0.1, 8)
         slice(0.01, 0.50, 0.12),   # theta:   [0.01, 0.50)
-        slice(0.05, 1.00, 0.25),   # sigma_v: [0.05, 1.00)
-        slice(-0.95, 0.00, 0.25),  # rho:     [-0.95, 0)
+        slice(0.05, 0.80, 0.20),   # sigma_v: [0.05, 0.80)
+        slice(-0.95, 0.05, 0.25),  # rho:     [-0.95, 0.05)
         slice(0.01, 0.50, 0.12),   # v0:      [0.01, 0.50)
     )
 
     FMIN_BOUNDS_LOW  = np.array([0.01, 0.001, 0.01, -0.999, 0.001])
-    FMIN_BOUNDS_HIGH = np.array([20.0, 2.000, 2.00,  0.999, 2.000])
+    FMIN_BOUNDS_HIGH = np.array([10.0, 1.000, 1.00,  0.999, 1.000])
 
     def __init__(self):
         self.result_params: Optional[np.ndarray] = None
@@ -109,10 +109,13 @@ class HestonCalibrator:
         logger.info(f"Calibrating to {len(Ks)} contracts (S={S:.2f})")
 
         def mse_fn(params: np.ndarray) -> float:
-            kappa, theta, sigma_v, rho, v0 = params
-            # Enforce positivity and bounds
-            if (kappa <= 0 or theta <= 0 or sigma_v <= 0 or v0 <= 0
-                    or abs(rho) >= 1):
+            # Clip to feasible region inside the objective so that the bounded
+            # Nelder-Mead sees a smooth landscape at the boundaries rather than
+            # a discontinuous wall from a hard reject.
+            kappa, theta, sigma_v, rho, v0 = np.clip(
+                params, self.FMIN_BOUNDS_LOW, self.FMIN_BOUNDS_HIGH
+            )
+            if kappa <= 0 or theta <= 0 or sigma_v <= 0 or v0 <= 0 or abs(rho) >= 1:
                 return 1e10
             errors = []
             for K, T, mp in zip(Ks, Ts, mkt_p):
@@ -128,7 +131,11 @@ class HestonCalibrator:
                         errors.append((res['price'] - mp) ** 2)  # absolute fallback (should not reach here after filter)
                 except Exception:
                     errors.append(1e4)
-            return float(np.mean(errors))
+            base_mse = float(np.mean(errors))
+            # Soft Feller penalty: add a weighted violation term so the optimizer
+            # is steered away from 2κθ < σᵥ² (variance hits zero → pricer diverges).
+            feller_violation = max(0.0, sigma_v ** 2 - 2.0 * kappa * theta)
+            return base_mse + 0.5 * feller_violation
 
         # ---- 2. Stage 1: Brute force ----
         logger.info("Stage 1: coarse grid search…")
@@ -138,7 +145,7 @@ class HestonCalibrator:
             logger.warning(f"Brute search failed: {e}; using default init")
             brute_result = np.array([2.0, 0.04, 0.3, -0.5, 0.04])
 
-        # ---- 3. Stage 2: Nelder-Mead refinement ----
+        # ---- 3. Stage 2: Nelder-Mead refinement with hard bounds ----
         logger.info("Stage 2: Nelder-Mead fine-tuning…")
 
         # Build scipy callback wrapper if caller supplied one
@@ -149,18 +156,32 @@ class HestonCalibrator:
                 current_error = mse_fn(xk)
                 callback(iteration_count[0], float(current_error))
 
+        # scipy.optimize.minimize with method='Nelder-Mead' supports bounds since scipy 1.7.
+        # This prevents the optimizer from wandering into degenerate regions (kappa=20, sigma_v=2)
+        # and then getting hard-clipped to a bad parameter set after the fact.
+        bounds_list = list(zip(self.FMIN_BOUNDS_LOW, self.FMIN_BOUNDS_HIGH))
+        x0 = np.clip(brute_result, self.FMIN_BOUNDS_LOW, self.FMIN_BOUNDS_HIGH)
         try:
-            fmin_result = fmin(mse_fn, brute_result, disp=False,
-                               maxiter=2000, ftol=1e-8, xtol=1e-6,
-                               full_output=True,
-                               callback=_scipy_callback)
-            opt_params, opt_mse = fmin_result[0], fmin_result[1]
+            min_result = minimize(
+                mse_fn, x0,
+                method='Nelder-Mead',
+                bounds=bounds_list,
+                options={
+                    'maxiter': 2000,
+                    'fatol': 1e-8,
+                    'xatol': 1e-6,
+                    'disp': False,
+                },
+                callback=_scipy_callback,
+            )
+            opt_params = min_result.x
+            opt_mse = float(min_result.fun)
         except Exception as e:
             logger.warning(f"Nelder-Mead failed: {e}; using brute result")
             opt_params = brute_result
             opt_mse = mse_fn(brute_result)
 
-        # Clip to feasible region
+        # Clip to feasible region (safety net after bounded optimisation)
         opt_params = np.clip(opt_params, self.FMIN_BOUNDS_LOW, self.FMIN_BOUNDS_HIGH)
         kappa, theta, sigma_v, rho, v0 = opt_params
 
@@ -210,6 +231,10 @@ class HestonCalibrator:
             except Exception:
                 pass
 
+        if strikes_out:
+            sorted_triples = sorted(zip(strikes_out, market_ivs, fitted_ivs), key=lambda x: x[0])
+            strikes_out, market_ivs, fitted_ivs = map(list, zip(*sorted_triples))
+
         return {
             'model': 'Heston (1993)',
             'ticker': ticker,
@@ -235,22 +260,42 @@ class HestonCalibrator:
     def calibrate_stream(self, ticker: str, risk_free_rate: float = 0.05,
                          option_type: str = 'call'):
         """
-        Generator that yields SSE-formatted progress strings, then a terminal done event.
+        Generator that yields SSE-formatted progress strings in real time.
 
-        Buffers callback events during calibration, then emits them all followed by a
-        ``{"done": true}`` sentinel.  This satisfies CALIB-03 (iteration count visible)
-        without requiring an async server — compatible with Render's free tier.
+        Runs calibration in a background thread and streams iteration events via a
+        queue so the frontend receives live updates rather than a burst at the end.
         """
         import json
-        events: List[str] = []
+        import threading
+        import queue as _queue
+
+        q: _queue.Queue = _queue.Queue()
 
         def _cb(iteration: int, error: float) -> None:
-            events.append(json.dumps({'iteration': iteration, 'error': error}))
+            q.put(json.dumps({'iteration': iteration, 'error': error}))
 
-        self.calibrate(ticker, risk_free_rate, option_type=option_type, callback=_cb)
+        def _run() -> None:
+            try:
+                self.calibrate(ticker, risk_free_rate, option_type=option_type, callback=_cb)
+            except Exception as exc:
+                q.put(json.dumps({'error': str(exc), 'done': True}))
+            finally:
+                q.put(None)  # sentinel
 
-        for msg in events:
-            yield f"data: {msg}\n\n"
+        threading.Thread(target=_run, daemon=True).start()
+
+        try:
+            while True:
+                try:
+                    msg = q.get(timeout=180)
+                except _queue.Empty:
+                    yield f"data: {json.dumps({'error': 'Calibration timed out', 'done': True})}\n\n"
+                    return
+                if msg is None:
+                    break
+                yield f"data: {msg}\n\n"
+        except GeneratorExit:
+            return
 
         yield f"data: {json.dumps({'done': True})}\n\n"
 
@@ -326,8 +371,12 @@ class BCCCalibrator:
         rho     = heston_params['rho']
         v0      = heston_params['v0']
 
+        JUMP_BOUNDS_LOW  = np.array([0.001, -1.0, 0.01])
+        JUMP_BOUNDS_HIGH = np.array([10.0,   1.0, 1.00])
+        MIN_MP = 0.50
+
         def jump_mse(jump_params: np.ndarray) -> float:
-            lam, mu_j, delta_j = jump_params
+            lam, mu_j, delta_j = np.clip(jump_params, JUMP_BOUNDS_LOW, JUMP_BOUNDS_HIGH)
             if lam <= 0 or delta_j <= 0:
                 return 1e10
             errors = []
@@ -336,7 +385,10 @@ class BCCCalibrator:
                     res = bcc_price(S, K, T, risk_free_rate,
                                     v0, kappa, theta, sigma_v, rho,
                                     0.0, lam, mu_j, delta_j, option_type)
-                    errors.append((res['price'] - mp) ** 2)
+                    if mp >= MIN_MP:
+                        errors.append(((res['price'] - mp) / mp) ** 2)
+                    else:
+                        errors.append((res['price'] - mp) ** 2)
                 except Exception:
                     errors.append(1e4)
             return float(np.mean(errors))
@@ -347,15 +399,63 @@ class BCCCalibrator:
         except Exception:
             j0 = np.array([0.5, -0.1, 0.15])
 
-        # Stage 2: Nelder-Mead
+        # Stage 2: bounded Nelder-Mead to prevent degenerate jump parameters
+        j0_clipped = np.clip(j0, JUMP_BOUNDS_LOW, JUMP_BOUNDS_HIGH)
         try:
-            jfmin = fmin(jump_mse, j0, disp=False, maxiter=1000)
-            lam, mu_j, delta_j = np.clip(jfmin, [0.001, -1.0, 0.01],
-                                          [20.0, 1.0, 2.0])
+            jmin = minimize(
+                jump_mse, j0_clipped,
+                method='Nelder-Mead',
+                bounds=list(zip(JUMP_BOUNDS_LOW, JUMP_BOUNDS_HIGH)),
+                options={'maxiter': 1000, 'fatol': 1e-8, 'xatol': 1e-6, 'disp': False},
+            )
+            lam, mu_j, delta_j = np.clip(jmin.x, JUMP_BOUNDS_LOW, JUMP_BOUNDS_HIGH)
         except Exception:
-            lam, mu_j, delta_j = j0
+            lam, mu_j, delta_j = j0_clipped
 
         final_mse = float(jump_mse(np.array([lam, mu_j, delta_j])))
+
+        # Compute market and fitted implied volatilities for IV chart
+        bcc_strikes: List[float] = []
+        bcc_market_ivs: List[float] = []
+        bcc_fitted_ivs: List[float] = []
+        for K_i, T_i, mp_i in zip(Ks, Ts, mkt_p):
+            try:
+                fitted_price = bcc_price(S, K_i, T_i, risk_free_rate,
+                                         v0, kappa, theta, sigma_v, rho,
+                                         0.0, lam, mu_j, delta_j, option_type)['price']
+
+                def _bs_price_bcc(sig, S_=S, K_=K_i, T_=T_i, r_=risk_free_rate, ot=option_type):
+                    if sig <= 0 or T_ <= 0:
+                        return 0.0
+                    from scipy.stats import norm
+                    d1 = (np.log(S_ / K_) + (r_ + 0.5 * sig ** 2) * T_) / (sig * np.sqrt(T_))
+                    d2 = d1 - sig * np.sqrt(T_)
+                    if ot == 'call':
+                        return float(S_ * norm.cdf(d1) - K_ * np.exp(-r_ * T_) * norm.cdf(d2))
+                    else:
+                        return float(K_ * np.exp(-r_ * T_) * norm.cdf(-d2) - S_ * norm.cdf(-d1))
+
+                def _iv_bcc(price):
+                    lo, hi = 1e-4, 5.0
+                    for _ in range(50):
+                        mid = (lo + hi) / 2.0
+                        if _bs_price_bcc(mid) > price:
+                            hi = mid
+                        else:
+                            lo = mid
+                        if hi - lo < 1e-6:
+                            break
+                    return float((lo + hi) / 2.0)
+
+                bcc_strikes.append(float(K_i))
+                bcc_market_ivs.append(_iv_bcc(mp_i))
+                bcc_fitted_ivs.append(_iv_bcc(max(fitted_price, 1e-8)))
+            except Exception:
+                pass
+
+        if bcc_strikes:
+            sorted_triples = sorted(zip(bcc_strikes, bcc_market_ivs, bcc_fitted_ivs), key=lambda x: x[0])
+            bcc_strikes, bcc_market_ivs, bcc_fitted_ivs = map(list, zip(*sorted_triples))
 
         return {
             'model': 'BCC (Heston + Merton Jumps)',
@@ -371,6 +471,9 @@ class BCCCalibrator:
             'mse':  final_mse,
             'rmse': float(np.sqrt(final_mse)),
             'spot': float(S),
+            'strikes':    bcc_strikes,
+            'market_ivs': bcc_market_ivs,
+            'fitted_ivs': bcc_fitted_ivs,
         }
 
 

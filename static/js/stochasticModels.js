@@ -186,10 +186,12 @@ async function runHestonCalibration() {
         }
         if (!d.done) {
             lastIteration = d.iteration;
-            if (progressDiv) progressDiv.textContent = `Iteration ${d.iteration} — RMSE: ${(d.error || 0).toFixed(6)}`;
+            if (progressDiv) progressDiv.textContent = `Iteration ${d.iteration} — RMSE: ${(typeof d.error === 'number' ? d.error : 0).toFixed(6)}`;
         } else {
             src.close();
-            if (progressDiv) progressDiv.textContent = `Calibration complete after ${lastIteration} iterations.`;
+            if (progressDiv) progressDiv.textContent = lastIteration > 0
+                ? `Calibration complete after ${lastIteration} iterations.`
+                : 'Calibration complete.';
 
             // Fetch final result from standard route for full chart data
             try {
@@ -267,8 +269,8 @@ async function runHestonCalibration() {
                         },
                         {
                             x: cal.strikes, y: cal.fitted_ivs,
-                            type: 'scatter', mode: 'lines+markers',
-                            name: 'Fitted IV', line: { color: '#dc3545', width: 2 }
+                            type: 'scatter', mode: 'markers',
+                            name: 'Fitted IV', marker: { color: '#dc3545', size: 8, symbol: 'x' }
                         }
                     ], {
                         title: `Heston Calibration — ${escapeHTML(ticker)}`,
@@ -725,11 +727,11 @@ async function runHestonPricing() {
         K: parseFloat(document.getElementById('hestonK').value),
         T: parseFloat(document.getElementById('hestonT').value),
         r: parseFloat(document.getElementById('hestonR').value),
-        v0: parseFloat(document.getElementById('hestonV0').value),
-        kappa: parseFloat(document.getElementById('hestonKappa').value),
-        theta: parseFloat(document.getElementById('hestonTheta').value),
-        sigma_v: parseFloat(document.getElementById('hestonSigmaV').value),
-        rho: parseFloat(document.getElementById('hestonRho').value),
+        v0: parseFloat(document.getElementById('hestonPriceV0').value),
+        kappa: parseFloat(document.getElementById('hestonPriceKappa').value),
+        theta: parseFloat(document.getElementById('hestonPriceTheta').value),
+        sigma_v: parseFloat(document.getElementById('hestonPriceSigmaV').value),
+        rho: parseFloat(document.getElementById('hestonPriceRho').value),
         option_type: document.getElementById('hestonOptionType').value
     };
     const resultsDiv = document.getElementById('hestonPriceResults');
@@ -874,8 +876,8 @@ async function runBCCCalibration() {
                 },
                 {
                     x: data.strikes, y: data.fitted_ivs,
-                    type: 'scatter', mode: 'lines+markers',
-                    name: 'BCC Fitted IV', line: { color: '#fd7e14', width: 2 }
+                    type: 'scatter', mode: 'markers',
+                    name: 'BCC Fitted IV', marker: { color: '#fd7e14', size: 8, symbol: 'x' }
                 }
             ], {
                 title: `BCC Calibration — ${escapeHTML(ticker)}`,

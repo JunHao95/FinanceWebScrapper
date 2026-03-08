@@ -1139,7 +1139,7 @@ def heston_price_endpoint():
         # Black-Scholes comparison
         from src.derivatives.options_pricer import OptionsPricer
         pricer = OptionsPricer()
-        sigma = float(data.get('vol_for_bs', data.get('sigma_v', 0.2)))
+        sigma = np.sqrt(float(data.get('v0', 0.04)))
         bs = pricer.black_scholes(
             float(data['spot']), float(data['strike']),
             float(data['maturity']), float(data['risk_free_rate']),
@@ -1576,9 +1576,12 @@ def calibrate_bcc_endpoint():
 
         return jsonify({
             'success': True,
-            'rmse':   result.get('rmse', 0),
-            'params': flat_params,
-            'result': result,
+            'rmse':       result.get('rmse', 0),
+            'params':     flat_params,
+            'result':     result,
+            'strikes':    result.get('strikes', []),
+            'market_ivs': result.get('market_ivs', []),
+            'fitted_ivs': result.get('fitted_ivs', []),
         })
 
     except Exception as e:
