@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-frontend-wiring 03-05-PLAN.md (Markov/Credit/Rates Plotly charts — awaiting human-verify checkpoint)
-last_updated: "2026-03-07T03:07:39.352Z"
+stopped_at: Completed 04-ml-in-finance-module 04-01-PLAN.md (RL HTML tab — awaiting human-verify checkpoint)
+last_updated: "2026-03-08T07:43:32.701Z"
 last_activity: "2026-03-06 — Completed plan 03-02 (Heston Pricing sub-tab: price cards + 3D IV surface, /api/heston_iv_surface route)"
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 4
+  total_plans: 13
+  completed_plans: 13
   percent: 70
 ---
 
@@ -62,6 +62,7 @@ Progress: [████████░░] 70%
 | Phase 03-frontend-wiring P04 | 3 | 1 tasks | 2 files |
 | Phase 03-frontend-wiring P03 | 4 | 2 tasks | 4 files |
 | Phase 03-frontend-wiring P05 | 5 | 1 tasks | 1 files |
+| Phase 04-ml-in-finance-module P01 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,8 @@ Recent decisions affecting current work:
 - [Phase 03-03]: Final chart data fetched from /api/calibrate_heston POST after SSE done event — keeps SSE route thin
 - [Phase 03-05]: Markov heatmap fetched via secondary /api/markov_chain nstep n=1 call inside runCreditRisk — no separate Markov sub-tab needed
 - [Phase 03-05]: Yield curve chart uses pt.spot_rate * 100 from yield_curve array — matches actual /api/interest_rate_model response field shape
+- [Phase 04-01]: No rlModels.js script tag added — already present at line 1588 of index.html
+- [Phase 04-01]: RL sub-tab IDs follow pattern rlTab_<name> for buttons and rlContent_<name> for content divs
 
 ### Pending Todos
 
@@ -113,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T03:07:36.013Z
-Stopped at: Completed 03-frontend-wiring 03-05-PLAN.md (Markov/Credit/Rates Plotly charts — awaiting human-verify checkpoint)
+Last session: 2026-03-08T07:43:32.699Z
+Stopped at: Completed 04-ml-in-finance-module 04-01-PLAN.md (RL HTML tab — awaiting human-verify checkpoint)
 Resume file: None
