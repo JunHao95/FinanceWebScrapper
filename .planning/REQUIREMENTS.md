@@ -1,11 +1,12 @@
 # Requirements: MFE Showcase Web App
 
 **Defined:** 2026-03-03
+**Updated for v2.0:** 2026-03-08
 **Core Value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
 
-## v1 Requirements
+## v1 Requirements (Milestone v1.0 — Complete)
 
-Requirements for the current milestone: completing the Stochastic Models section and building the ML in Finance section.
+All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for full details.
 
 ### Model Correctness (Stochastic Models)
 
@@ -62,7 +63,7 @@ Requirements for the current milestone: completing the Stochastic Models section
 - [x] **CALIB-02**: User can calibrate BCC (Bates-Chan-Chang) model to market option prices
 - [x] **CALIB-03**: Calibration shows live progress streaming (iteration count, current error) via SSE
 - [x] **CALIB-04**: Calibration results display relative RMSE and fitted vs. market IV comparison
-- [x] **CALIB-05**: BCC calibration has a Flask route and UI sub-tab (currently backend-complete, no route/UI)
+- [x] **CALIB-05**: BCC calibration has a Flask route and UI sub-tab
 
 ### ML in Finance Module
 
@@ -76,22 +77,37 @@ Requirements for the current milestone: completing the Stochastic Models section
 - [x] **ML-08**: All ML models use TimeSeriesSplit to prevent data leakage (no look-ahead bias)
 - [x] **ML-09**: ML module appears as a new main tab in the UI consistent with existing tab structure
 
-## v2 Requirements
+---
 
-Deferred to future semesters/milestones.
+## v2 Requirements (Milestone v2.0 — Active)
 
-### Advanced Models
+**Milestone:** v2.0 One-Click Analysis Dashboard
+**Goal:** From ticker symbols to full analysis in one click.
 
-- **V2-01**: Multi-factor interest rate models (HJM, LMM)
-- **V2-02**: LSTM / deep learning for return prediction
-- **V2-03**: n-state HMM (n > 2) for finer regime granularity
-- **V2-04**: Real-time market data streaming
-- **V2-05**: MDP with reinforcement learning (Q-learning) for dynamic hedging
+### Form UX
 
-### Infrastructure
+- [ ] **FORM-01**: User can submit analysis with only ticker symbols entered (no required source selection or API key input)
+- [ ] **FORM-02**: User can toggle advanced settings (sources, API keys) via a collapsible "⚙ Advanced" section
+- [ ] **FORM-03**: System applies smart defaults (yahoo + finviz + google + technical) when advanced settings are collapsed or unconfigured
+- [ ] **FORM-04**: User can switch between "% Weight" and "Value" allocation modes via a mode toggle
+- [ ] **FORM-05**: In Value mode, user enters currency amounts per ticker and sees live computed % weights (e.g., "→ 66.7%")
+- [ ] **FORM-06**: In Value mode, user can select currency (USD/SGD/EUR/GBP) next to the mode toggle
+- [ ] **FORM-07**: Leaving all value fields blank in either mode falls back to equal-weight allocation
+- [ ] **FORM-08**: "Analyze Stocks" button relabelled to "▶ Run Analysis" and presented in a prominent hero layout
 
-- **V2-06**: Model result caching for demo tickers (pre-computed results)
-- **V2-07**: Export / download results as CSV or PDF report
+### Auto Analysis
+
+- [ ] **AUTO-01**: After scrape completes, Regime Detection runs automatically for each ticker using a 2-year window
+- [ ] **AUTO-02**: After scrape completes, Portfolio MDP runs automatically (skipped gracefully for single-ticker input)
+- [ ] **AUTO-03**: Analytics tab shows per-module status badges ("⏳ Running…" → "✓ Done" / "⚠ Failed")
+- [ ] **AUTO-04**: Auto-run regime results render inline in Analytics sub-tab (charts via existing Plotly helpers)
+- [ ] **AUTO-05**: Auto-run Portfolio MDP policy output renders inline in Analytics sub-tab
+
+### Portfolio Health Card
+
+- [ ] **HEALTH-01**: A "Portfolio Health" card appears above the tab nav in results showing VaR (95%), Sharpe ratio, and regime per ticker
+- [ ] **HEALTH-02**: Each metric in the health card links/jumps to its relevant analytics tab section
+- [ ] **HEALTH-03**: Health card shows available metrics only when fewer tickers are submitted (no correlation/PCA for single ticker)
 
 ## Out of Scope
 
@@ -100,8 +116,12 @@ Deferred to future semesters/milestones.
 | User authentication | Showcase app, not multi-user platform |
 | Mobile app / responsive design | Web-first, desktop demo context |
 | Real-time market data feeds | Static/fetched data sufficient for demos |
-| QuantLib / hmmlearn / ta-lib | Black-box libraries defeat the showcase purpose; also have C build deps that break on Render |
+| QuantLib / hmmlearn / ta-lib | Black-box libraries defeat the showcase purpose |
 | Production hardening (rate limiting, auth, etc.) | Academic demo context |
+| Options Pricing auto-run | Requires strike and maturity — user-specific params |
+| Volatility Surface auto-run | Requires date range selection — keep as manual tab |
+| CIR/Vasicek auto-run | Need rate model params — keep as manual tab |
+| RL training auto-run | Needs hyperparameter selection — keep as manual tab |
 
 ## Traceability
 
@@ -152,13 +172,29 @@ Deferred to future semesters/milestones.
 | ML-07 | Phase 4: ML-in-Finance Module | Complete |
 | ML-08 | Phase 4: ML-in-Finance Module | Complete |
 | ML-09 | Phase 4: ML-in-Finance Module | Complete |
+| FORM-01 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-02 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-03 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-04 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-05 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-06 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-07 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-08 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| AUTO-01 | Phase 7: Auto-Run Extended Analysis | Pending |
+| AUTO-02 | Phase 7: Auto-Run Extended Analysis | Pending |
+| AUTO-03 | Phase 7: Auto-Run Extended Analysis | Pending |
+| AUTO-04 | Phase 7: Auto-Run Extended Analysis | Pending |
+| AUTO-05 | Phase 7: Auto-Run Extended Analysis | Pending |
+| HEALTH-01 | Phase 8: Portfolio Health Summary Card | Pending |
+| HEALTH-02 | Phase 8: Portfolio Health Summary Card | Pending |
+| HEALTH-03 | Phase 8: Portfolio Health Summary Card | Pending |
 
 **Coverage:**
-- v1 requirements: 40 total
-- Mapped to phases: 40
-- Unmapped: 0
-- Pending (gap closure): 8 (MARKOV-01..06, RATE-02, RATE-03 → Phase 5)
+- v1 requirements: 40 total — all Complete
+- v2 requirements: 16 total (FORM: 8, AUTO: 5, HEALTH: 3)
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after roadmap creation*
+*Last updated: 2026-03-08 after v2.0 milestone start*
