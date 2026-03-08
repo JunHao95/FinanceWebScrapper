@@ -382,6 +382,7 @@ async function runCIRModel() {
     const theta = parseFloat(document.getElementById('cirTheta')?.value || 5.0) / 100;
     const sigma = parseFloat(document.getElementById('cirSigma')?.value || 10) / 100;
     const calibrate = document.getElementById('cirCalibrateTreasuries')?.checked || false;
+    const model = document.getElementById('cirModel')?.value || 'cir';
 
     const resultsDiv = document.getElementById('cirResults');
     if (!resultsDiv) return;
@@ -392,7 +393,7 @@ async function runCIRModel() {
     try {
         const payload = calibrate
             ? { r0, calibrate_to_treasuries: true }
-            : { r0, kappa, theta, sigma,
+            : { model, r0, kappa, theta, sigma,
                 maturities: [0.083, 0.25, 0.5, 1, 2, 3, 5, 7, 10, 20, 30] };
 
         const resp = await fetch('/api/interest_rate_model', {
@@ -957,4 +958,212 @@ async function calculateMertonPrice() {
     } catch (err) {
         contentDiv.innerHTML = `<div style="color:red;">Request failed: ${err.message}</div>`;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Markov Chain Analysis (steady-state, absorption, MDP)
+// ---------------------------------------------------------------------------
+function showMarkovForm(mode) {
+    ['steady_state', 'absorption', 'mdp'].forEach(function(m) {
+        const el = document.getElementById('markovForm_' + m);
+        if (el) el.style.display = m === mode ? 'block' : 'none';
+    });
+}
+
+async function runMarkovChain() {
+    const mode = document.getElementById('markovMode')?.value || 'steady_state';
+    const resultsDiv = document.getElementById('markovResults');
+    if (!resultsDiv) return;
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<p style="color:#666;">&#9203; Computing&#8230;</p>';
+
+    const transitionDiv = document.getElementById('markovTransitionHeatmap');
+    if (transitionDiv) transitionDiv.style.display = 'none';
+
+    try {
+        let payload = { mode };
+        let userMatrix = null;
+
+        if (mode === 'steady_state') {
+            const raw = document.getElementById('markovMatrixSS')?.value.trim();
+            if (raw) {
+                try { payload.transition_matrix = JSON.parse(raw); userMatrix = payload.transition_matrix; }
+                catch (e) { resultsDiv.innerHTML = renderAlert('Invalid JSON in transition matrix: ' + e.message); return; }
+            }
+        } else if (mode === 'absorption') {
+            const raw = document.getElementById('markovMatrixAbs')?.value.trim();
+            if (raw) {
+                try { payload.transition_matrix = JSON.parse(raw); }
+                catch (e) { resultsDiv.innerHTML = renderAlert('Invalid JSON in transition matrix: ' + e.message); return; }
+            }
+        } else if (mode === 'mdp') {
+            payload.gamma    = parseFloat(document.getElementById('markovGamma')?.value || 0.95);
+            payload.n_periods = parseInt(document.getElementById('markovNPeriods')?.value || 1000, 10);
+        }
+
+        const resp = await fetch('/api/markov_chain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            resultsDiv.innerHTML = renderAlert('Error: ' + (data.error || 'Unknown error'));
+            return;
+        }
+
+        const r = data.result;
+
+        if (r.error) {
+            resultsDiv.innerHTML = renderAlert(r.error, 'warning');
+            return;
+        }
+
+        if (mode === 'steady_state') {
+            const labels  = r.ratings || r.steady_state.map((_, i) => 'State ' + i);
+            const values  = (r.steady_state || []).map(v => +(v * 100).toFixed(4));
+            resultsDiv.innerHTML = `
+                <div class="result-card">
+                    <h3>&#128200; Steady-State Distribution</h3>
+                    <p style="font-size:13px; color:#666;">Long-run fraction of time spent in each state.</p>
+                    <div id="markovSteadyChart" style="margin-top:12px;"></div>
+                </div>`;
+            Plotly.newPlot('markovSteadyChart', [{
+                x: labels,
+                y: values,
+                type: 'bar',
+                marker: { color: '#667eea' }
+            }], {
+                title: 'Steady-State Distribution',
+                xaxis: { title: 'State' },
+                yaxis: { title: 'Probability (%)', tickformat: '.2f' },
+                height: 350,
+                margin: { t: 40, l: 70, r: 20, b: 60 }
+            }, { responsive: true });
+
+            try {
+                const nstepPayload = { mode: 'nstep', n: 1 };
+                if (userMatrix) nstepPayload.transition_matrix = userMatrix;
+                const nstepResp = await fetch('/api/markov_chain', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nstepPayload)
+                });
+                const nstepData = await nstepResp.json();
+                if (nstepData.success && nstepData.result && nstepData.result.transition_matrix_n) {
+                    const tm = nstepData.result.transition_matrix_n;
+                    const tmLabels = nstepData.result.ratings || tm.map((_, i) => 'State ' + i);
+                    if (transitionDiv) {
+                        transitionDiv.style.display = 'block';
+                        transitionDiv.innerHTML = '<div class="result-card"><h3>&#127758; Transition Matrix</h3><p style="font-size:13px; color:#666;">1-step transition probabilities between states.</p><div id="markovTransitionHeatmapPlot" style="margin-top:12px;"></div></div>';
+                        Plotly.newPlot('markovTransitionHeatmapPlot', [{
+                            z: tm,
+                            x: tmLabels,
+                            y: tmLabels,
+                            type: 'heatmap',
+                            colorscale: 'Blues',
+                            text: tm.map(function(row) { return row.map(function(v) { return (v * 100).toFixed(1) + '%'; }); }),
+                            texttemplate: '%{text}',
+                            showscale: true
+                        }], {
+                            title: 'S&P 1-Year Rating Transition Matrix',
+                            height: 420,
+                            margin: { t: 50, l: 80, r: 20, b: 80 }
+                        }, { responsive: true });
+                    }
+                }
+            } catch (nstepErr) {
+                console.warn('Transition matrix heatmap fetch failed:', nstepErr.message);
+            }
+
+        } else if (mode === 'absorption') {
+            const tIdx  = r.transient_indices  || [];
+            const aIdx  = r.absorbing_indices  || [];
+            const absM  = r.absorption_matrix  || [];
+            const rowLabels = tIdx.map(i => 'S' + i + ' (transient)');
+            const colLabels = aIdx.map(i => 'S' + i + ' (absorbing)');
+
+            resultsDiv.innerHTML = `
+                <div class="result-card">
+                    <h3>&#128257; Absorption Probabilities</h3>
+                    <p style="font-size:13px; color:#666;">
+                        Probability that a chain starting in transient state i is absorbed by absorbing state j.
+                        Transient states: [${tIdx.join(', ')}] &nbsp; Absorbing states: [${aIdx.join(', ')}]
+                    </p>
+                    <div id="markovAbsorptionHeatmap" style="margin-top:12px;"></div>
+                </div>`;
+            Plotly.newPlot('markovAbsorptionHeatmap', [{
+                z: absM,
+                x: colLabels,
+                y: rowLabels,
+                type: 'heatmap',
+                colorscale: 'Blues',
+                text: absM.map(row => row.map(v => (v * 100).toFixed(1) + '%')),
+                texttemplate: '%{text}',
+                showscale: true
+            }], {
+                title: 'Absorption Probability Matrix',
+                height: 400,
+                margin: { t: 50, l: 120, r: 20, b: 80 }
+            }, { responsive: true });
+
+        } else if (mode === 'mdp') {
+            const states  = r.states  || [];
+            const actions = r.actions || [];
+            const policy  = r.optimal_policy  || [];
+            const vf      = r.value_function  || [];
+
+            const policyCards = states.map(function(state, i) {
+                return `<div style="background:#f8f9fa; padding:10px; border-radius:4px; text-align:center; min-width:120px;">
+                    <div style="font-weight:bold; font-size:13px;">${escapeHTML(state)}</div>
+                    <div style="font-size:11px; color:#667eea; margin-top:4px;">${escapeHTML(actions[policy[i]] || '?')}</div>
+                </div>`;
+            }).join('');
+
+            const convNote = r.converged
+                ? `Converged in ${r.convergence_iterations} iterations (&#947; = ${(r.gamma || 0.95).toFixed(2)})`
+                : `Did not converge in ${r.convergence_iterations} iterations`;
+
+            resultsDiv.innerHTML = `
+                <div class="result-card">
+                    <h3>&#127919; MDP — Optimal Portfolio Policy</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:8px;">${escapeHTML(convNote)}</p>
+                    <p style="font-size:12px; color:#555; margin-bottom:10px;"><strong>Optimal Policy:</strong></p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">${policyCards}</div>
+                    <div id="markovMDPChart" style="margin-top:12px;"></div>
+                </div>`;
+            Plotly.newPlot('markovMDPChart', [{
+                x: states,
+                y: vf,
+                type: 'bar',
+                marker: { color: '#28a745' }
+            }], {
+                title: 'V* — Optimal Value Function',
+                xaxis: { title: 'State' },
+                yaxis: { title: 'V*(s)', tickformat: '.2f' },
+                height: 320,
+                margin: { t: 40, l: 70, r: 20, b: 50 }
+            }, { responsive: true });
+        }
+
+    } catch (err) {
+        resultsDiv.innerHTML = renderAlert('Request failed: ' + err.message);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CIR/Vasicek model selector — swap default parameter values on model change
+// ---------------------------------------------------------------------------
+function updateCIRDefaults(model) {
+    const defaults = {
+        cir:     { kappa: '1.5', theta: '5.0', sigma: '10',  r0: '5.3' },
+        vasicek: { kappa: '0.5', theta: '6.0', sigma: '2.0', r0: '5.3' }
+    };
+    const d = defaults[model] || defaults.cir;
+    const set = function(id, val) { const el = document.getElementById(id); if (el) el.value = val; };
+    set('cirKappa', d.kappa);
+    set('cirTheta', d.theta);
+    set('cirSigma', d.sigma);
+    set('cirR0',    d.r0);
 }
