@@ -17,12 +17,12 @@ Requirements for the current milestone: completing the Stochastic Models section
 
 ### Markov Chain & MDP Module
 
-- [ ] **MARKOV-01**: User can input a transition matrix and compute steady-state distribution
-- [ ] **MARKOV-02**: User can compute absorption probabilities for absorbing Markov chains
-- [ ] **MARKOV-03**: User can visualize state transition diagram or heatmap of transition matrix
-- [ ] **MARKOV-04**: User can define a portfolio rebalancing Markov Decision Process (states, actions, rewards)
-- [ ] **MARKOV-05**: User can compute optimal policy via value iteration or policy iteration for the MDP
-- [ ] **MARKOV-06**: Markov/MDP results display in dedicated UI sub-tab with interactive parameters
+- [x] **MARKOV-01**: User can input a transition matrix and compute steady-state distribution
+- [x] **MARKOV-02**: User can compute absorption probabilities for absorbing Markov chains
+- [x] **MARKOV-03**: User can visualize state transition diagram or heatmap of transition matrix
+- [x] **MARKOV-04**: User can define a portfolio rebalancing Markov Decision Process (states, actions, rewards)
+- [x] **MARKOV-05**: User can compute optimal policy via value iteration or policy iteration for the MDP
+- [x] **MARKOV-06**: Markov/MDP results display in dedicated UI sub-tab with interactive parameters
 
 ### Credit Transitions Module
 
@@ -35,8 +35,8 @@ Requirements for the current milestone: completing the Stochastic Models section
 ### Interest Rate Models Module
 
 - [x] **RATE-01**: User can simulate CIR (Cox-Ingersoll-Ross) interest rate paths with chosen parameters
-- [ ] **RATE-02**: User can simulate Vasicek interest rate paths with chosen parameters
-- [ ] **RATE-03**: User can view yield curve generated from the selected model
+- [x] **RATE-02**: User can simulate Vasicek interest rate paths with chosen parameters
+- [x] **RATE-03**: User can view yield curve generated from the selected model
 - [x] **RATE-04**: UI displays whether Feller condition is satisfied for CIR parameters
 - [x] **RATE-05**: Interest rate model results display in dedicated UI sub-tab with Plotly chart output
 
@@ -112,20 +112,20 @@ Deferred to future semesters/milestones.
 | MATH-03 | Phase 1: Math Correctness | Complete |
 | MATH-04 | Phase 1: Math Correctness | Complete |
 | MATH-05 | Phase 1: Math Correctness | Complete |
-| MARKOV-01 | Phase 5: Stochastic Models UI Completion | Pending |
-| MARKOV-02 | Phase 5: Stochastic Models UI Completion | Pending |
-| MARKOV-03 | Phase 5: Stochastic Models UI Completion | Pending |
-| MARKOV-04 | Phase 5: Stochastic Models UI Completion | Pending |
-| MARKOV-05 | Phase 5: Stochastic Models UI Completion | Pending |
-| MARKOV-06 | Phase 5: Stochastic Models UI Completion | Pending |
+| MARKOV-01 | Phase 5: Stochastic Models UI Completion | Complete |
+| MARKOV-02 | Phase 5: Stochastic Models UI Completion | Complete |
+| MARKOV-03 | Phase 5: Stochastic Models UI Completion | Complete |
+| MARKOV-04 | Phase 5: Stochastic Models UI Completion | Complete |
+| MARKOV-05 | Phase 5: Stochastic Models UI Completion | Complete |
+| MARKOV-06 | Phase 5: Stochastic Models UI Completion | Complete |
 | CREDIT-01 | Phase 2: Backend Completeness | Complete |
 | CREDIT-02 | Phase 2: Backend Completeness | Complete |
 | CREDIT-03 | Phase 2: Backend Completeness | Complete |
 | CREDIT-04 | Phase 1: Math Correctness | Complete |
 | CREDIT-05 | Phase 2: Backend Completeness | Complete |
 | RATE-01 | Phase 2: Backend Completeness | Complete |
-| RATE-02 | Phase 5: Stochastic Models UI Completion | Pending |
-| RATE-03 | Phase 5: Stochastic Models UI Completion | Pending |
+| RATE-02 | Phase 5: Stochastic Models UI Completion | Complete |
+| RATE-03 | Phase 5: Stochastic Models UI Completion | Complete |
 | RATE-04 | Phase 2: Backend Completeness | Complete |
 | RATE-05 | Phase 2: Backend Completeness | Complete |
 | REGIME-01 | Phase 3: Frontend Wiring and Visualization | Complete |

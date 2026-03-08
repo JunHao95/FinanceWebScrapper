@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Backend Completeness** - Close backend gaps so every planned stochastic feature has a callable Flask API (completed 2026-03-05)
 - [x] **Phase 3: Frontend Wiring and Visualization** - Wire all stochastic model sub-tabs with interactive inputs and Plotly charts (completed 2026-03-07)
 - [x] **Phase 4: ML-in-Finance Module** - Build the new ML main tab with supervised, unsupervised, and time-series models (completed 2026-03-08)
-- [ ] **Phase 5: Stochastic Models UI Completion** - Wire Markov Chain sub-tab and Vasicek model selector (gap closure phase from v1.0 audit)
+- [x] **Phase 5: Stochastic Models UI Completion** - Wire Markov Chain sub-tab and Vasicek model selector (gap closure phase from v1.0 audit) (completed 2026-03-08)
 
 ## Phase Details
 
@@ -116,4 +116,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Backend Completeness | 4/4 | Complete   | 2026-03-05 |
 | 3. Frontend Wiring and Visualization | 5/5 | Complete   | 2026-03-07 |
 | 4. ML-in-Finance Module | 1/1 | Complete   | 2026-03-08 |
-| 5. Stochastic Models UI Completion | 0/1 | Not started | - |
+| 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
