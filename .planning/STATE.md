@@ -5,7 +5,7 @@ milestone_name: One-Click Analysis Dashboard
 status: not_started
 stopped_at: —
 last_updated: "2026-03-08T00:00:00.000Z"
-last_activity: "2026-03-08 — Milestone v2.0 started"
+last_activity: "2026-03-08 — Roadmap for v2.0 (phases 6-8) created"
 progress:
   total_phases: 3
   completed_phases: 0
@@ -18,36 +18,39 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-03)
+See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
-**Current focus:** Phase 3 — Frontend Wiring
+**Current focus:** Phase 6 — Form Streamlining & Smart Defaults (v2.0 milestone start)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 6 — Form Streamlining & Smart Defaults (not yet started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-08 — Milestone v2.0 started
+Status: Roadmap defined; awaiting plan-phase for Phase 6
+Last activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0%  (v2.0 phases: 0 of 3 complete)
 
 ## Performance Metrics
 
-**Velocity:**
-- Total plans completed: 5
+**Velocity (v1.0 history):**
+- Total plans completed: 14
 - Average duration: ~4 min
-- Total execution time: ~19 min
+- Total execution time: ~56 min
 
-**By Phase:**
+**By Phase (v1.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-math-correctness | 3 | ~9 min | ~3 min |
-| 02-backend-completeness | 2 | ~10 min | ~5 min |
+| 02-backend-completeness | 4 | ~20 min | ~5 min |
+| 03-frontend-wiring | 5 | ~20 min | ~4 min |
+| 04-ml-in-finance-module | 1 | ~5 min | ~5 min |
+| 05-stochastic-models-ui-completion | 1 | ~8 min | ~8 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~3 min), 01-02 (~3 min), 01-03 (~3 min), 02-01 (~5 min), 02-02 (~5 min)
+- Last 5 plans: 03-05 (~5 min), 04-01 (~5 min), 05-01 (~8 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -110,7 +113,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- Plan Phase 6: Form Streamlining & Smart Defaults (FORM-01..08)
 
 ### Blockers/Concerns
 
@@ -120,5 +123,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-08T12:49:56.998Z
-Stopped at: Completed 05-stochastic-models-ui-completion 05-01-PLAN.md (2/3 tasks — awaiting human-verify checkpoint)
+Stopped at: Roadmap v2.0 created (phases 6-8 appended). Ready to plan Phase 6.
 Resume file: None

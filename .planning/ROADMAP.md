@@ -4,6 +4,8 @@
 
 This milestone completes the Stochastic Models section and builds the ML-in-Finance section of an interactive MFE portfolio showcase. The work proceeds in four phases ordered by risk: fix math correctness first (Phase 1), close backend gaps so all planned features have callable APIs (Phase 2), wire the frontend with Plotly visualizations so recruiters can interact with live models (Phase 3), then build the ML-in-Finance module as a new main tab when the semester begins (Phase 4). Phases 1-3 complete the current semester deliverable; Phase 4 is the next semester deliverable.
 
+Milestone v2.0 (One-Click Analysis Dashboard) adds Phases 6-8, delivering one-click analysis with smart form defaults, auto-run extended analytics, and a Portfolio Health summary card.
+
 ## Phases
 
 **Phase Numbering:**
@@ -17,6 +19,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Frontend Wiring and Visualization** - Wire all stochastic model sub-tabs with interactive inputs and Plotly charts (completed 2026-03-07)
 - [x] **Phase 4: ML-in-Finance Module** - Build the new ML main tab with supervised, unsupervised, and time-series models (completed 2026-03-08)
 - [x] **Phase 5: Stochastic Models UI Completion** - Wire Markov Chain sub-tab and Vasicek model selector (gap closure phase from v1.0 audit) (completed 2026-03-08)
+- [ ] **Phase 6: Form Streamlining & Smart Defaults** - Reduce visible form to ticker input + Run Analysis button; data sources default silently; allocation supports % Weight and Value modes
+- [ ] **Phase 7: Auto-Run Extended Analysis After Scrape** - After scrape completes, Regime Detection and Portfolio MDP trigger automatically with inline results and status badges in the Analytics tab
+- [ ] **Phase 8: Portfolio Health Summary Card** - A concise Portfolio Health card appears at the top of results after all analyses complete, showing VaR, Sharpe, and regime per ticker
 
 ## Phase Details
 
@@ -105,10 +110,44 @@ Plans:
 Plans:
 - [ ] 05-01-PLAN.md — Markov Chain sub-tab HTML+JS + Vasicek model selector (MARKOV-01 to MARKOV-06, RATE-02, RATE-03)
 
+### Phase 6: Form Streamlining & Smart Defaults
+**Goal**: Users can run a full analysis by entering only ticker symbols and clicking one button — all data source configuration is hidden behind a collapsible advanced toggle, allocation supports both % Weight and Value modes with live weight feedback, and the submit button is prominent.
+**Depends on**: Phase 5
+**Requirements**: FORM-01, FORM-02, FORM-03, FORM-04, FORM-05, FORM-06, FORM-07, FORM-08
+**Success Criteria** (what must be TRUE):
+  1. A user can enter one or more ticker symbols and click "Run Analysis" without touching any other field — the form submits successfully using yahoo + finviz + google + technical as defaults.
+  2. A user can click the "Advanced" toggle to reveal data source checkboxes and API key inputs, configure them, and re-collapse the section without losing the configured values.
+  3. A user can switch to Value mode, enter currency amounts per ticker, and see "→ XX.X%" live next to each amount field as other amounts change; the computed weights are used in analysis.
+  4. A user can select a currency (USD/SGD/EUR/GBP) in Value mode and see the label update without affecting the weight computation logic.
+  5. Leaving all allocation fields blank in either mode submits with equal-weight allocation applied automatically, with no validation error shown to the user.
+**Plans**: TBD
+
+### Phase 7: Auto-Run Extended Analysis After Scrape
+**Goal**: After the main scrape completes, Regime Detection runs per ticker and Portfolio MDP runs for the portfolio without any user action — results appear inline in the Analytics tab alongside status badges that track each module's progress from running to done or failed.
+**Depends on**: Phase 6
+**Requirements**: AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05
+**Success Criteria** (what must be TRUE):
+  1. After clicking "Run Analysis" for two tickers, both regime detection charts appear in the Analytics sub-tab without the user clicking any additional button; each chart shows bull/bear/neutral regime shading over the 2-year window.
+  2. The Analytics tab shows a status badge per auto-run module that transitions from "Running..." to "Done" (or "Failed") without a page reload.
+  3. Portfolio MDP output (optimal policy and value function) renders inline in the Analytics sub-tab after scrape; for a single-ticker input the MDP section is gracefully absent (no error, no empty chart).
+  4. Auto-run regime charts use the same Plotly helpers already present in stochasticModels.js — no duplicate chart rendering code is introduced.
+  5. If a regime detection API call fails for one ticker, the other ticker's chart still renders and the failed ticker shows a "Failed" badge without blocking the rest of the flow.
+**Plans**: TBD
+
+### Phase 8: Portfolio Health Summary Card
+**Goal**: A Portfolio Health card appears at the top of results once all analyses complete, giving the user an at-a-glance summary of portfolio VaR, Sharpe ratio, and the current regime per ticker — each metric links directly to its detailed section in the Analytics tab.
+**Depends on**: Phase 7
+**Requirements**: HEALTH-01, HEALTH-02, HEALTH-03
+**Success Criteria** (what must be TRUE):
+  1. After a multi-ticker analysis completes, the Portfolio Health card is visible above the tab nav and shows VaR (95%), Sharpe ratio, a regime label per ticker (bull/bear/neutral), and the top correlation pair.
+  2. Clicking a metric in the health card (e.g., the Sharpe ratio) scrolls or navigates to the corresponding section in the Analytics tab.
+  3. For a single-ticker analysis, the health card appears showing only the metrics that are computable (VaR, Sharpe, regime) — correlation and PCA entries are absent, not shown as empty or "N/A".
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -117,3 +156,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Frontend Wiring and Visualization | 5/5 | Complete   | 2026-03-07 |
 | 4. ML-in-Finance Module | 1/1 | Complete   | 2026-03-08 |
 | 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
+| 6. Form Streamlining & Smart Defaults | 0/? | Not started | - |
+| 7. Auto-Run Extended Analysis After Scrape | 0/? | Not started | - |
+| 8. Portfolio Health Summary Card | 0/? | Not started | - |
