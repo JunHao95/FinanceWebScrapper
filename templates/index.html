@@ -522,9 +522,26 @@
         #advanced-settings summary:hover { text-decoration: underline; }
         #advanced-settings > .form-group { margin-top: 15px; }
 
-        /* Hero ticker input */
+        /* Hero ticker input and Run Analysis button */
         .hero-input-group input { font-size: 1.1em; padding: 14px; }
-        #runAnalysisBtn { font-size: 1.1em; padding: 12px 24px; }
+        #runAnalysisBtn {
+            width: 100%;
+            font-size: 1.15em;
+            padding: 16px 32px;
+            letter-spacing: 0.02em;
+        }
+        /* button-group column layout so Run Analysis is full-width above Clear */
+        .form-group ~ .button-group,
+        #scrapeForm .button-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        /* De-emphasise Clear as secondary action */
+        #scrapeForm .button-group .secondary-btn {
+            font-size: 0.95em;
+            padding: 10px 24px;
+            opacity: 0.85;
+        }
 
         /* Allocation mode controls */
         .allocation-mode-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
