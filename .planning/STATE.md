@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: Roadmap defined; awaiting plan-phase for Phase 6
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-09T13:31:44.444Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-09T14:28:53.911Z"
 last_activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 16
+  completed_plans: 15
   percent: 0
 ---
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%  (v2.0 phases: 0 of 3 complete)
 | Phase 03-frontend-wiring P05 | 5 | 1 tasks | 1 files |
 | Phase 04-ml-in-finance-module P01 | 5 | 1 tasks | 1 files |
 | Phase 05-stochastic-models-ui-completion P01 | 8 | 2 tasks | 2 files |
+| Phase 06-form-streamlining-smart-defaults P01 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Recent decisions affecting current work:
 - [Phase 04-01]: RL sub-tab IDs follow pattern rlTab_<name> for buttons and rlContent_<name> for content divs
 - [Phase 05-01]: stochContent_markov uses selector-driven tab switching — switchStochasticTab finds div by pattern, no hardcoded reference needed in HTML
 - [Phase 05-01]: cirModel select added before calibrate checkbox; updateCIRDefaults swaps kappa/theta/sigma defaults on model change
+- [Phase 06-01]: equalWeightsHint hidden by default in HTML; JS toggles to block on totalValue===0 in value mode, hides in percent mode
+- [Phase 06-01]: defaultsNote starts visible (display:block) as Advanced Settings collapsed by default; toggle event hides on open
 
 ### Pending Todos
 
@@ -122,6 +125,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T13:31:44.434Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-form-streamlining-smart-defaults/06-CONTEXT.md
+Last session: 2026-03-09T14:28:53.909Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None

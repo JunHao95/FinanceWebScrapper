@@ -86,13 +86,13 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 
 ### Form UX
 
-- [ ] **FORM-01**: User can submit analysis with only ticker symbols entered (no required source selection or API key input)
-- [ ] **FORM-02**: User can toggle advanced settings (sources, API keys) via a collapsible "⚙ Advanced" section
-- [ ] **FORM-03**: System applies smart defaults (yahoo + finviz + google + technical) when advanced settings are collapsed or unconfigured
-- [ ] **FORM-04**: User can switch between "% Weight" and "Value" allocation modes via a mode toggle
-- [ ] **FORM-05**: In Value mode, user enters currency amounts per ticker and sees live computed % weights (e.g., "→ 66.7%")
-- [ ] **FORM-06**: In Value mode, user can select currency (USD/SGD/EUR/GBP) next to the mode toggle
-- [ ] **FORM-07**: Leaving all value fields blank in either mode falls back to equal-weight allocation
+- [x] **FORM-01**: User can submit analysis with only ticker symbols entered (no required source selection or API key input)
+- [x] **FORM-02**: User can toggle advanced settings (sources, API keys) via a collapsible "⚙ Advanced" section
+- [x] **FORM-03**: System applies smart defaults (yahoo + finviz + google + technical) when advanced settings are collapsed or unconfigured
+- [x] **FORM-04**: User can switch between "% Weight" and "Value" allocation modes via a mode toggle
+- [x] **FORM-05**: In Value mode, user enters currency amounts per ticker and sees live computed % weights (e.g., "→ 66.7%")
+- [x] **FORM-06**: In Value mode, user can select currency (USD/SGD/EUR/GBP) next to the mode toggle
+- [x] **FORM-07**: Leaving all value fields blank in either mode falls back to equal-weight allocation
 - [ ] **FORM-08**: "Analyze Stocks" button relabelled to "▶ Run Analysis" and presented in a prominent hero layout
 
 ### Auto Analysis
@@ -172,13 +172,13 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 | ML-07 | Phase 4: ML-in-Finance Module | Complete |
 | ML-08 | Phase 4: ML-in-Finance Module | Complete |
 | ML-09 | Phase 4: ML-in-Finance Module | Complete |
-| FORM-01 | Phase 6: Form Streamlining & Smart Defaults | Pending |
-| FORM-02 | Phase 6: Form Streamlining & Smart Defaults | Pending |
-| FORM-03 | Phase 6: Form Streamlining & Smart Defaults | Pending |
-| FORM-04 | Phase 6: Form Streamlining & Smart Defaults | Pending |
-| FORM-05 | Phase 6: Form Streamlining & Smart Defaults | Pending |
-| FORM-06 | Phase 6: Form Streamlining & Smart Defaults | Pending |
-| FORM-07 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-01 | Phase 6: Form Streamlining & Smart Defaults | Complete |
+| FORM-02 | Phase 6: Form Streamlining & Smart Defaults | Complete |
+| FORM-03 | Phase 6: Form Streamlining & Smart Defaults | Complete |
+| FORM-04 | Phase 6: Form Streamlining & Smart Defaults | Complete |
+| FORM-05 | Phase 6: Form Streamlining & Smart Defaults | Complete |
+| FORM-06 | Phase 6: Form Streamlining & Smart Defaults | Complete |
+| FORM-07 | Phase 6: Form Streamlining & Smart Defaults | Complete |
 | FORM-08 | Phase 6: Form Streamlining & Smart Defaults | Pending |
 | AUTO-01 | Phase 7: Auto-Run Extended Analysis | Pending |
 | AUTO-02 | Phase 7: Auto-Run Extended Analysis | Pending |

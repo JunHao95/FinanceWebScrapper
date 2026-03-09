@@ -160,6 +160,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Frontend Wiring and Visualization | 5/5 | Complete   | 2026-03-07 |
 | 4. ML-in-Finance Module | 1/1 | Complete   | 2026-03-08 |
 | 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
-| 6. Form Streamlining & Smart Defaults | 0/2 | Not started | - |
+| 6. Form Streamlining & Smart Defaults | 1/2 | In Progress|  |
 | 7. Auto-Run Extended Analysis After Scrape | 0/? | Not started | - |
 | 8. Portfolio Health Summary Card | 0/? | Not started | - |
