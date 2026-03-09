@@ -93,7 +93,7 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 - [x] **FORM-05**: In Value mode, user enters currency amounts per ticker and sees live computed % weights (e.g., "→ 66.7%")
 - [x] **FORM-06**: In Value mode, user can select currency (USD/SGD/EUR/GBP) next to the mode toggle
 - [x] **FORM-07**: Leaving all value fields blank in either mode falls back to equal-weight allocation
-- [ ] **FORM-08**: "Analyze Stocks" button relabelled to "▶ Run Analysis" and presented in a prominent hero layout
+- [x] **FORM-08**: "Analyze Stocks" button relabelled to "▶ Run Analysis" and presented in a prominent hero layout
 
 ### Auto Analysis
 
@@ -179,7 +179,7 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 | FORM-05 | Phase 6: Form Streamlining & Smart Defaults | Complete |
 | FORM-06 | Phase 6: Form Streamlining & Smart Defaults | Complete |
 | FORM-07 | Phase 6: Form Streamlining & Smart Defaults | Complete |
-| FORM-08 | Phase 6: Form Streamlining & Smart Defaults | Pending |
+| FORM-08 | Phase 6: Form Streamlining & Smart Defaults | Complete |
 | AUTO-01 | Phase 7: Auto-Run Extended Analysis | Pending |
 | AUTO-02 | Phase 7: Auto-Run Extended Analysis | Pending |
 | AUTO-03 | Phase 7: Auto-Run Extended Analysis | Pending |
