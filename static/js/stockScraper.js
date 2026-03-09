@@ -45,19 +45,26 @@ const StockScraper = {
             return;
         }
 
-        // Get selected sources
-        const sources = [];
-        if (document.getElementById('source-all').checked) {
-            sources.push('all');
-        } else {
-            document.querySelectorAll('.checkbox-item input[type="checkbox"]:not(#source-all)').forEach(cb => {
-                if (cb.checked) sources.push(cb.value);
-            });
-        }
+        // Get selected sources — use smart defaults if advanced settings are collapsed
+        const advancedDetails = document.getElementById('advanced-settings');
+        const advancedOpen = advancedDetails && advancedDetails.open;
 
-        if (sources.length === 0) {
-            Utils.showAlert('Please select at least one data source', 'error');
-            return;
+        let sources = [];
+        if (advancedOpen) {
+            if (document.getElementById('source-all').checked) {
+                sources.push('all');
+            } else {
+                document.querySelectorAll('.checkbox-item input[type="checkbox"]:not(#source-all)').forEach(cb => {
+                    if (cb.checked) sources.push(cb.value);
+                });
+            }
+            if (sources.length === 0) {
+                Utils.showAlert('Please select at least one data source', 'error');
+                return;
+            }
+        } else {
+            // Advanced collapsed: use all free sources as defaults
+            sources = ['yahoo', 'finviz', 'google', 'technical'];
         }
 
         const alphaKey = document.getElementById('alphaKey').value.trim();
@@ -65,19 +72,6 @@ const StockScraper = {
 
         // Get portfolio allocation
         const portfolioAllocation = FormManager.getPortfolioAllocation();
-        
-        // Validate allocation if provided
-        if (portfolioAllocation) {
-            let total = 0;
-            for (const weight of Object.values(portfolioAllocation)) {
-                total += weight;
-            }
-            
-            if (Math.abs(total - 1.0) > 0.01) {
-                Utils.showAlert('Portfolio allocation must sum to 100%. Current total: ' + (total * 100).toFixed(1) + '%', 'error');
-                return;
-            }
-        }
 
         // Show loading with ticker count info
         const loadingSection = document.getElementById('loadingSection');
