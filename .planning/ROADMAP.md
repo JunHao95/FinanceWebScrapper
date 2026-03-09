@@ -117,10 +117,14 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. A user can enter one or more ticker symbols and click "Run Analysis" without touching any other field — the form submits successfully using yahoo + finviz + google + technical as defaults.
   2. A user can click the "Advanced" toggle to reveal data source checkboxes and API key inputs, configure them, and re-collapse the section without losing the configured values.
-  3. A user can switch to Value mode, enter currency amounts per ticker, and see "→ XX.X%" live next to each amount field as other amounts change; the computed weights are used in analysis.
+  3. A user can switch to Value mode, enter currency amounts per ticker, and see "-> XX.X%" live next to each amount field as other amounts change; the computed weights are used in analysis.
   4. A user can select a currency (USD/SGD/EUR/GBP) in Value mode and see the label update without affecting the weight computation logic.
   5. Leaving all allocation fields blank in either mode submits with equal-weight allocation applied automatically, with no validation error shown to the user.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Equal-weights hint (Value mode) + collapsed-defaults note (FORM-01, FORM-02, FORM-03, FORM-04, FORM-05, FORM-06, FORM-07)
+- [ ] 06-02-PLAN.md — Hero Run Analysis button CSS + full smoke test checkpoint (FORM-08)
 
 ### Phase 7: Auto-Run Extended Analysis After Scrape
 **Goal**: After the main scrape completes, Regime Detection runs per ticker and Portfolio MDP runs for the portfolio without any user action — results appear inline in the Analytics tab alongside status badges that track each module's progress from running to done or failed.
@@ -156,6 +160,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Frontend Wiring and Visualization | 5/5 | Complete   | 2026-03-07 |
 | 4. ML-in-Finance Module | 1/1 | Complete   | 2026-03-08 |
 | 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
-| 6. Form Streamlining & Smart Defaults | 0/? | Not started | - |
+| 6. Form Streamlining & Smart Defaults | 0/2 | Not started | - |
 | 7. Auto-Run Extended Analysis After Scrape | 0/? | Not started | - |
 | 8. Portfolio Health Summary Card | 0/? | Not started | - |
