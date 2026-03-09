@@ -511,6 +511,30 @@
             color: #721c24;
         }
 
+        /* Advanced settings toggle */
+        #advanced-settings summary {
+            cursor: pointer;
+            color: #667eea;
+            font-weight: 600;
+            padding: 8px 0;
+            user-select: none;
+        }
+        #advanced-settings summary:hover { text-decoration: underline; }
+        #advanced-settings > .form-group { margin-top: 15px; }
+
+        /* Hero ticker input */
+        .hero-input-group input { font-size: 1.1em; padding: 14px; }
+        #runAnalysisBtn { font-size: 1.1em; padding: 12px 24px; }
+
+        /* Allocation mode controls */
+        .allocation-mode-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .allocation-mode-header label { margin-bottom: 0; }
+        .allocation-mode-controls { display: flex; align-items: center; gap: 8px; }
+        .mode-btn { padding: 4px 12px; border: 1px solid #667eea; border-radius: 4px; background: white; color: #667eea; cursor: pointer; font-size: 0.9em; }
+        .mode-btn.active { background: #667eea; color: white; }
+        #currencySelect { padding: 4px 8px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.9em; width: auto; }
+        .allocation-pct-label { margin-left: 8px; color: #667eea; font-size: 0.9em; min-width: 55px; }
+
         /* Tab Styles */
         .tabs-container {
             margin-bottom: 20px;
@@ -665,88 +689,97 @@
             <div class="input-section">
                 <h2>Enter Stock Tickers</h2>
             <form id="scrapeForm">
-                <div class="form-group">
+                <div class="form-group hero-input-group">
                     <label for="tickers">Stock Ticker Symbols</label>
-                    <input 
-                        type="text" 
-                        id="tickers" 
-                        name="tickers" 
+                    <input
+                        type="text"
+                        id="tickers"
+                        name="tickers"
                         placeholder="e.g., AAPL, MSFT, GOOG, TSLA"
                         required
                     >
                     <small>Enter one or more ticker symbols separated by commas</small>
                 </div>
 
-                <div class="form-group">
-                    <label>Data Sources</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="source-all" value="all" checked>
-                            <label for="source-all">All Sources</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="source-yahoo" value="yahoo">
-                            <label for="source-yahoo">Yahoo Finance</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="source-finviz" value="finviz">
-                            <label for="source-finviz">Finviz</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="source-google" value="google">
-                            <label for="source-google">Google Finance</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="source-technical" value="technical">
-                            <label for="source-technical">Technical Indicators</label>
+                <details id="advanced-settings">
+                    <summary>⚙ Advanced Settings</summary>
+                    <div class="form-group">
+                        <label>Data Sources</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="source-all" value="all" checked>
+                                <label for="source-all">All Sources</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="source-yahoo" value="yahoo">
+                                <label for="source-yahoo">Yahoo Finance</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="source-finviz" value="finviz">
+                                <label for="source-finviz">Finviz</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="source-google" value="google">
+                                <label for="source-google">Google Finance</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="source-technical" value="technical">
+                                <label for="source-technical">Technical Indicators</label>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="alphaKey">Alpha Vantage API Key (Optional)</label>
-                    <input 
-                        type="text" 
-                        id="alphaKey" 
-                        name="alphaKey" 
-                        placeholder="Enter your Alpha Vantage API key"
-                    >
-                    <small>Required for technical indicators and some features</small>
-                </div>
+                    <div class="form-group">
+                        <label for="alphaKey">Alpha Vantage API Key (Optional)</label>
+                        <input
+                            type="text"
+                            id="alphaKey"
+                            name="alphaKey"
+                            placeholder="Enter your Alpha Vantage API key"
+                        >
+                        <small>Required for technical indicators and some features</small>
+                    </div>
 
-                <div class="form-group">
-                    <label for="finhubKey">Finhub API Key (Optional)</label>
-                    <input 
-                        type="text" 
-                        id="finhubKey" 
-                        name="finhubKey" 
-                        placeholder="Enter your Finhub API key"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="customAllocation" onchange="toggleAllocationSection()">
-                        Customize Portfolio Allocation
-                    </label>
-                    <small>Override default equal-weight allocation with custom percentages</small>
-                </div>
+                    <div class="form-group">
+                        <label for="finhubKey">Finhub API Key (Optional)</label>
+                        <input
+                            type="text"
+                            id="finhubKey"
+                            name="finhubKey"
+                            placeholder="Enter your Finhub API key"
+                        >
+                    </div>
+                </details>
+                <small id="defaultsNote" style="color:#6c757d; font-size:0.85em; display:block; margin-top:4px;">
+                    Using defaults: Yahoo Finance, Finviz, Google Finance, Technical Indicators
+                </small>
 
                 <div id="allocationSection" style="display: none;">
                     <div class="form-group">
-                        <label>Portfolio Allocation (%)</label>
-                        <small>Enter the percentage allocation for each ticker (total should equal 100%). Leave blank for equal weights.</small>
-                        <div id="allocationInputs" style="margin-top: 15px;">
-                            <!-- Dynamic allocation inputs will be added here -->
+                        <div class="allocation-mode-header">
+                            <label>Portfolio Allocation</label>
+                            <div class="allocation-mode-controls">
+                                <button type="button" id="modePercentBtn" class="mode-btn active" onclick="FormManager.switchAllocationMode('percent')">% Weight</button>
+                                <button type="button" id="modeValueBtn" class="mode-btn" onclick="FormManager.switchAllocationMode('value')">Value</button>
+                                <select id="currencySelect" style="display:none">
+                                    <option value="USD">USD</option>
+                                    <option value="SGD">SGD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
                         </div>
-                        <div id="allocationTotal" style="margin-top: 10px; font-weight: bold; color: #667eea;">
-                            Total: 0%
-                        </div>
+                        <small id="allocationHint">Enter the percentage allocation for each ticker (total should equal 100%). Leave blank for equal weights.</small>
+                        <div id="allocationInputs" style="margin-top: 15px;"></div>
+                        <div id="allocationTotal" style="margin-top: 10px; font-weight: bold; color: #667eea;">Total: 0%</div>
+                        <small id="equalWeightsHint" style="display:none; color:#6c757d; margin-top:6px;">
+                            No values entered — equal weights will be used.
+                        </small>
                     </div>
                 </div>
 
                 <div class="button-group">
-                    <button type="submit">🔍 Analyze Stocks</button>
+                    <button type="submit" id="runAnalysisBtn">▶ Run Analysis</button>
                     <button type="button" class="secondary-btn" onclick="clearForm()">🔄 Clear</button>
                 </div>
             </form>
