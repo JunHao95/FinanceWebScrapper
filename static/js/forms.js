@@ -3,6 +3,8 @@
 // ===========================
 
 const FormManager = {
+    _allocationMode: 'percent',  // 'percent' | 'value'
+
     /**
      * Parse tickers from input string (helper method)
      * @param {string} tickersInput - Comma-separated ticker string
@@ -17,22 +19,35 @@ const FormManager = {
             .map(t => t.trim().toUpperCase())
             .filter(t => t.length > 0);
     },
+
     /**
-     * Toggle portfolio allocation section
+     * Switch allocation mode between 'percent' and 'value'
      */
-    toggleAllocationSection() {
-        const checkbox = document.getElementById('customAllocation');
+    switchAllocationMode(mode) {
+        this._allocationMode = mode;
+        document.getElementById('modePercentBtn').classList.toggle('active', mode === 'percent');
+        document.getElementById('modeValueBtn').classList.toggle('active', mode === 'value');
+        const currSel = document.getElementById('currencySelect');
+        if (currSel) currSel.style.display = mode === 'value' ? 'inline-block' : 'none';
+        const hint = document.getElementById('allocationHint');
+        if (hint) hint.textContent = mode === 'percent'
+            ? 'Enter the percentage allocation for each ticker (total should equal 100%). Leave blank for equal weights.'
+            : 'Enter the total value held per ticker. Leave blank for equal weights.';
+        this.updateAllocationInputs();
+    },
+
+    /**
+     * Auto-show/hide allocation section based on ticker count
+     */
+    syncAllocationSection() {
+        const tickers = this.parseTickersInput(document.getElementById('tickers').value);
         const section = document.getElementById('allocationSection');
-        
-        if (!checkbox || !section) {
-            console.error('Required DOM elements not found: customAllocation or allocationSection');
-            return;
-        }
-        
-        section.style.display = checkbox.checked ? 'block' : 'none';
-        
-        if (checkbox.checked) {
+        if (!section) return;
+        if (tickers.length >= 2) {
+            section.style.display = 'block';
             this.updateAllocationInputs();
+        } else {
+            section.style.display = 'none';
         }
     },
 
@@ -42,47 +57,47 @@ const FormManager = {
     updateAllocationInputs() {
         const tickersInputElement = document.getElementById('tickers');
         const container = document.getElementById('allocationInputs');
-        
+
         if (!tickersInputElement || !container) {
             console.error('Required DOM elements not found: tickers or allocationInputs');
             return;
         }
-        
+
         const tickers = this.parseTickersInput(tickersInputElement.value);
         container.innerHTML = '';
-        
+
         if (tickers.length === 0) {
             container.innerHTML = '<p style="color: #666;">Enter tickers first to set allocations</p>';
             return;
         }
-        
+
         tickers.forEach(ticker => {
             const row = document.createElement('div');
             row.className = 'allocation-input-row';
-            
-            row.innerHTML = `
-                <label for="alloc-${ticker}">${ticker}:</label>
-                <input 
-                    type="number" 
-                    id="alloc-${ticker}" 
-                    name="alloc-${ticker}"
-                    placeholder="e.g., 25"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    class="allocation-input"
-                >
-            `;
-            
+
+            if (this._allocationMode === 'value') {
+                row.innerHTML = `
+                    <label for="alloc-${ticker}">${ticker}:</label>
+                    <input type="number" id="alloc-${ticker}" name="alloc-${ticker}"
+                           placeholder="e.g., 10000" min="0" step="1" class="allocation-input">
+                    <span id="alloc-pct-${ticker}" class="allocation-pct-label"></span>
+                `;
+            } else {
+                row.innerHTML = `
+                    <label for="alloc-${ticker}">${ticker}:</label>
+                    <input type="number" id="alloc-${ticker}" name="alloc-${ticker}"
+                           placeholder="e.g., 25" min="0" max="100" step="0.1" class="allocation-input">
+                `;
+            }
+
             container.appendChild(row);
-            
-            // Attach event listener instead of inline handler
+
             const input = row.querySelector('input');
             if (input) {
                 input.addEventListener('input', () => this.calculateAllocationTotal());
             }
         });
-        
+
         this.calculateAllocationTotal();
     },
 
@@ -90,28 +105,57 @@ const FormManager = {
      * Calculate and display total allocation
      */
     calculateAllocationTotal() {
-        const inputs = document.querySelectorAll('[id^="alloc-"]');
-        let total = 0;
-        
-        inputs.forEach(input => {
-            const value = parseFloat(input.value) || 0;
-            total += value;
-        });
-        
         const totalDiv = document.getElementById('allocationTotal');
         if (!totalDiv) {
             console.error('Required DOM element not found: allocationTotal');
             return;
         }
-        
-        totalDiv.textContent = `Total: ${total.toFixed(1)}%`;
-        
-        // Color code based on validity
-        totalDiv.classList.remove('valid', 'invalid');
-        if (Math.abs(total - 100) < 0.1 && total > 0) {
-            totalDiv.classList.add('valid');
-        } else if (total > 0) {
-            totalDiv.classList.add('invalid');
+
+        if (this._allocationMode === 'value') {
+            const tickers = this.parseTickersInput(document.getElementById('tickers').value);
+            let totalValue = 0;
+            const values = {};
+            tickers.forEach(ticker => {
+                const input = document.getElementById(`alloc-${ticker}`);
+                const v = input ? (parseFloat(input.value) || 0) : 0;
+                values[ticker] = v;
+                totalValue += v;
+            });
+
+            // Update per-ticker percentage labels
+            tickers.forEach(ticker => {
+                const pctSpan = document.getElementById(`alloc-pct-${ticker}`);
+                if (pctSpan) {
+                    pctSpan.textContent = totalValue > 0
+                        ? `→ ${(values[ticker] / totalValue * 100).toFixed(1)}%`
+                        : '';
+                }
+            });
+
+            const currSel = document.getElementById('currencySelect');
+            const currency = currSel ? currSel.value : 'USD';
+            totalDiv.textContent = `Total: ${totalValue.toLocaleString()} ${currency}`;
+            totalDiv.classList.remove('valid', 'invalid');
+            const equalWeightsHint = document.getElementById('equalWeightsHint');
+            if (equalWeightsHint) {
+                equalWeightsHint.style.display = (totalValue === 0) ? 'block' : 'none';
+            }
+        } else {
+            const inputs = document.querySelectorAll('[id^="alloc-"]');
+            let total = 0;
+            inputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+
+            totalDiv.textContent = `Total: ${total.toFixed(1)}%`;
+            totalDiv.classList.remove('valid', 'invalid');
+            const equalWeightsHint = document.getElementById('equalWeightsHint');
+            if (equalWeightsHint) equalWeightsHint.style.display = 'none';
+            if (Math.abs(total - 100) < 0.1 && total > 0) {
+                totalDiv.classList.add('valid');
+            } else if (total > 0) {
+                totalDiv.classList.add('invalid');
+            }
         }
     },
 
@@ -119,32 +163,41 @@ const FormManager = {
      * Get portfolio allocation from form
      */
     getPortfolioAllocation() {
-        const customAllocationCheckbox = document.getElementById('customAllocation');
-        if (!customAllocationCheckbox || !customAllocationCheckbox.checked) {
-            return null;
-        }
-        
-        const tickersInputElement = document.getElementById('tickers');
-        if (!tickersInputElement) {
-            console.error('Required DOM element not found: tickers');
-            return null;
-        }
-        
-        const tickers = this.parseTickersInput(tickersInputElement.value);
+        const section = document.getElementById('allocationSection');
+        if (!section || section.style.display === 'none') return null;
+
+        const tickers = this.parseTickersInput(document.getElementById('tickers').value);
         const allocations = {};
         let hasAnyAllocation = false;
-        
-        tickers.forEach(ticker => {
-            const input = document.getElementById(`alloc-${ticker}`);
-            if (input && input.value) {
-                const value = parseFloat(input.value);
-                if (!isNaN(value) && value > 0) {
-                    allocations[ticker] = value / 100;
+
+        if (this._allocationMode === 'value') {
+            let totalValue = 0;
+            const values = {};
+            tickers.forEach(ticker => {
+                const input = document.getElementById(`alloc-${ticker}`);
+                const v = input ? (parseFloat(input.value) || 0) : 0;
+                values[ticker] = v;
+                totalValue += v;
+            });
+            if (totalValue === 0) return null;  // fall back to equal-weight
+            tickers.forEach(ticker => {
+                if (values[ticker] > 0) {
+                    allocations[ticker] = values[ticker] / totalValue;
                     hasAnyAllocation = true;
                 }
-            }
-        });
-        
+            });
+        } else {
+            tickers.forEach(ticker => {
+                const input = document.getElementById(`alloc-${ticker}`);
+                if (input && input.value) {
+                    const v = parseFloat(input.value);
+                    if (!isNaN(v) && v > 0) {
+                        allocations[ticker] = v / 100;
+                        hasAnyAllocation = true;
+                    }
+                }
+            });
+        }
         return hasAnyAllocation ? allocations : null;
     },
 
@@ -155,27 +208,28 @@ const FormManager = {
         const scrapeForm = document.getElementById('scrapeForm');
         const sourceAll = document.getElementById('source-all');
         const resultsSection = document.getElementById('resultsSection');
-        
+
         if (!scrapeForm || !sourceAll || !resultsSection) {
             console.error('Required DOM elements not found for form clearing');
             return;
         }
-        
+
         scrapeForm.reset();
         sourceAll.checked = true;
         resultsSection.classList.remove('active');
-        
-        // Verify global dependencies exist before accessing
+
         if (typeof AppState !== 'undefined') {
             AppState.currentData = null;
             AppState.currentCnnData = null;
             AppState.currentTickers = [];
             AppState.currentAnalytics = {};
         }
-        
+
         if (typeof Utils !== 'undefined' && typeof Utils.hideAlert === 'function') {
             Utils.hideAlert();
         }
+
+        this.syncAllocationSection();
     },
 
     /**
@@ -183,15 +237,12 @@ const FormManager = {
      */
     initEventListeners() {
         const tickersInput = document.getElementById('tickers');
-        const customAllocationCheckbox = document.getElementById('customAllocation');
         const sourceAllCheckbox = document.getElementById('source-all');
-        
-        // Update allocation inputs when tickers change
-        if (tickersInput && customAllocationCheckbox) {
+
+        // Auto-show/hide allocation section when tickers change
+        if (tickersInput) {
             tickersInput.addEventListener('input', () => {
-                if (customAllocationCheckbox.checked) {
-                    this.updateAllocationInputs();
-                }
+                this.syncAllocationSection();
             });
         }
 
@@ -211,6 +262,15 @@ const FormManager = {
                         sourceAllCheckbox.checked = false;
                     }
                 });
+            });
+        }
+
+        // Toggle defaults note when advanced section opens/closes
+        const advDet = document.getElementById('advanced-settings');
+        const defaultsNote = document.getElementById('defaultsNote');
+        if (advDet && defaultsNote) {
+            advDet.addEventListener('toggle', () => {
+                defaultsNote.style.display = advDet.open ? 'none' : 'block';
             });
         }
     }
