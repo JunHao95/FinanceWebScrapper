@@ -1783,6 +1783,115 @@ def markov_chain_endpoint():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ---------------------------------------------------------------------------
+# M6: Reinforcement Learning Routes
+# ---------------------------------------------------------------------------
+
+def _get_rl_models():
+    """Lazy-load RL models to avoid import-time cost."""
+    from src.analytics.rl_models import (
+        investment_mdp_policy_iteration,
+        gridworld_policy_iteration,
+        portfolio_rotation_policy_iteration,
+        portfolio_rotation_qlearning,
+    )
+    return (
+        investment_mdp_policy_iteration,
+        gridworld_policy_iteration,
+        portfolio_rotation_policy_iteration,
+        portfolio_rotation_qlearning,
+    )
+
+
+@app.route('/api/rl_investment_mdp', methods=['POST'])
+def rl_investment_mdp():
+    """L1: Investment MDP policy iteration (Bull/Bear/Crash)."""
+    try:
+        body  = request.json or {}
+        gamma = float(body.get('gamma', 0.95))
+        fn    = _get_rl_models()[0]
+        result = fn(gamma=gamma)
+        return jsonify(convert_numpy_types(result))
+    except Exception as e:
+        logger.error(f"Error in rl_investment_mdp: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/rl_gridworld', methods=['POST'])
+def rl_gridworld():
+    """L2: 4×4 gridworld policy iteration (deterministic or windy)."""
+    try:
+        body     = request.json or {}
+        use_wind = bool(body.get('use_wind', False))
+        gamma    = float(body.get('gamma', 0.95))
+        fn       = _get_rl_models()[1]
+        result   = fn(use_wind=use_wind, gamma=gamma)
+        return jsonify(convert_numpy_types(result))
+    except Exception as e:
+        logger.error(f"Error in rl_gridworld: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/rl_portfolio_rotation_pi', methods=['POST'])
+def rl_portfolio_rotation_pi():
+    """L3: Portfolio rotation via policy iteration on SPY/IEF/SHY MDP."""
+    try:
+        body   = request.json or {}
+        fn     = _get_rl_models()[2]
+        result = fn(
+            train_end  = body.get('train_end',  '2016-12-31'),
+            test_start = body.get('test_start', '2017-01-01'),
+            gamma      = float(body.get('gamma',     0.99)),
+            cost_bps   = int(body.get('cost_bps',   10)),
+        )
+        return jsonify(convert_numpy_types(result))
+    except Exception as e:
+        logger.error(f"Error in rl_portfolio_rotation_pi: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/stoch_portfolio_mdp', methods=['POST'])
+def stoch_portfolio_mdp():
+    """Portfolio MDP policy iteration with user-specified tickers (Stochastic Models tab)."""
+    try:
+        from src.analytics.rl_models import portfolio_mdp_user_stocks
+        body   = request.json or {}
+        result = portfolio_mdp_user_stocks(
+            equity_ticker = body.get('equity_ticker', 'SPY'),
+            bond_ticker   = body.get('bond_ticker',   'IEF'),
+            start_date    = body.get('start_date',    '2010-01-01'),
+            train_end     = body.get('train_end',     '2020-12-31'),
+            test_start    = body.get('test_start',    '2021-01-01'),
+            gamma         = float(body.get('gamma',    0.99)),
+            cost_bps      = int(body.get('cost_bps',  10)),
+        )
+        return jsonify(convert_numpy_types(result))
+    except Exception as e:
+        logger.error(f"Error in stoch_portfolio_mdp: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/rl_portfolio_rotation_ql', methods=['POST'])
+def rl_portfolio_rotation_ql():
+    """L4: Portfolio rotation via Q-learning (ε-greedy TD)."""
+    try:
+        body   = request.json or {}
+        fn     = _get_rl_models()[3]
+        result = fn(
+            alpha     = float(body.get('alpha',     0.10)),
+            epochs    = int(body.get('epochs',    200)),
+            eps_start = float(body.get('eps_start', 0.15)),
+            eps_end   = float(body.get('eps_end',   0.01)),
+            optimistic = float(body.get('optimistic', 0.005)),
+            gamma     = float(body.get('gamma',     0.99)),
+            cost_bps  = int(body.get('cost_bps',   10)),
+        )
+        return jsonify(convert_numpy_types(result))
+    except Exception as e:
+        logger.error(f"Error in rl_portfolio_rotation_ql: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
