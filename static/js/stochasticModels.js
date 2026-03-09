@@ -412,7 +412,7 @@ async function runCIRModel() {
         const curve = r.implied_yield_curve || r.yield_curve || [];
         const params = r.calibrated_params || r.params || { kappa, theta, sigma };
         const feller = r.feller_condition_satisfied;
-        const fellerBadge = feller
+        const fellerBadge = model === 'vasicek' ? '' : feller
             ? `<span style="background:#d4edda; color:#155724; padding:2px 8px; border-radius:4px; font-size:12px;">✓ Feller: 2κθ > σ² satisfied</span>`
             : `<span style="background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:4px; font-size:12px;">✗ Feller violated (rates may go negative)</span>`;
 
@@ -426,7 +426,7 @@ async function runCIRModel() {
 
         resultsDiv.innerHTML = `
             <div class="result-card">
-                <h3>📐 CIR Yield Curve ${calibrate ? '(Calibrated to US Treasuries)' : ''}</h3>
+                <h3>📐 ${model === 'vasicek' ? 'Vasicek (1977)' : 'CIR'} Yield Curve ${calibrate ? '(Calibrated to US Treasuries)' : ''}</h3>
                 ${fellerBadge}
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin:12px 0;">
                     <div style="background:#f8f9fa; padding:10px; border-radius:4px; text-align:center;">
