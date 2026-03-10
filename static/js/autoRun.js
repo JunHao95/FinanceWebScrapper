@@ -54,7 +54,6 @@ function buildAutoRunHTML(tickers) {
 
     return `
     <div id="autoRunSection" style="border-bottom:1px solid #e0e0e0;margin-bottom:24px;padding-bottom:8px;">
-        <h3 style="margin-bottom:16px;">Auto Analysis</h3>
         ${tickerBlocks}
         ${mdpBlock}
     </div>`;
@@ -161,6 +160,10 @@ async function runAutoRegime(ticker, startDate, endDate) {
         badge.setAttribute('style', BADGE_DONE);
         badge.textContent = 'Done';
 
+        // Derive regime label from filtered_probs last value and update health card
+        const regimeLabel = (data.filtered_probs && data.filtered_probs.length > 0 && data.filtered_probs[data.filtered_probs.length - 1] >= 0.5) ? 'RISK_OFF' : 'RISK_ON';
+        if (window.PortfolioHealth) PortfolioHealth.updateRegime(ticker, regimeLabel);
+
     } catch (err) {
         const badge = document.getElementById('autoRegimeBadge_' + ticker);
         if (badge) {
@@ -171,6 +174,7 @@ async function runAutoRegime(ticker, startDate, endDate) {
         if (placeholder) {
             placeholder.textContent = 'Regime detection failed: ' + (err?.message || 'Unknown error');
         }
+        if (window.PortfolioHealth) PortfolioHealth.updateRegime(ticker, null);
     }
 }
 
@@ -329,15 +333,15 @@ async function triggerAutoRun(tickers) {
     const trainEnd  = startDate;   // same as regime startDate (2y ago)
     const testStart = startDate;
 
-    // Guard: need #analyticsResults container
-    const analyticsResults = document.getElementById('analyticsResults');
-    if (!analyticsResults) return;
+    // Guard: need #autoAnalysisContent container
+    const autoAnalysisContent = document.getElementById('autoAnalysisContent');
+    if (!autoAnalysisContent) return;
 
     // Remove any existing autoRunSection to avoid duplication on re-runs
     document.getElementById('autoRunSection')?.remove();
 
     // Inject HTML scaffold
-    analyticsResults.insertAdjacentHTML('afterbegin', buildAutoRunHTML(tickers));
+    autoAnalysisContent.insertAdjacentHTML('afterbegin', buildAutoRunHTML(tickers));
 
     // Build promise array — regime per ticker + optional MDP
     const regimePromises = tickers.map(t => runAutoRegime(t, startDate, endDate));

@@ -164,10 +164,22 @@ const StockScraper = {
             tickerResultsDiv.appendChild(tickerDiv);
         }
         
-        // Switch to analytics tab so auto-run badges are immediately visible
-        TabManager.switchTab('analytics');
+        // Switch to Auto Analysis tab so auto-run results are immediately visible
+        TabManager.switchTab('autoanalysis');
+
+        const autoanalysisCountEl = document.getElementById('autoanalysisCount');
+        if (autoanalysisCountEl) {
+            autoanalysisCountEl.textContent = AppState.currentTickers.length;
+            autoanalysisCountEl.style.display = 'inline-block';
+        }
 
         document.getElementById('resultsSection').classList.add('active');
+
+        // Initialize Portfolio Health card (synchronously, before auto-run starts)
+        if (window.PortfolioHealth) {
+            const allocations = FormManager.getPortfolioAllocation() || {};
+            PortfolioHealth.initCard(AppState.currentTickers, AppState.currentAnalytics, allocations);
+        }
 
         // Auto-run extended analysis (regime detection + portfolio MDP)
         if (window.AutoRun) {

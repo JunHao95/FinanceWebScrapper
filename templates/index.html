@@ -815,6 +815,10 @@
                     <button class="tab-button" onclick="switchTab('analytics')" id="analyticsTab">
                         📈 Advanced Analytics
                     </button>
+                    <button class="tab-button" onclick="switchTab('autoanalysis')" id="autoanalysisTab">
+                        🤖 Auto Analysis
+                        <span class="tab-badge" id="autoanalysisCount" style="display:none"></span>
+                    </button>
                 </div>
             </div>
 
@@ -833,6 +837,63 @@
                         <h3>📊 No Analytics Available</h3>
                         <p style="margin-top: 10px;">Advanced analytics will appear here when you analyze 2 or more stocks with portfolio allocation enabled.</p>
                     </div>
+                </div>
+
+                <!-- Tab 3: Auto Analysis -->
+                <div class="tab-content" id="autoanalysisTabContent">
+
+                    <!-- Static interpretation guide -->
+                    <details open style="background:#f8f9fb;border:1px solid #e0e0e0;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+                        <summary style="cursor:pointer;font-weight:700;font-size:15px;color:#667eea;list-style:none;display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:18px;">📖</span> How to Read These Results
+                        </summary>
+
+                        <div style="margin-top:16px;">
+                            <h4 style="margin-bottom:8px;color:#333;font-size:14px;border-bottom:1px solid #e0e0e0;padding-bottom:6px;">
+                                Regime Detection (Hidden Markov Model)
+                            </h4>
+                            <ul style="padding-left:20px;font-size:13px;color:#555;line-height:1.7;margin:0;">
+                                <li><strong>What it is:</strong> A 2-state HMM fitted to daily log-returns. State 0 = calm/bull; State 1 = stressed/bear.</li>
+                                <li><strong>P(Stressed) chart:</strong> Filtered probability of being in the stressed regime. Values near 1 = model believes high-volatility / downward-trending conditions.</li>
+                                <li><strong>Price + shading chart:</strong> Price history with red bands wherever State 1 probability exceeds 0.5.</li>
+                                <li><strong>RISK_ON / RISK_OFF:</strong> Current regime label. RISK_OFF = latest observation most likely stressed. Descriptive signal, not a trade recommendation.</li>
+                            </ul>
+                            <p style="font-size:12px;color:#888;margin:8px 0 0 0;">
+                                References:
+                                <a href="https://en.wikipedia.org/wiki/Hidden_Markov_model" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Hidden Markov Models</a>
+                                &nbsp;|&nbsp;
+                                <a href="https://en.wikipedia.org/wiki/Hamilton_filter_(econometrics)" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Hamilton Filter</a>
+                                &nbsp;|&nbsp;
+                                <a href="https://en.wikipedia.org/wiki/Viterbi_algorithm" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Viterbi Algorithm</a>
+                            </p>
+                        </div>
+
+                        <div style="margin-top:18px;">
+                            <h4 style="margin-bottom:8px;color:#333;font-size:14px;border-bottom:1px solid #e0e0e0;padding-bottom:6px;">
+                                Portfolio MDP (Markov Decision Process)
+                            </h4>
+                            <ul style="padding-left:20px;font-size:13px;color:#555;line-height:1.7;margin:0;">
+                                <li><strong>What it is:</strong> 12-state MDP where each state = (SPY momentum, IEF momentum, volatility bucket). Actions = 5 SPY/IEF weight splits (100/0 → 0/100). Policy found via Policy Iteration on training data.</li>
+                                <li><strong>V* bar chart:</strong> Optimal state-value V*(s) — expected discounted cumulative return starting from state s under the optimal policy. Taller bar = more valuable regime. Zero bars = state never seen in training; policy there is untested.</li>
+                                <li><strong>Optimal Policy Table:</strong> Maps each (vol, momentum) state to the recommended SPY/IEF allocation. "0 months" in Test Visits = that state never occurred in the test window — treat those rows with caution.</li>
+                                <li><strong>Backtest chart:</strong> Cumulative return of MDP policy vs. static 50/50 benchmark over the held-out test period. Gap shows whether regime-switching adds value over passive allocation.</li>
+                                <li><strong>Sharpe vs CAGR trade-off:</strong> Higher CAGR with lower Sharpe than benchmark means the MDP earned more but took on more risk to do it.</li>
+                            </ul>
+                            <p style="font-size:12px;color:#888;margin:8px 0 0 0;">
+                                References:
+                                <a href="https://en.wikipedia.org/wiki/Markov_decision_process" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Markov Decision Process</a>
+                                &nbsp;|&nbsp;
+                                <a href="https://en.wikipedia.org/wiki/Markov_decision_process#Policy_iteration" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Policy Iteration</a>
+                                &nbsp;|&nbsp;
+                                <a href="https://en.wikipedia.org/wiki/Bellman_equation" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Bellman Equation</a>
+                                &nbsp;|&nbsp;
+                                <a href="https://en.wikipedia.org/wiki/Sharpe_ratio" target="_blank" rel="noopener noreferrer" style="color:#667eea;">Sharpe Ratio</a>
+                            </p>
+                        </div>
+                    </details>
+
+                    <!-- Dynamic content injected by autoRun.js -->
+                    <div id="autoAnalysisContent"></div>
                 </div>
             </div>
 
@@ -1889,6 +1950,7 @@
     <script src="/static/js/volatilitySurface.js"></script>
     <script src="/static/js/stochasticModels.js?v=2"></script>
     <script src="/static/js/rlModels.js"></script>
+    <script src="/static/js/portfolioHealth.js"></script>
     <script src="/static/js/autoRun.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
