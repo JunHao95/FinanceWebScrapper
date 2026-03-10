@@ -106,7 +106,7 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 ### Portfolio Health Card
 
 - [x] **HEALTH-01**: A "Portfolio Health" card appears above the tab nav in results showing VaR (95%), Sharpe ratio, and regime per ticker
-- [x] **HEALTH-02**: Each metric in the health card links/jumps to its relevant analytics tab section
+- [ ] **HEALTH-02**: Each metric in the health card links/jumps to its relevant analytics tab section
 - [x] **HEALTH-03**: Health card shows available metrics only when fewer tickers are submitted (no correlation/PCA for single ticker)
 
 ## Out of Scope
@@ -186,7 +186,7 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 | AUTO-04 | Phase 7: Auto-Run Extended Analysis | Complete |
 | AUTO-05 | Phase 7: Auto-Run Extended Analysis | Complete |
 | HEALTH-01 | Phase 8: Portfolio Health Summary Card | Complete |
-| HEALTH-02 | Phase 8: Portfolio Health Summary Card | Complete |
+| HEALTH-02 | Phase 9: Health Card Deep-Links & Auto-Run Hardening | Pending |
 | HEALTH-03 | Phase 8: Portfolio Health Summary Card | Complete |
 
 **Coverage:**
@@ -194,7 +194,8 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 - v2 requirements: 16 total (FORM: 8, AUTO: 5, HEALTH: 3)
 - Mapped to phases: 16
 - Unmapped: 0 ✓
+- Gap closure: HEALTH-02 reassigned to Phase 9
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-08 after v2.0 milestone start*
+*Last updated: 2026-03-11 after v2.0 audit gap closure*

@@ -4,7 +4,7 @@
 
 This milestone completes the Stochastic Models section and builds the ML-in-Finance section of an interactive MFE portfolio showcase. The work proceeds in four phases ordered by risk: fix math correctness first (Phase 1), close backend gaps so all planned features have callable APIs (Phase 2), wire the frontend with Plotly visualizations so recruiters can interact with live models (Phase 3), then build the ML-in-Finance module as a new main tab when the semester begins (Phase 4). Phases 1-3 complete the current semester deliverable; Phase 4 is the next semester deliverable.
 
-Milestone v2.0 (One-Click Analysis Dashboard) adds Phases 6-8, delivering one-click analysis with smart form defaults, auto-run extended analytics, and a Portfolio Health summary card.
+Milestone v2.0 (One-Click Analysis Dashboard) adds Phases 6-8, delivering one-click analysis with smart form defaults, auto-run extended analytics, and a Portfolio Health summary card. Phase 9 closes gaps identified by the v2.0 milestone audit.
 
 ## Phases
 
@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Form Streamlining & Smart Defaults** - Reduce visible form to ticker input + Run Analysis button; data sources default silently; allocation supports % Weight and Value modes (completed 2026-03-09)
 - [x] **Phase 7: Auto-Run Extended Analysis After Scrape** - After scrape completes, Regime Detection and Portfolio MDP trigger automatically with inline results and status badges in the Analytics tab (completed 2026-03-10)
 - [x] **Phase 8: Portfolio Health Summary Card** - A concise Portfolio Health card appears at the top of results after all analyses complete, showing VaR, Sharpe, and regime per ticker (completed 2026-03-10)
+- [ ] **Phase 9: Health Card Deep-Links & Auto-Run Hardening** - Health card metric clicks navigate to specific analytics sections; autoRun.js implicit global dependencies hardened (gap closure from v2.0 audit)
 
 ## Phase Details
 
@@ -156,10 +157,24 @@ Plans:
 - [ ] 08-01-PLAN.md — Test scaffold + /api/portfolio_sharpe Flask backend route (HEALTH-01)
 - [ ] 08-02-PLAN.md — portfolioHealth.js module + wiring into autoRun/stockScraper/index.html + human verify (HEALTH-01, HEALTH-02, HEALTH-03)
 
+### Phase 9: Health Card Deep-Links & Auto-Run Hardening
+**Goal**: Health card metric clicks navigate to the specific analytics subsection (not just the tab top); autoRun.js implicit global dependencies on `rlEscapeHTML`/`rlAlert` are hardened so MDP rendering cannot crash silently if rlModels.js load order changes.
+**Depends on**: Phase 8
+**Requirements**: HEALTH-02
+**Gap Closure**: Closes gaps from v2.0 audit — HEALTH-02 shallow navigation, AUTO-05 fragile globals
+**Success Criteria** (what must be TRUE):
+  1. Clicking the VaR chip in the Portfolio Health card switches to the Analytics tab AND scrolls to the Monte Carlo / VaR section within that tab.
+  2. Clicking the Sharpe chip switches to the Analytics tab AND scrolls to the Sharpe / returns section.
+  3. If rlModels.js fails to load (simulated by removing its script tag), the regime detection auto-run still completes and only the MDP section shows a graceful error — no uncaught ReferenceError.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 09-01-PLAN.md — Add anchor IDs to analytics subsections + scrollIntoView in portfolioHealth.js; expose rlEscapeHTML/rlAlert via window.* and add guards in autoRun.js (HEALTH-02, AUTO-05)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -171,3 +186,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. Form Streamlining & Smart Defaults | 2/2 | Complete   | 2026-03-09 |
 | 7. Auto-Run Extended Analysis After Scrape | 2/2 | Complete   | 2026-03-10 |
 | 8. Portfolio Health Summary Card | 2/2 | Complete   | 2026-03-10 |
+| 9. Health Card Deep-Links & Auto-Run Hardening | 0/1 | Pending | — |
