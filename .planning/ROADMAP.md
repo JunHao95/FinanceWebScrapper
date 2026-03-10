@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Stochastic Models UI Completion** - Wire Markov Chain sub-tab and Vasicek model selector (gap closure phase from v1.0 audit) (completed 2026-03-08)
 - [x] **Phase 6: Form Streamlining & Smart Defaults** - Reduce visible form to ticker input + Run Analysis button; data sources default silently; allocation supports % Weight and Value modes (completed 2026-03-09)
 - [x] **Phase 7: Auto-Run Extended Analysis After Scrape** - After scrape completes, Regime Detection and Portfolio MDP trigger automatically with inline results and status badges in the Analytics tab (completed 2026-03-10)
-- [ ] **Phase 8: Portfolio Health Summary Card** - A concise Portfolio Health card appears at the top of results after all analyses complete, showing VaR, Sharpe, and regime per ticker
+- [x] **Phase 8: Portfolio Health Summary Card** - A concise Portfolio Health card appears at the top of results after all analyses complete, showing VaR, Sharpe, and regime per ticker (completed 2026-03-10)
 
 ## Phase Details
 
@@ -170,4 +170,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
 | 6. Form Streamlining & Smart Defaults | 2/2 | Complete   | 2026-03-09 |
 | 7. Auto-Run Extended Analysis After Scrape | 2/2 | Complete   | 2026-03-10 |
-| 8. Portfolio Health Summary Card | 1/2 | In Progress|  |
+| 8. Portfolio Health Summary Card | 2/2 | Complete   | 2026-03-10 |

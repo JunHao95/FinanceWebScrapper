@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: Roadmap defined; awaiting plan-phase for Phase 6
-stopped_at: Completed 08-01-PLAN.md — /api/portfolio_sharpe route and tests
-last_updated: "2026-03-10T15:12:21.091Z"
+stopped_at: Completed 08-02-PLAN.md — Portfolio Health summary card UI
+last_updated: "2026-03-10T16:11:11.225Z"
 last_activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%  (v2.0 phases: 0 of 3 complete)
 | Phase 07-auto-run-extended-analysis-after-scrape P01 | 4 | 2 tasks | 2 files |
 | Phase 07-auto-run-extended-analysis-after-scrape P02 | 2 | 1 tasks | 1 files |
 | Phase 08-portfolio-health-summary-card P01 | 6 | 2 tasks | 2 files |
+| Phase 08-portfolio-health-summary-card P02 | 52 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ Recent decisions affecting current work:
 - [Phase 07-01]: Container IDs namespaced with auto prefix to prevent collision with manual Stochastic Models tab
 - [Phase 07-02]: Tab switches to analytics (not stocks) after scrape so user sees live badge updates without manual navigation
 - [Phase 08-01]: Import pandas as pd locally inside /api/portfolio_sharpe route body — consistent with existing local-import pattern in webapp.py lines 1323 and 1353
+- [Phase 08-02]: PortfolioHealth.initCard called synchronously before AutoRun.triggerAutoRun() so card is visible before regime badges start updating
+- [Phase 08-02]: Regime label derived from filtered_probs last value >= 0.5 threshold — consistent with autoRun.js convention
+- [Phase 08-02]: updateRegime(ticker, null) called in catch branch so failed tickers show dash instead of staying on Analyzing...
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T15:12:21.088Z
-Stopped at: Completed 08-01-PLAN.md — /api/portfolio_sharpe route and tests
+Last session: 2026-03-10T16:11:11.216Z
+Stopped at: Completed 08-02-PLAN.md — Portfolio Health summary card UI
 Resume file: None
