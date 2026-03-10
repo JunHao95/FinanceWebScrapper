@@ -136,7 +136,11 @@ Plans:
   3. Portfolio MDP output (optimal policy and value function) renders inline in the Analytics sub-tab after scrape; for a single-ticker input the MDP section is gracefully absent (no error, no empty chart).
   4. Auto-run regime charts use the same Plotly helpers already present in stochasticModels.js — no duplicate chart rendering code is introduced.
   5. If a regime detection API call fails for one ticker, the other ticker's chart still renders and the failed ticker shows a "Failed" badge without blocking the rest of the flow.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Create autoRun.js module: HTML scaffold injection, parallel API calls, Plotly rendering, badge transitions (AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05)
+- [ ] 07-02-PLAN.md — Wire AutoRun.triggerAutoRun into stockScraper.js displayResults() + human verify checkpoint (AUTO-01, AUTO-02, AUTO-03)
 
 ### Phase 8: Portfolio Health Summary Card
 **Goal**: A Portfolio Health card appears at the top of results once all analyses complete, giving the user an at-a-glance summary of portfolio VaR, Sharpe ratio, and the current regime per ticker — each metric links directly to its detailed section in the Analytics tab.
@@ -161,5 +165,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. ML-in-Finance Module | 1/1 | Complete   | 2026-03-08 |
 | 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
 | 6. Form Streamlining & Smart Defaults | 2/2 | Complete   | 2026-03-09 |
-| 7. Auto-Run Extended Analysis After Scrape | 0/? | Not started | - |
+| 7. Auto-Run Extended Analysis After Scrape | 1/2 | In Progress|  |
 | 8. Portfolio Health Summary Card | 0/? | Not started | - |
