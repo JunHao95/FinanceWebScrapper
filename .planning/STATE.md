@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: Roadmap defined; awaiting plan-phase for Phase 6
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-10T09:28:22.474Z"
+stopped_at: "Checkpoint: human-verify 07-02 (Task 1 complete, awaiting human verification)"
+last_updated: "2026-03-10T09:30:35.297Z"
 last_activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
   percent: 0
 ---
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%  (v2.0 phases: 0 of 3 complete)
 | Phase 06-form-streamlining-smart-defaults P01 | 2 | 2 tasks | 2 files |
 | Phase 06-form-streamlining-smart-defaults P02 | 3 | 2 tasks | 1 files |
 | Phase 07-auto-run-extended-analysis-after-scrape P01 | 4 | 2 tasks | 2 files |
+| Phase 07-auto-run-extended-analysis-after-scrape P02 | 2 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,7 @@ Recent decisions affecting current work:
 - [Phase 07-01]: autoRun.js uses Promise.allSettled for parallel regime calls with isolated per-ticker error handling
 - [Phase 07-01]: MDP block conditional on tickers.length >= 2 — single-ticker scrape silently skips it
 - [Phase 07-01]: Container IDs namespaced with auto prefix to prevent collision with manual Stochastic Models tab
+- [Phase 07-02]: Tab switches to analytics (not stocks) after scrape so user sees live badge updates without manual navigation
 
 ### Pending Todos
 
@@ -132,6 +134,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T09:28:22.471Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-10T09:30:35.295Z
+Stopped at: Checkpoint: human-verify 07-02 (Task 1 complete, awaiting human verification)
 Resume file: None
