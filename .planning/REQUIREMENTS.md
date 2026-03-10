@@ -97,15 +97,15 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 
 ### Auto Analysis
 
-- [ ] **AUTO-01**: After scrape completes, Regime Detection runs automatically for each ticker using a 2-year window
-- [ ] **AUTO-02**: After scrape completes, Portfolio MDP runs automatically (skipped gracefully for single-ticker input)
-- [ ] **AUTO-03**: Analytics tab shows per-module status badges ("⏳ Running…" → "✓ Done" / "⚠ Failed")
-- [ ] **AUTO-04**: Auto-run regime results render inline in Analytics sub-tab (charts via existing Plotly helpers)
-- [ ] **AUTO-05**: Auto-run Portfolio MDP policy output renders inline in Analytics sub-tab
+- [x] **AUTO-01**: After scrape completes, Regime Detection runs automatically for each ticker using a 2-year window
+- [x] **AUTO-02**: After scrape completes, Portfolio MDP runs automatically (skipped gracefully for single-ticker input)
+- [x] **AUTO-03**: Analytics tab shows per-module status badges ("⏳ Running…" → "✓ Done" / "⚠ Failed")
+- [x] **AUTO-04**: Auto-run regime results render inline in Analytics sub-tab (charts via existing Plotly helpers)
+- [x] **AUTO-05**: Auto-run Portfolio MDP policy output renders inline in Analytics sub-tab
 
 ### Portfolio Health Card
 
-- [ ] **HEALTH-01**: A "Portfolio Health" card appears above the tab nav in results showing VaR (95%), Sharpe ratio, and regime per ticker
+- [x] **HEALTH-01**: A "Portfolio Health" card appears above the tab nav in results showing VaR (95%), Sharpe ratio, and regime per ticker
 - [ ] **HEALTH-02**: Each metric in the health card links/jumps to its relevant analytics tab section
 - [ ] **HEALTH-03**: Health card shows available metrics only when fewer tickers are submitted (no correlation/PCA for single ticker)
 
@@ -180,12 +180,12 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 | FORM-06 | Phase 6: Form Streamlining & Smart Defaults | Complete |
 | FORM-07 | Phase 6: Form Streamlining & Smart Defaults | Complete |
 | FORM-08 | Phase 6: Form Streamlining & Smart Defaults | Complete |
-| AUTO-01 | Phase 7: Auto-Run Extended Analysis | Pending |
-| AUTO-02 | Phase 7: Auto-Run Extended Analysis | Pending |
-| AUTO-03 | Phase 7: Auto-Run Extended Analysis | Pending |
-| AUTO-04 | Phase 7: Auto-Run Extended Analysis | Pending |
-| AUTO-05 | Phase 7: Auto-Run Extended Analysis | Pending |
-| HEALTH-01 | Phase 8: Portfolio Health Summary Card | Pending |
+| AUTO-01 | Phase 7: Auto-Run Extended Analysis | Complete |
+| AUTO-02 | Phase 7: Auto-Run Extended Analysis | Complete |
+| AUTO-03 | Phase 7: Auto-Run Extended Analysis | Complete |
+| AUTO-04 | Phase 7: Auto-Run Extended Analysis | Complete |
+| AUTO-05 | Phase 7: Auto-Run Extended Analysis | Complete |
+| HEALTH-01 | Phase 8: Portfolio Health Summary Card | Complete |
 | HEALTH-02 | Phase 8: Portfolio Health Summary Card | Pending |
 | HEALTH-03 | Phase 8: Portfolio Health Summary Card | Pending |
 

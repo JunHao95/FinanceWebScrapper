@@ -170,4 +170,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Stochastic Models UI Completion | 1/1 | Complete   | 2026-03-08 |
 | 6. Form Streamlining & Smart Defaults | 2/2 | Complete   | 2026-03-09 |
 | 7. Auto-Run Extended Analysis After Scrape | 2/2 | Complete   | 2026-03-10 |
-| 8. Portfolio Health Summary Card | 0/? | Not started | - |
+| 8. Portfolio Health Summary Card | 1/2 | In Progress|  |
