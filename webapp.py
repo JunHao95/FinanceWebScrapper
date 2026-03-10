@@ -1892,6 +1892,64 @@ def rl_portfolio_rotation_ql():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/portfolio_sharpe', methods=['POST'])
+def portfolio_sharpe():
+    """
+    Compute annualized portfolio Sharpe ratio.
+    Body: { "tickers": [...], "weights": {...}, "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD" }
+    Returns: { "sharpe": float, "rf_rate": float, "period": "YYYY-MM-DD to YYYY-MM-DD" }
+    """
+    data = request.json or {}
+    tickers = data.get('tickers', [])
+    weights = data.get('weights', {})
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+
+    try:
+        import yfinance as yf
+        import numpy as np
+        import pandas as pd
+
+        # Fetch risk-free rate (annualized %) — silent fallback to 0.0
+        rf_rate = 0.0
+        try:
+            irx = yf.Ticker('^IRX').history(period='5d')
+            if not irx.empty:
+                rf_rate = float(irx['Close'].iloc[-1]) / 100.0  # ^IRX in % already
+        except Exception:
+            rf_rate = 0.0
+
+        # Fetch price data
+        prices = yf.download(tickers, start=start_date, end=end_date,
+                             auto_adjust=True, progress=False)['Close']
+        # Coerce single-ticker Series to DataFrame
+        if isinstance(prices, pd.Series):
+            prices = prices.to_frame(tickers[0])
+        prices = prices.dropna()
+
+        # Build weight vector — equal-weight fallback for missing tickers
+        n = len(tickers)
+        w = np.array([weights.get(t, 1.0 / n) for t in tickers])
+        w = w / w.sum()  # normalize
+
+        # Weighted daily log-returns
+        daily_log = np.log(prices / prices.shift(1)).dropna()
+        port_ret = (daily_log.values * w).sum(axis=1)
+
+        ann_ret = port_ret.mean() * 252
+        ann_vol = port_ret.std() * np.sqrt(252)
+        sharpe = (ann_ret - rf_rate) / ann_vol if ann_vol > 0 else 0.0
+
+        return jsonify({
+            'sharpe': round(float(sharpe), 4),
+            'rf_rate': round(float(rf_rate), 4),
+            'period': f'{start_date} to {end_date}'
+        })
+    except Exception as e:
+        logger.error(f"Error in portfolio_sharpe: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
