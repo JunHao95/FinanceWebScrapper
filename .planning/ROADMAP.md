@@ -150,7 +150,11 @@ Plans:
   1. After a multi-ticker analysis completes, the Portfolio Health card is visible above the tab nav and shows VaR (95%), Sharpe ratio, a regime label per ticker (bull/bear/neutral), and the top correlation pair.
   2. Clicking a metric in the health card (e.g., the Sharpe ratio) scrolls or navigates to the corresponding section in the Analytics tab.
   3. For a single-ticker analysis, the health card appears showing only the metrics that are computable (VaR, Sharpe, regime) — correlation and PCA entries are absent, not shown as empty or "N/A".
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Test scaffold + /api/portfolio_sharpe Flask backend route (HEALTH-01)
+- [ ] 08-02-PLAN.md — portfolioHealth.js module + wiring into autoRun/stockScraper/index.html + human verify (HEALTH-01, HEALTH-02, HEALTH-03)
 
 ## Progress
 
