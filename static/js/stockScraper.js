@@ -164,10 +164,15 @@ const StockScraper = {
             tickerResultsDiv.appendChild(tickerDiv);
         }
         
-        // Switch to stocks tab by default
-        TabManager.switchTab('stocks');
-        
+        // Switch to analytics tab so auto-run badges are immediately visible
+        TabManager.switchTab('analytics');
+
         document.getElementById('resultsSection').classList.add('active');
+
+        // Auto-run extended analysis (regime detection + portfolio MDP)
+        if (window.AutoRun) {
+            AutoRun.triggerAutoRun(AppState.currentTickers);
+        }
     },
 
     /**
