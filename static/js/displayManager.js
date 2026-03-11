@@ -168,7 +168,7 @@ const DisplayManager = {
         analyticsDiv.style.marginBottom = '30px';
         
         let html = '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px;">';
-        html += '<h2 style="margin: 0 0 20px 0; font-size: 1.8rem;">📈 Advanced Financial Analytics</h2>';
+        html += '<h2 style="margin: 0 0 20px 0; font-size: 1.8rem; color: white;">📈 Advanced Financial Analytics</h2>';
         html += '<p style="margin: 0; opacity: 0.9;">Portfolio-level risk metrics and statistical analysis</p>';
         html += '</div>';
         
