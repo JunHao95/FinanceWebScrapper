@@ -297,8 +297,8 @@ async function runAutoMDP(mdpStart, trainEnd, testStart) {
         const policyRows = Object.entries(optimal_policy).map(([state, action]) => {
             const count = (state_counts || {})[state] || 0;
             return `<tr>
-                <td style="padding:3px 10px;font-size:12px;">${rlEscapeHTML(state)}</td>
-                <td style="padding:3px 10px;font-weight:600;color:#667eea;">${rlEscapeHTML(action)}</td>
+                <td style="padding:3px 10px;font-size:12px;">${_esc(state)}</td>
+                <td style="padding:3px 10px;font-weight:600;color:#667eea;">${_esc(action)}</td>
                 <td style="padding:3px 10px;color:#888;">${count} months</td>
             </tr>`;
         }).join('');
