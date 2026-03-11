@@ -13,7 +13,7 @@ const TabManager = {
             return;
         }
 
-        const validTabs = ['stocks', 'analytics'];
+        const validTabs = ['stocks', 'analytics', 'autoanalysis'];
         if (!validTabs.includes(tabName)) {
             console.error('Invalid tab name:', tabName);
             return;
@@ -23,7 +23,7 @@ const TabManager = {
             // Remove active class from all tabs and contents
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
+
             // Add active class to selected tab and content
             if (tabName === 'stocks') {
                 const stocksTab = document.getElementById('stocksTab');
@@ -42,6 +42,13 @@ const TabManager = {
                     analyticsContent.classList.add('active');
                 } else {
                     console.error('Analytics tab elements not found');
+                }
+            } else if (tabName === 'autoanalysis') {
+                const autoanalysisTab = document.getElementById('autoanalysisTab');
+                const autoanalysisContent = document.getElementById('autoanalysisTabContent');
+                if (autoanalysisTab && autoanalysisContent) {
+                    autoanalysisTab.classList.add('active');
+                    autoanalysisContent.classList.add('active');
                 }
             }
         } catch (error) {

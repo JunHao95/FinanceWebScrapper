@@ -224,22 +224,19 @@ def gridworld_policy_iteration(use_wind: bool = False, gamma: float = 0.95) -> d
 def _fetch_monthly_prices(start: str = '2004-01-01'):
     """Download monthly Adj Close for SPY, IEF, SHY via yfinance."""
     import yfinance as yf
-    raw = yf.download(
-        ['SPY', 'IEF', 'SHY'],
-        start=start,
-        interval='1mo',
-        auto_adjust=True,
-        progress=False,
-    )
-    # yfinance ≥ 0.2 returns MultiIndex columns: (Price, Ticker)
-    if isinstance(raw.columns, type(None)) or raw.empty:
-        raise ValueError("yfinance returned empty data")
+    import pandas as pd
 
-    # Try MultiIndex access first, fall back to flat
-    try:
-        prices = raw['Close'][['SPY', 'IEF', 'SHY']].copy()
-    except (KeyError, TypeError):
-        prices = raw[['SPY', 'IEF', 'SHY']].copy()
+    # Use individual Ticker objects to avoid shared-session contamination when
+    # multiple concurrent downloads are running (e.g. regime detection + MDP).
+    series = {}
+    for t in ('SPY', 'IEF', 'SHY'):
+        hist = yf.Ticker(t).history(start=start, interval='1mo', auto_adjust=True)
+        if hist.empty:
+            raise ValueError(f"yfinance returned no data for {t}")
+        series[t] = hist['Close']
+
+    prices = pd.DataFrame(series)
+    prices.index = prices.index.tz_localize(None)  # strip tz for consistent merging
 
     prices.dropna(how='all', inplace=True)
     return prices
@@ -604,21 +601,18 @@ def portfolio_mdp_user_stocks(
         raise ValueError("Equity and bond tickers must be different.")
 
     # ── fetch data ────────────────────────────────────────────────────────────
-    raw = yf.download(
-        [eq, bd],
-        start=start_date,
-        interval='1mo',
-        auto_adjust=True,
-        progress=False,
-    )
-    if raw.empty:
-        raise ValueError(f"No data returned for {eq}, {bd}. Check tickers.")
+    # Use individual Ticker objects to avoid shared-session contamination when
+    # concurrent downloads (regime detection) are running simultaneously.
+    import pandas as pd
+    series = {}
+    for t in (eq, bd):
+        hist = yf.Ticker(t).history(start=start_date, interval='1mo', auto_adjust=True)
+        if hist.empty:
+            raise ValueError(f"No data returned for {t}. Check ticker symbol.")
+        series[t] = hist['Close']
 
-    # yfinance ≥ 0.2: columns are MultiIndex (Price, Ticker)
-    try:
-        prices = raw['Close'][[eq, bd]].copy()
-    except (KeyError, TypeError):
-        prices = raw[[eq, bd]].copy()
+    prices = pd.DataFrame(series)
+    prices.index = prices.index.tz_localize(None)  # strip tz for consistent merging
 
     prices.dropna(subset=[eq, bd], inplace=True)
     if len(prices) < 24:
