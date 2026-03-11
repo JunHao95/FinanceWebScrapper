@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: Roadmap defined; awaiting plan-phase for Phase 6
-stopped_at: Phase 9 context gathered
-last_updated: "2026-03-10T17:12:39.280Z"
+stopped_at: Completed 09-01-PLAN.md — Phase 9 and v2.0 milestone complete
+last_updated: "2026-03-11T05:51:08.549Z"
 last_activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
 progress:
   total_phases: 9
-  completed_phases: 8
-  total_plans: 20
-  completed_plans: 20
+  completed_phases: 9
+  total_plans: 21
+  completed_plans: 21
   percent: 0
 ---
 
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%  (v2.0 phases: 0 of 3 complete)
 | Phase 07-auto-run-extended-analysis-after-scrape P02 | 2 | 1 tasks | 1 files |
 | Phase 08-portfolio-health-summary-card P01 | 6 | 2 tasks | 2 files |
 | Phase 08-portfolio-health-summary-card P02 | 52 | 3 tasks | 4 files |
+| Phase 09-health-card-deep-links-and-auto-run-hardening P01 | 30 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,9 @@ Recent decisions affecting current work:
 - [Phase 08-02]: PortfolioHealth.initCard called synchronously before AutoRun.triggerAutoRun() so card is visible before regime badges start updating
 - [Phase 08-02]: Regime label derived from filtered_probs last value >= 0.5 threshold — consistent with autoRun.js convention
 - [Phase 08-02]: updateRegime(ticker, null) called in catch branch so failed tickers show dash instead of staying on Analyzing...
+- [Phase 09-01]: analyticsVarSection ID placed on portfolio-level Monte Carlo wrapper to avoid per-ticker ID collision
+- [Phase 09-01]: yf.Ticker().history() replaces yf.download() to fix concurrent-download shape corruption (2D vs 1D DataFrame)
+- [Phase 09-01]: _esc/_alert guard locals defined before try block in runAutoMDP so catch block can access them without ReferenceError
 
 ### Pending Todos
 
@@ -140,6 +144,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T17:12:39.272Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-health-card-deep-links-and-auto-run-hardening/09-CONTEXT.md
+Last session: 2026-03-11T05:51:08.539Z
+Stopped at: Completed 09-01-PLAN.md — Phase 9 and v2.0 milestone complete
+Resume file: None

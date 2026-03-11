@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Form Streamlining & Smart Defaults** - Reduce visible form to ticker input + Run Analysis button; data sources default silently; allocation supports % Weight and Value modes (completed 2026-03-09)
 - [x] **Phase 7: Auto-Run Extended Analysis After Scrape** - After scrape completes, Regime Detection and Portfolio MDP trigger automatically with inline results and status badges in the Analytics tab (completed 2026-03-10)
 - [x] **Phase 8: Portfolio Health Summary Card** - A concise Portfolio Health card appears at the top of results after all analyses complete, showing VaR, Sharpe, and regime per ticker (completed 2026-03-10)
-- [ ] **Phase 9: Health Card Deep-Links & Auto-Run Hardening** - Health card metric clicks navigate to specific analytics sections; autoRun.js implicit global dependencies hardened (gap closure from v2.0 audit)
+- [x] **Phase 9: Health Card Deep-Links & Auto-Run Hardening** - Health card metric clicks navigate to specific analytics sections; autoRun.js implicit global dependencies hardened (gap closure from v2.0 audit) (completed 2026-03-11)
 
 ## Phase Details
 
@@ -186,4 +186,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Form Streamlining & Smart Defaults | 2/2 | Complete   | 2026-03-09 |
 | 7. Auto-Run Extended Analysis After Scrape | 2/2 | Complete   | 2026-03-10 |
 | 8. Portfolio Health Summary Card | 2/2 | Complete   | 2026-03-10 |
-| 9. Health Card Deep-Links & Auto-Run Hardening | 0/1 | Pending | — |
+| 9. Health Card Deep-Links & Auto-Run Hardening | 1/1 | Complete   | 2026-03-11 |
