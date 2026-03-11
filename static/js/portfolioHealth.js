@@ -168,8 +168,8 @@ function initCard(tickers, analyticsData, allocations) {
             <span
                 id="healthVarValue"
                 style="font-size:14px;font-weight:600;color:#333;cursor:pointer;text-decoration:underline dotted;"
-                onclick="if(window.TabManager)TabManager.switchTab('analytics')"
-                title="Click to open Analytics tab"
+                onclick="if(window.TabManager){TabManager.switchTab('analytics');var el=document.getElementById('analyticsVarSection');if(el){el.scrollIntoView({behavior:'smooth'});el.style.transition='box-shadow 0.8s';el.style.boxShadow='0 0 0 3px #667eea';setTimeout(function(){el.style.boxShadow='';},800);}}"
+                title="Click to jump to Monte Carlo / VaR section"
             >${varDisplay}</span>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
@@ -177,8 +177,8 @@ function initCard(tickers, analyticsData, allocations) {
             <span
                 id="healthSharpeValue"
                 style="font-size:14px;font-weight:600;color:#333;cursor:pointer;text-decoration:underline dotted;"
-                onclick="if(window.TabManager)TabManager.switchTab('analytics')"
-                title="Click to open Analytics tab"
+                onclick="if(window.TabManager){TabManager.switchTab('analytics');var el=document.getElementById('analyticsSharpeSection');if(el){el.scrollIntoView({behavior:'smooth'});el.style.transition='box-shadow 0.8s';el.style.boxShadow='0 0 0 3px #667eea';setTimeout(function(){el.style.boxShadow='';},800);}else{var v=document.getElementById('analyticsVarSection');if(v){v.scrollIntoView({behavior:'smooth'});}}}"
+                title="Click to jump to Sharpe / Correlation section"
             >Computing...</span>
         </div>
         ${regimeBadgesHTML}
