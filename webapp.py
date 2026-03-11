@@ -1309,27 +1309,29 @@ def regime_detection_endpoint():
         data = request.json or {}
 
         # --- Determine ticker and fetch price data ---
+        import pandas as pd
+        import numpy as np
+
         if 'ticker' in data or 'start_date' in data or 'end_date' in data:
             # New API: ticker + date range
             ticker = str(data.get('ticker', 'SPY')).upper()
             start_date = data.get('start_date', '2019-01-01')
             end_date = data.get('end_date', datetime.now().strftime('%Y-%m-%d'))
 
-            df = yf.download(ticker, start=start_date, end=end_date,
-                             auto_adjust=True, progress=False)
-            if df.empty:
+            # Use Ticker.history() (instance-isolated) to avoid shared-session
+            # contamination when concurrent regime detection requests run in parallel.
+            hist = yf.Ticker(ticker).history(start=start_date, end=end_date,
+                                             auto_adjust=True)
+            if hist.empty:
                 return jsonify({'success': False, 'error': f'No data for {ticker}'}), 400
 
-            import pandas as pd
-            import numpy as np
-            df_close: pd.DataFrame = pd.DataFrame(df)
-            closes: pd.Series = pd.Series(df_close['Close'].squeeze()).dropna()
+            closes: pd.Series = hist['Close'].dropna()
 
             # Align index (dates correspond to returns, which are 1 shorter)
-            price_dates = pd.DatetimeIndex(closes.index).strftime('%Y-%m-%d').tolist()
+            price_dates = pd.DatetimeIndex(closes.index).tz_localize(None).strftime('%Y-%m-%d').tolist()
             price_values = closes.tolist()
 
-            log_ret = np.asarray(pd.Series(np.log(closes / closes.shift(1))).dropna())
+            log_ret = np.asarray(np.log(closes / closes.shift(1)).dropna())
             # dates/prices aligned to returns (drop first row)
             ret_dates = price_dates[1:]
             ret_prices = price_values[1:]
@@ -1344,21 +1346,19 @@ def regime_detection_endpoint():
             end_dt = datetime.now()
             start_dt = end_dt - timedelta(days=int(days * 1.5))
 
-            df = yf.download(ticker, start=start_dt.strftime('%Y-%m-%d'),
-                             end=end_dt.strftime('%Y-%m-%d'),
-                             auto_adjust=True, progress=False)
-            if df.empty:
+            # Use Ticker.history() (instance-isolated) to avoid shared-session contamination
+            hist = yf.Ticker(ticker).history(start=start_dt.strftime('%Y-%m-%d'),
+                                             end=end_dt.strftime('%Y-%m-%d'),
+                                             auto_adjust=True)
+            if hist.empty:
                 return jsonify({'success': False, 'error': f'No data for {ticker}'}), 400
 
-            import pandas as pd
-            import numpy as np
-            df_close: pd.DataFrame = pd.DataFrame(df)
-            closes: pd.Series = pd.Series(df_close['Close'].squeeze()).dropna()
+            closes: pd.Series = hist['Close'].dropna()
 
-            price_dates = pd.DatetimeIndex(closes.index).strftime('%Y-%m-%d').tolist()
+            price_dates = pd.DatetimeIndex(closes.index).tz_localize(None).strftime('%Y-%m-%d').tolist()
             price_values = closes.tolist()
 
-            log_ret = np.asarray(pd.Series(np.log(closes / closes.shift(1))).dropna())
+            log_ret = np.asarray(np.log(closes / closes.shift(1)).dropna())
             ret_dates = price_dates[1:]
             ret_prices = price_values[1:]
 

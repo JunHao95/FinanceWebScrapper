@@ -104,17 +104,16 @@ class RegimeDetector:
         start = end - timedelta(days=int(days * 1.5))
         self.logger.info(f"Fetching {ticker} history from {start.date()} to {end.date()}")
 
-        data = yf.download(ticker, start=start.strftime('%Y-%m-%d'),
-                           end=end.strftime('%Y-%m-%d'),
-                           auto_adjust=True, progress=False)
+        # Use Ticker.history() (instance-isolated) to avoid shared-session
+        # contamination when concurrent downloads run in parallel.
+        data = yf.Ticker(ticker).history(start=start.strftime('%Y-%m-%d'),
+                                         end=end.strftime('%Y-%m-%d'),
+                                         auto_adjust=True)
 
         if data.empty:
             raise ValueError(f"No data returned for {ticker}")
 
-        closes = data['Close']
-        if hasattr(closes, 'squeeze'):
-            closes = closes.squeeze()
-        closes = closes.dropna()
+        closes = data['Close'].dropna()
 
         log_ret = np.log(closes / closes.shift(1)).dropna().values
         self.logger.info(f"Got {len(log_ret)} log-returns for {ticker}")
