@@ -311,7 +311,7 @@ async function runAutoMDP(mdpStart, trainEnd, testStart) {
                 <table style="border-collapse:collapse;width:100%;font-size:12px;">
                     <thead><tr style="background:#f8f9fa;">
                         <th style="padding:4px 10px;text-align:left;">State</th>
-                        <th style="padding:4px 10px;text-align:left;">${rlEscapeHTML(eq)}/${rlEscapeHTML(bd)} Allocation</th>
+                        <th style="padding:4px 10px;text-align:left;">${_esc(eq)}/${_esc(bd)} Allocation</th>
                         <th style="padding:4px 10px;text-align:left;">Test Visits</th>
                     </tr></thead>
                     <tbody>${policyRows}</tbody>
