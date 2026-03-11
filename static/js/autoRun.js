@@ -334,7 +334,7 @@ async function runAutoMDP(mdpStart, trainEnd, testStart) {
         }
         const results = document.getElementById('autoMDPResults');
         if (results) {
-            results.innerHTML = rlAlert('Portfolio MDP failed: ' + err.message);
+            results.innerHTML = _alert('Portfolio MDP failed: ' + err.message);
         }
     }
 }
