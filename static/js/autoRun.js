@@ -184,6 +184,27 @@ async function runAutoRegime(ticker, startDate, endDate) {
 // ---------------------------------------------------------------------------
 
 async function runAutoMDP(mdpStart, trainEnd, testStart) {
+    // Guards at function top so catch block can also use _alert
+    const _esc = window.rlEscapeHTML || (function(s) {
+        return String(s).replace(/[&<>"']/g, function(c) {
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+        });
+    });
+    const _alert = window.rlAlert || (function(msg) {
+        return '<div style="background:#f8d7da;border:1px solid #f5c6cb;padding:12px;border-radius:4px;margin-top:10px;">' + _esc(msg) + '</div>';
+    });
+
+    // If rlModels.js did not load, show unavailability message (distinguishable from compute error)
+    if (!window.rlEscapeHTML) {
+        const badge = document.getElementById('autoMDPBadge');
+        if (badge) { badge.setAttribute('style', BADGE_FAILED); badge.textContent = 'Failed'; }
+        const results = document.getElementById('autoMDPResults');
+        if (results) {
+            results.innerHTML = _alert('Portfolio MDP unavailable: rlModels.js did not load. Reload the page and try again.');
+        }
+        return;
+    }
+
     try {
         const resp = await fetch('/api/stoch_portfolio_mdp', {
             method: 'POST',
