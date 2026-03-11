@@ -114,7 +114,7 @@ const AnalyticsRenderer = {
      * Render correlation analysis
      */
     renderCorrelation(corrData) {
-        let html = '<div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #667eea;">';
+        let html = '<div id="analyticsSharpeSection" style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #667eea;">';
         html += '<h3 style="color: #667eea; margin-bottom: 15px;">📊 Correlation Analysis</h3>';
         
         const corrMatrix = corrData["Correlation Matrix"] || corrData.correlation_matrix;
