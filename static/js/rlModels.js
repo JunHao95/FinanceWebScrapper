@@ -525,3 +525,9 @@ async function runStochGridworld() {
         document.getElementById(containerId).innerHTML = rlAlert('Error: ' + err.message);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Expose shared helpers for cross-script access (e.g. autoRun.js)
+// ---------------------------------------------------------------------------
+window.rlEscapeHTML = rlEscapeHTML;
+window.rlAlert      = rlAlert;
