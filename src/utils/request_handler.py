@@ -23,9 +23,8 @@ def create_session():
     session = requests.Session()
     
     # Get pool settings from environment or use defaults
-    # Default to small pools to conserve memory on constrained hosts (e.g. Render free tier)
-    pool_connections = int(os.environ.get('CONNECTION_POOL_SIZE', 5))
-    pool_maxsize = int(os.environ.get('CONNECTION_POOL_MAXSIZE', 5))
+    pool_connections = int(os.environ.get('CONNECTION_POOL_SIZE', 20))
+    pool_maxsize = int(os.environ.get('CONNECTION_POOL_MAXSIZE', 20))
     
     # Configure retry strategy
     retry_strategy = Retry(

@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import tempfile
 import logging
 from logging.handlers import RotatingFileHandler
-import gc
 import numpy as np
 import copy
 import concurrent.futures
@@ -249,7 +248,7 @@ def run_scrapers_for_ticker(ticker, sources=['all'], alpha_key=None, finhub_key=
         scraper_tasks.append(("Technical Indicators", get_technical_data))
     
     # Run scrapers concurrently with limited workers to avoid overwhelming APIs
-    max_workers = min(2, len(scraper_tasks))  # Limit to 2 concurrent scrapers to save memory
+    max_workers = min(4, len(scraper_tasks))  # Limit to 4 concurrent scrapers
     
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -409,9 +408,10 @@ def scrape_data():
                 logger.info(f"Processing ticker: {ticker}")
                 return ticker, run_scrapers_for_ticker(ticker, sources, alpha_key, finhub_key)
             
-            # Use limited parallel workers to avoid OOM on constrained cloud hosts
+            # Use up to 6 parallel workers for multiple tickers
+            # Scale workers based on portfolio size using sqrt for better scaling
             import math
-            max_ticker_workers = min(3, max(2, int(math.sqrt(len(tickers)))))
+            max_ticker_workers = min(6, max(3, int(math.sqrt(len(tickers)) * 1.5)))
             logger.info(f"Using {max_ticker_workers} parallel workers for {len(tickers)} tickers")
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_ticker_workers) as executor:
                 futures = [executor.submit(process_ticker, ticker) for ticker in tickers]
@@ -505,7 +505,7 @@ def scrape_data():
                         logger.warning(f"Regression analysis failed for {ticker}: {str(e)}")
                     
                     try:
-                        mc_result = analytics.monte_carlo_var_es([ticker], days=252, simulations=1000)
+                        mc_result = analytics.monte_carlo_var_es([ticker], days=252, simulations=5000)
                         if mc_result and 'error' not in mc_result:
                             ticker_analytics['monte_carlo'] = mc_result
                     except Exception as e:
@@ -518,7 +518,7 @@ def scrape_data():
                 if len(tickers_list) >= 2:
                     try:
                         logger.info(f"Running portfolio-level Monte Carlo for {len(tickers_list)} tickers...")
-                        portfolio_mc_result = analytics.monte_carlo_var_es(tickers_list, days=252, simulations=1000)
+                        portfolio_mc_result = analytics.monte_carlo_var_es(tickers_list, days=252, simulations=5000)
                         if portfolio_mc_result and 'error' not in portfolio_mc_result:
                             analytics_data['portfolio_monte_carlo'] = portfolio_mc_result
                             logger.info(f"✓ Portfolio Monte Carlo completed (includes stress test)")
@@ -538,10 +538,6 @@ def scrape_data():
                 
             except Exception as e:
                 logger.error(f"Analytics computation error: {str(e)}")
-            finally:
-                # Explicitly release analytics object and collected data to free memory
-                del analytics
-                gc.collect()
         elif len(analytics_tickers) >= 1 and skip_analytics:
             logger.info(f"Skipping advanced analytics for large portfolio ({len(analytics_tickers)} tickers). Enable for smaller portfolios (≤50 tickers).")
             analytics_data['info'] = {
