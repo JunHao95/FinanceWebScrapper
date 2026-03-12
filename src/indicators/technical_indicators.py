@@ -32,7 +32,6 @@ import logging
 import time
 from datetime import datetime, timedelta
 import yfinance as yf
-from pandas_datareader import data as pdr
 from ..utils.request_handler import make_request
 from ..utils.mongodb_storage import MongoDBStorage
 

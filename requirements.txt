@@ -10,7 +10,6 @@ tabulate>=0.9.0    # For better display formatting
 python-dotenv>=1.0.0  # For loading environment variables
 pymongo>=4.5.0  # For MongoDB storage
 yfinance>=0.2.18  # For Yahoo Finance API access
-pandas-datareader>=0.10.0  # For financial data reading
 
 # Web application dependencies
 Flask>=2.3.0
