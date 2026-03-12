@@ -222,7 +222,14 @@ function updateRegime(ticker, label) {
 }
 
 // ---------------------------------------------------------------------------
+// Public: getRegimeMap / getTickerList — consumed by RL tab (Phase 10+)
+// ---------------------------------------------------------------------------
+
+function getRegimeMap()  { return { ..._regimeMap };  }
+function getTickerList() { return [..._tickerList]; }
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
-window.PortfolioHealth = { initCard, updateRegime };
+window.PortfolioHealth = { initCard, updateRegime, getRegimeMap, getTickerList };

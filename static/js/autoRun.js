@@ -371,6 +371,9 @@ async function triggerAutoRun(tickers) {
         : regimePromises;
 
     await Promise.allSettled(allPromises);
+
+    // Phase 10 — populate RL portfolio banner once all regimes are resolved
+    if (window.updateRLPortfolioBanner) updateRLPortfolioBanner();
 }
 
 // ---------------------------------------------------------------------------

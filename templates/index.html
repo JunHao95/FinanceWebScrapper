@@ -1762,6 +1762,12 @@
                     All models trained on historical data with no look-ahead bias.
                 </p>
 
+                <!-- RL Portfolio Banner (Phase 10 — RLCTX-01, RLCTX-02) -->
+                <div id="rlPortfolioBanner" style="display:none;"></div>
+
+                <!-- RL Summary Section (Phase 10 — RLSUM-01, RLSUM-02) -->
+                <div id="rlSummarySection" style="display:none;"></div>
+
                 <!-- RL Sub-tabs -->
                 <div class="tabs-container" style="margin-bottom: 20px;">
                     <div class="tabs">
@@ -1842,6 +1848,13 @@
                     </p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                         <div class="form-group">
+                            <label for="rlPIEquityTicker">Your Equity Ticker</label>
+                            <input type="text" id="rlPIEquityTicker" placeholder="SPY"
+                                   style="text-transform:uppercase;"
+                                   oninput="this._userEdited=true;this.value=this.value.toUpperCase()">
+                            <small>Auto-filled from your portfolio (for context)</small>
+                        </div>
+                        <div class="form-group">
                             <label for="rlPITrainEnd">Train End Date</label>
                             <input type="date" id="rlPITrainEnd" value="2016-12-31">
                             <small>Last date of training window</small>
@@ -1877,6 +1890,13 @@
                         cumulative return vs 60/40 benchmark.
                     </p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="form-group">
+                            <label for="rlQLEquityTicker">Your Equity Ticker</label>
+                            <input type="text" id="rlQLEquityTicker" placeholder="SPY"
+                                   style="text-transform:uppercase;"
+                                   oninput="this._userEdited=true;this.value=this.value.toUpperCase()">
+                            <small>Auto-filled from your portfolio (for context)</small>
+                        </div>
                         <div class="form-group">
                             <label for="rlQLAlpha">Learning Rate (α)</label>
                             <input type="number" id="rlQLAlpha" value="0.10" min="0.01" max="1.0" step="0.01">
