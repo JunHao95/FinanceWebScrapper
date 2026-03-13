@@ -1960,7 +1960,7 @@ def portfolio_sharpe():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """
-    Endpoint for Quantitative Assistant chatbot using local Ollama model.
+    Endpoint for Quantitative Assistant chatbot using Ollama model.
     """
     try:
         data = request.json or {}
@@ -1969,14 +1969,40 @@ def chat():
         if not message:
             return jsonify({"error": "Message is required."}), 400
             
-        OLLAMA_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/chat')
-        OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3')
-        
         system_prompt = "You are an expert MFE (Master of Financial Engineering) quantitative assistant named 'QuantAssistant'. Respond informatively but concisely, focusing on financial data and quantitative analysis principles."
         
-        try:
+        # Check if we have a Groq API Key setup in the environment
+        groq_api_key = os.environ.get('GROQ_API_KEY')
+        
+        if groq_api_key:
+            # --- GROQ (CLOUD) IMPLEMENTATION ---
+            URL = "https://api.groq.com/openai/v1/chat/completions"
+            MODEL = os.environ.get('GROQ_MODEL', 'llama3-8b-8192')
+            headers = {
+                "Authorization": f"Bearer {groq_api_key}",
+                "Content-Type": "application/json"
+            }
             payload = {
-                "model": OLLAMA_MODEL,
+                "model": MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message}
+                ]
+            }
+            
+            response = requests.post(URL, json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            # Groq/OpenAI response formatting
+            result = response.json()
+            reply = result.get("choices", [{}])[0].get("message", {}).get("content", "No response content found.")
+            
+        else:
+            # --- OLLAMA (LOCAL) IMPLEMENTATION ---
+            URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/chat')
+            MODEL = os.environ.get('OLLAMA_MODEL', 'llama3')
+            payload = {
+                "model": MODEL,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": message}
@@ -1984,20 +2010,18 @@ def chat():
                 "stream": False
             }
             
-            response = requests.post(OLLAMA_URL, json=payload, timeout=120)
+            response = requests.post(URL, json=payload, timeout=120)
             response.raise_for_status()
             
+            # Ollama response formatting
             result = response.json()
             reply = result.get("message", {}).get("content", "No response content found.")
             
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Ollama connection error: {e}")
-            reply = f"Error communicating with local LLM. Make sure Ollama is running (`ollama serve`) and the model '{OLLAMA_MODEL}' is pulled (`ollama pull {OLLAMA_MODEL}`). Details: {e}"
-        except Exception as e:
-            logger.error(f"Error parsing Ollama response: {e}")
-            reply = f"Error extracting response from local LLM: {str(e)}"
-        
         return jsonify({"reply": reply})
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"LLM connection error: {e}")
+        return jsonify({"reply": f"Error communicating with LLM. Details: {str(e)}"})
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({"error": str(e)}), 500
