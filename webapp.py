@@ -16,6 +16,12 @@ import copy
 import concurrent.futures
 import threading
 import time
+import traceback
+
+try:
+    import openai
+except ImportError:
+    openai = None
 
 # Load environment variables
 load_dotenv()
@@ -1966,8 +1972,23 @@ def chat():
         if not message:
             return jsonify({"error": "Message is required."}), 400
             
-        # Placeholder response logic
-        reply = f"Hello, I am QuantAssistant. I received your message: {message}"
+        openai_key = os.environ.get('OPENAI_API_KEY')
+        if not openai_key or not openai:
+            return jsonify({"reply": "The LLM is currently unplugged - missing API key or openai library."})
+        
+        try:
+            client = openai.OpenAI(api_key=openai_key)
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are an expert MFE (Master of Financial Engineering) quantitative assistant named 'QuantAssistant'. Respond informatively but concisely, focusing on financial data and quantitative analysis principles."},
+                    {"role": "user", "content": message}
+                ]
+            )
+            reply = response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"OpenAI error in chat endpoint: {e}")
+            reply = f"Error communicating with LLM: {str(e)}"
         
         return jsonify({"reply": reply})
     except Exception as e:
