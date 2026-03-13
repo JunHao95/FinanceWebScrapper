@@ -1949,6 +1949,32 @@ def portfolio_sharpe():
         logger.error(f"Error in portfolio_sharpe: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """
+    Endpoint for Quantitative Assistant chatbot.
+    Receives user message and returns a simulated response.
+    Expected JSON:
+        { "message": "user input text" }
+    Returns:
+        { "reply": "Hello, I am QuantAssistant. I received your message: <message>" }
+    """
+    try:
+        data = request.json or {}
+        message = data.get("message", "").strip()
+        
+        if not message:
+            return jsonify({"error": "Message is required."}), 400
+            
+        # Placeholder response logic
+        reply = f"Hello, I am QuantAssistant. I received your message: {message}"
+        
+        return jsonify({"reply": reply})
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route('/health')
 def health_check():
