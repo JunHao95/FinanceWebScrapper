@@ -5,6 +5,7 @@ Flask Web Application for Stock Financial Metrics Scraper
 import os
 import sys
 import json
+import requests
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file
 from dotenv import load_dotenv
@@ -1484,6 +1485,7 @@ def calibrate_heston_stream():
                 yield event
         except Exception as e:
             import json
+            import requests
             yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
 
     return Response(
@@ -1958,12 +1960,7 @@ def portfolio_sharpe():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """
-    Endpoint for Quantitative Assistant chatbot.
-    Receives user message and returns a simulated response.
-    Expected JSON:
-        { "message": "user input text" }
-    Returns:
-        { "reply": "Hello, I am QuantAssistant. I received your message: <message>" }
+    Endpoint for Quantitative Assistant chatbot using local Ollama model.
     """
     try:
         data = request.json or {}
@@ -1972,30 +1969,38 @@ def chat():
         if not message:
             return jsonify({"error": "Message is required."}), 400
             
-        openai_key = os.environ.get('OPENAI_API_KEY')
-        if not openai_key or not openai:
-            return jsonify({"reply": "The LLM is currently unplugged - missing API key or openai library."})
+        OLLAMA_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api/chat')
+        OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3')
+        
+        system_prompt = "You are an expert MFE (Master of Financial Engineering) quantitative assistant named 'QuantAssistant'. Respond informatively but concisely, focusing on financial data and quantitative analysis principles."
         
         try:
-            client = openai.OpenAI(api_key=openai_key)
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an expert MFE (Master of Financial Engineering) quantitative assistant named 'QuantAssistant'. Respond informatively but concisely, focusing on financial data and quantitative analysis principles."},
+            payload = {
+                "model": OLLAMA_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": message}
-                ]
-            )
-            reply = response.choices[0].message.content
+                ],
+                "stream": False
+            }
+            
+            response = requests.post(OLLAMA_URL, json=payload, timeout=120)
+            response.raise_for_status()
+            
+            result = response.json()
+            reply = result.get("message", {}).get("content", "No response content found.")
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Ollama connection error: {e}")
+            reply = f"Error communicating with local LLM. Make sure Ollama is running (`ollama serve`) and the model '{OLLAMA_MODEL}' is pulled (`ollama pull {OLLAMA_MODEL}`). Details: {e}"
         except Exception as e:
-            logger.error(f"OpenAI error in chat endpoint: {e}")
-            reply = f"Error communicating with LLM: {str(e)}"
+            logger.error(f"Error parsing Ollama response: {e}")
+            reply = f"Error extracting response from local LLM: {str(e)}"
         
         return jsonify({"reply": reply})
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({"error": str(e)}), 500
-
-
 
 @app.route('/health')
 def health_check():
