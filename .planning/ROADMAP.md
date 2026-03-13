@@ -187,3 +187,12 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Auto-Run Extended Analysis After Scrape | 2/2 | Complete   | 2026-03-10 |
 | 8. Portfolio Health Summary Card | 2/2 | Complete   | 2026-03-10 |
 | 9. Health Card Deep-Links & Auto-Run Hardening | 1/1 | Complete   | 2026-03-11 |
+
+### Phase 10: chatbot-integration
+**Goal**: Integrate a chatbot in the FinanceWebScrapper web and having QuantAssisant agent residing in the chatbot
+**Requirements**: [CHAT-01]
+**Plans**: 1 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Integrate QuantAssistant chatbot (backend endpoint + frontend widget) (CHAT-01)
+
