@@ -2020,8 +2020,9 @@ def chat():
         return jsonify({"reply": reply})
         
     except requests.exceptions.RequestException as e:
-        logger.error(f"LLM connection error: {e}")
-        return jsonify({"reply": f"Error communicating with LLM. Details: {str(e)}"})
+        error_body = e.response.text if hasattr(e, 'response') and e.response is not None else str(e)
+        logger.error(f"LLM connection error: {error_body}")
+        return jsonify({"reply": f"Error communicating with LLM. Details: {str(e)}. Response: {error_body}"})
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({"error": str(e)}), 500
