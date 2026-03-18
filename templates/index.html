@@ -162,7 +162,7 @@
                 <!-- Tab 2: Advanced Analytics -->
                 <div class="tab-content" id="analyticsTabContent">
                     <div id="analyticsResults"></div>
-                    <div id="noAnalyticsMessage" style="display: none; text-align: center; padding: 40px; color: #666;">
+                    <div id="noAnalyticsMessage" style="display: none; text-align: center; padding: 40px; color:var(--text-secondary);">
                         <h3>📊 No Analytics Available</h3>
                         <p style="margin-top: 10px;">Advanced analytics will appear here when you analyze 2 or more stocks with portfolio allocation enabled.</p>
                     </div>
@@ -172,16 +172,16 @@
                 <div class="tab-content" id="autoanalysisTabContent">
 
                     <!-- Static interpretation guide -->
-                    <details open style="background:#f8f9fb;border:1px solid #e0e0e0;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+                    <details open style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px 20px;margin-bottom:24px;">
                         <summary style="cursor:pointer;font-weight:700;font-size:15px;color:#667eea;list-style:none;display:flex;align-items:center;gap:8px;">
                             <span style="font-size:18px;">📖</span> How to Read These Results
                         </summary>
 
                         <div style="margin-top:16px;">
-                            <h4 style="margin-bottom:8px;color:#333;font-size:14px;border-bottom:1px solid #e0e0e0;padding-bottom:6px;">
+                            <h4 style="margin-bottom:8px;color:var(--text-primary);font-size:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;">
                                 Regime Detection (Hidden Markov Model)
                             </h4>
-                            <ul style="padding-left:20px;font-size:13px;color:#555;line-height:1.7;margin:0;">
+                            <ul style="padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.7;margin:0;">
                                 <li><strong>What it is:</strong> A 2-state HMM fitted to daily log-returns. State 0 = calm/bull; State 1 = stressed/bear.</li>
                                 <li><strong>P(Stressed) chart:</strong> Filtered probability of being in the stressed regime. Values near 1 = model believes high-volatility / downward-trending conditions.</li>
                                 <li><strong>Price + shading chart:</strong> Price history with red bands wherever State 1 probability exceeds 0.5.</li>
@@ -198,10 +198,10 @@
                         </div>
 
                         <div style="margin-top:18px;">
-                            <h4 style="margin-bottom:8px;color:#333;font-size:14px;border-bottom:1px solid #e0e0e0;padding-bottom:6px;">
+                            <h4 style="margin-bottom:8px;color:var(--text-primary);font-size:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;">
                                 Portfolio MDP (Markov Decision Process)
                             </h4>
-                            <ul style="padding-left:20px;font-size:13px;color:#555;line-height:1.7;margin:0;">
+                            <ul style="padding-left:20px;font-size:13px;color:var(--text-secondary);line-height:1.7;margin:0;">
                                 <li><strong>What it is:</strong> 12-state MDP where each state = (SPY momentum, IEF momentum, volatility bucket). Actions = 5 SPY/IEF weight splits (100/0 → 0/100). Policy found via Policy Iteration on training data.</li>
                                 <li><strong>V* bar chart:</strong> Optimal state-value V*(s) — expected discounted cumulative return starting from state s under the optimal policy. Taller bar = more valuable regime. Zero bars = state never seen in training; policy there is untested.</li>
                                 <li><strong>Optimal Policy Table:</strong> Maps each (vol, momentum) state to the recommended SPY/IEF allocation. "0 months" in Test Visits = that state never occurred in the test window — treat those rows with caution.</li>
@@ -437,7 +437,7 @@
 
             <!-- Heston Model Calculator -->
             <div id="hestonCalculator" style="display: none;">
-                <p style="margin-bottom: 15px; color: #666;">
+                <p style="margin-bottom: 15px; color:var(--text-secondary);">
                     Price options under the <strong>Heston (1993) stochastic volatility model</strong>
                     via Lewis (2001) Fourier integration. Captures volatility smile that Black-Scholes cannot.
                 </p>
@@ -498,7 +498,7 @@
 
             <!-- Merton Jump-Diffusion Calculator -->
             <div id="mertonCalculator" style="display: none;">
-                <p style="margin-bottom: 15px; color: #666;">
+                <p style="margin-bottom: 15px; color:var(--text-secondary);">
                     Price options under <strong>Merton (1976) jump-diffusion</strong> — captures sudden price jumps
                     (earnings surprises, macro shocks) via Poisson-distributed log-normal jumps.
                 </p>
@@ -563,11 +563,11 @@
             <!-- Volatility Surface Viewer -->
             <div class="input-section">
                 <h2>📈 Interactive Volatility Surface Viewer</h2>
-            <p style="margin-bottom: 20px; color: #666;">
+            <p style="margin-bottom: 20px; color:var(--text-secondary);">
                 Visualize implied volatility surface from real market options data with interactive 3D rotation and zoom
             </p>
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
-                <strong>⏰ Market Hours Recommended:</strong> Best results during 9:30 AM - 4:00 PM ET (Mon-Fri). 
+            <div style="background: rgba(255,193,7,0.12); border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px; color: #ffe082;">
+                <strong>⏰ Market Hours Recommended:</strong> Best results during 9:30 AM - 4:00 PM ET (Mon-Fri).
                 After-hours/weekend data may have zero bid/ask quotes. Try <strong>SPY</strong> or <strong>QQQ</strong> for best liquidity.
             </div>
 
@@ -611,13 +611,13 @@
 
             <!-- Surface Plot Container -->
             <div id="volSurfaceContainer" style="display: none; margin-top: 30px;">
-                <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background: var(--bg-card); backdrop-filter: var(--blur); border: 1px solid var(--border-glass); border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                     <h3 style="color: #667eea; margin-bottom: 15px;">Interactive Volatility Surface</h3>
-                    <div id="volSurfaceMetadata" style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div id="volSurfaceMetadata" style="margin-bottom: 15px; padding: 15px; background:rgba(255,255,255,0.04); border-radius: 8px;">
                         <!-- Metadata will be inserted here -->
                     </div>
                     <div id="volSurfacePlot" style="width: 100%; height: 700px;"></div>
-                    <div style="margin-top: 15px; padding: 15px; background: #e8f4fd; border-radius: 8px; border-left: 3px solid #3498db;">
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(52,152,219,0.12); border-radius: 8px; border-left: 3px solid #3498db;">
                         <p style="margin: 0; color: #2c3e50;">
                             <strong>💡 How to interact:</strong> Click and drag to rotate | Scroll to zoom | Hover over surface to see values
                         </p>
@@ -627,7 +627,7 @@
 
             <!-- ATM Term Structure Container -->
             <div id="atmTermStructureContainer" style="display: none; margin-top: 30px;">
-                <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background: var(--bg-card); backdrop-filter: var(--blur); border: 1px solid var(--border-glass); border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                     <h3 style="color: #764ba2; margin-bottom: 15px;">ATM Volatility Term Structure</h3>
                     <div id="atmTermStructurePlot" style="width: 100%; height: 500px;"></div>
                 </div>
@@ -650,7 +650,7 @@
         <div id="stochasticModelsTab" class="main-tab-content">
             <div class="input-section">
                 <h2>🔬 Stochastic Models</h2>
-                <p style="color:#666; margin-bottom: 20px;">
+                <p style="color:var(--text-secondary); margin-bottom: 20px;">
                     Advanced quantitative finance tools from stochastic modelling theory:
                     market regime detection, Heston calibration, CIR yield curves, and credit risk.
                 </p>
@@ -694,7 +694,7 @@
                 <!-- Regime Detection -->
                 <div id="stochContent_regime" class="stoch-content">
                     <h3 style="margin-bottom: 10px;">🌡️ Market Regime Detection (HMM)</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         Fits a 2-state Hidden Markov Model (calm / stressed) to historical returns
                         using the Hamilton filter + L-BFGS-B MLE. Outputs regime probabilities and a trading signal.
                     </p>
@@ -724,11 +724,11 @@
                 <!-- Heston Calibration -->
                 <div id="stochContent_heston_cal" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">⚙️ Heston Model Calibration</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         Two-stage calibration (brute-force grid + Nelder-Mead) of Heston parameters
                         {κ, θ, σᵥ, ρ, ν₀} against real market options. Reports MSE fit quality.
                     </p>
-                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                    <div style="background: rgba(255,193,7,0.12); border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 15px; border-radius: 4px; color: #ffe082;">
                         <strong>⏰ Note:</strong> Calibration may take 30–120 seconds depending on options liquidity.
                         Use liquid tickers (SPY, QQQ, AAPL) for best results. Market hours recommended.
                     </div>
@@ -752,7 +752,7 @@
                     <button type="button" class="primary-btn" onclick="runHestonCalibration()">
                         Calibrate Heston Parameters
                     </button>
-                    <div id="calibProgress" style="display:none; margin:10px 0; padding:8px 12px; background:#f8f9fa; border-radius:4px; font-family:monospace; font-size:13px;"></div>
+                    <div id="calibProgress" style="display:none; margin:10px 0; padding:8px 12px; background:rgba(255,255,255,0.04); border-radius:4px; font-family:monospace; font-size:13px;"></div>
                     <div id="calibrationResults" style="display:none; margin-top:20px;"></div>
                     <div id="calibIVChart" style="margin-top:20px;"></div>
                 </div>
@@ -760,11 +760,11 @@
                 <!-- Merton Calibration -->
                 <div id="stochContent_merton_cal" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">🦘 Merton Jump-Diffusion Calibration</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         Two-stage calibration (brute-force grid + Nelder-Mead) of Merton parameters
                         {σ, λ, μⱼ, δⱼ} against real market options. Captures fat tails and jump risk.
                     </p>
-                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                    <div style="background: rgba(255,193,7,0.12); border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 15px; border-radius: 4px; color: #ffe082;">
                         <strong>⏰ Note:</strong> Calibration may take 30–90 seconds depending on options liquidity.
                         Use liquid tickers (SPY, QQQ, AAPL) for best results.
                     </div>
@@ -794,7 +794,7 @@
                 <!-- CIR Yield Curve -->
                 <div id="stochContent_cir" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">📐 CIR Interest Rate Model</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         Cox-Ingersoll-Ross (1985) stochastic rate model: dr = κ(θ−r)dt + σ√r dW.
                         Computes zero-coupon bond prices B(0,T) and implied yield curve.
                     </p>
@@ -839,7 +839,7 @@
                 <!-- Credit Risk -->
                 <div id="stochContent_credit" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">💳 Credit Risk (Markov Chain)</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         S&P-style credit rating transition matrix (Markov chain). Computes default probabilities
                         over multiple horizons, expected bond value, and Monte Carlo time-to-default simulation.
                     </p>
@@ -882,7 +882,7 @@
                 <!-- Markov Chain -->
                 <div id="stochContent_markov" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">🔗 Markov Chain Analysis</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         Analyse discrete-time Markov chains: compute steady-state distributions,
                         absorption probabilities, and solve portfolio MDP via value iteration.
                     </p>
@@ -897,7 +897,7 @@
 
                     <!-- Form: Steady-State -->
                     <div id="markovForm_steady_state">
-                        <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">
                             Enter a row-stochastic transition matrix as a JSON array of arrays.
                             Leave blank to use the 8-state S&amp;P credit rating matrix.
                         </p>
@@ -911,7 +911,7 @@
 
                     <!-- Form: Absorption -->
                     <div id="markovForm_absorption" style="display:none;">
-                        <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">
                             Enter a matrix where at least one state has P[i,i] = 1 (absorbing state).
                         </p>
                         <div class="form-group">
@@ -923,7 +923,7 @@
 
                     <!-- Form: MDP -->
                     <div id="markovForm_mdp" style="display:none;">
-                        <p style="font-size:13px; color:#666; margin-bottom:10px;">
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">
                             3-state portfolio MDP (risk_off / neutral / risk_on) with 3 actions
                             (underweight / neutral / overweight). Value iteration finds optimal policy.
                         </p>
@@ -976,7 +976,7 @@
                 <!-- BCC Calibration -->
                 <div id="stochContent_bcc_calibration" class="stoch-content" style="display:none;">
                     <h3>BCC Model Calibration</h3>
-                    <p style="font-size:13px; color:#666;">Bates-Chan-Chang model — stochastic vol + jumps. Calibrates to live market option prices.</p>
+                    <p style="font-size:13px; color:var(--text-secondary);">Bates-Chan-Chang model — stochastic vol + jumps. Calibrates to live market option prices.</p>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:15px;">
                         <div>
                             <label>Ticker</label>
@@ -1002,16 +1002,16 @@
                 <!-- Portfolio MDP -->
                 <div id="stochContent_portfolio_mdp" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom:10px;">📊 Portfolio MDP — Policy Iteration</h3>
-                    <p style="color:#666; margin-bottom:15px;">
+                    <p style="color:var(--text-secondary); margin-bottom:15px;">
                         Builds a 12-state Markov Decision Process from monthly return data for any two assets.
                         <strong>States</strong>: equity momentum × bond momentum × vol regime.
                         <strong>Actions</strong>: 5 allocation strategies (100/0 → 0/100).
                         Policy iteration solves for the optimal regime-conditional allocation. Signals are lagged 1 month to prevent look-ahead bias.
                     </p>
-                    <div style="background:#d1ecf1; border-left:4px solid #17a2b8; padding:10px; margin-bottom:15px; border-radius:4px;">
+                    <div style="background:rgba(23,162,184,0.15); border-left:4px solid #17a2b8; padding:10px; margin-bottom:15px; border-radius:4px; color:#74d7e8;">
                         <strong>ℹ️ How to use:</strong> Enter any equity ticker (e.g. <code>SPY</code>, <code>QQQ</code>, <code>AAPL</code>) and a bond/hedge ticker (e.g. <code>IEF</code>, <code>TLT</code>, <code>GLD</code>). The model learns when to shift between them.
                     </div>
-                    <div style="background:#fff3cd; border-left:4px solid #ffc107; padding:10px; margin-bottom:15px; border-radius:4px;">
+                    <div style="background:rgba(255,193,7,0.12); border-left:4px solid #ffc107; padding:10px; margin-bottom:15px; border-radius:4px; color:#ffe082;">
                         <strong>⏰ Note:</strong> Downloads monthly data from Yahoo Finance — may take 10–30 s.
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(155px, 1fr)); gap:12px; margin-bottom:15px;">
@@ -1056,7 +1056,7 @@
                 <!-- Gridworld PI -->
                 <div id="stochContent_gridworld" class="stoch-content" style="display:none;">
                     <h3 style="margin-bottom:10px;">🗺️ Grid-world Policy Iteration</h3>
-                    <p style="color:#666; margin-bottom:15px;">
+                    <p style="color:var(--text-secondary); margin-bottom:15px;">
                         Classic 4×4 grid-world. Terminal states at corners (top-left = 0, bottom-right = 15).
                         Step cost = −1. Policy iteration converges to arrows pointing toward the nearest terminal.
                         Enable <em>wind</em> to add a stochastic left-push per column.
@@ -1085,7 +1085,7 @@
         <div id="rlTab" class="main-tab-content">
             <div class="input-section">
                 <h2>🤖 Reinforcement Learning in Finance</h2>
-                <p style="color:#666; margin-bottom: 20px;">
+                <p style="color:var(--text-secondary); margin-bottom: 20px;">
                     Four interactive RL demos: Investment MDP policy iteration, Gridworld planning,
                     and Portfolio Rotation via both policy iteration and Q-learning.
                     All models trained on historical data with no look-ahead bias.
@@ -1118,7 +1118,7 @@
                 <!-- L1: Investment MDP -->
                 <div id="rlContent_mdp" class="rl-content">
                     <h3 style="margin-bottom: 10px;">💼 L1 — Investment MDP (Policy Iteration)</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         3-state MDP (Bull / Bear / Crash) with 3 actions (Buy / Hold / Sell).
                         Solves (I − γP_π)V = r_π exactly via linear system. Expected optimal policy: Buy, Sell, Sell.
                     </p>
@@ -1139,7 +1139,7 @@
                 <!-- L2: Gridworld -->
                 <div id="rlContent_grid" class="rl-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">🗺️ L2 — Gridworld Policy Iteration</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         4×4 grid with terminal states at top-left and bottom-right. Policy shown as
                         arrows (↑→↓←). Optional stochastic wind pushes agent LEFT with column-dependent probability.
                     </p>
@@ -1170,7 +1170,7 @@
                 <!-- L3: Portfolio Rotation — Policy Iteration -->
                 <div id="rlContent_pi" class="rl-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">📊 L3 — Portfolio Rotation (Policy Iteration)</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         12-state MDP on SPY/IEF/SHY monthly data (2004–present). States: equity momentum ×
                         bond momentum × vol regime. 5 allocation actions from 100% equity to 100% bonds.
                         Vol terciles and signals computed on training data only — no look-ahead bias.
@@ -1213,7 +1213,7 @@
                 <!-- L4: Portfolio Rotation — Q-Learning -->
                 <div id="rlContent_ql" class="rl-content" style="display:none;">
                     <h3 style="margin-bottom: 10px;">🧠 L4 — Portfolio Rotation (Q-Learning)</h3>
-                    <p style="color:#666; margin-bottom: 15px;">
+                    <p style="color:var(--text-secondary); margin-bottom: 15px;">
                         Model-free ε-greedy TD learning on the same 12-state portfolio MDP.
                         Train 2004–2017, test 2018+. Outputs Q-table heatmap (12×5) and
                         cumulative return vs 60/40 benchmark.
