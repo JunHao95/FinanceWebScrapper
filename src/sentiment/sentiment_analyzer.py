@@ -47,6 +47,10 @@ import praw
 
 class SentimentAnalyzer:
     """Handles sentiment analysis using VADER and FinBERT"""
+    _finbert_tokenizer = None
+    _finbert_model = None
+    _finbert_pipeline = None
+
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         try:
@@ -55,19 +59,20 @@ class SentimentAnalyzer:
         except Exception as e:
             self.logger.error("Error initializing VADER: %s", e)
             self.vader_analyzer = None
-        try:
-            model_name = "ProsusAI/finbert"
-            self.finbert_tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.finbert_model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            self.finbert_pipeline = pipeline(
-                task="sentiment-analysis",
-                model=self.finbert_model,
-                tokenizer=self.finbert_tokenizer
-            )
-            self.logger.info("FinBERT sentiment analyzer initialized")
-        except Exception as e:
-            self.logger.error("Error initializing FinBERT: %s", e)
-            self.finbert_pipeline = None
+        if SentimentAnalyzer._finbert_pipeline is None:
+            try:
+                model_name = "ProsusAI/finbert"
+                SentimentAnalyzer._finbert_tokenizer = AutoTokenizer.from_pretrained(model_name)
+                SentimentAnalyzer._finbert_model = AutoModelForSequenceClassification.from_pretrained(model_name)
+                SentimentAnalyzer._finbert_pipeline = pipeline(
+                    task="sentiment-analysis",
+                    model=SentimentAnalyzer._finbert_model,
+                    tokenizer=SentimentAnalyzer._finbert_tokenizer
+                )
+                self.logger.info("FinBERT sentiment analyzer initialized")
+            except Exception as e:
+                self.logger.error("Error initializing FinBERT: %s", e)
+        self.finbert_pipeline = SentimentAnalyzer._finbert_pipeline
 
     def analyze(self, text: str) -> Dict[str, Any]:
         results = {}
@@ -295,6 +300,15 @@ class GoogleTrendsCollector:
             self.logger.error("Error initializing Google Trends: %s", e)
             self.pytrends = None
 
+    def _prune_cache(self):
+        current_time = time.time()
+        expired = [
+            k for k, v in self.cache.items()
+            if current_time - v.get('timestamp', 0) > self.cache_ttl
+        ]
+        for k in expired:
+            del self.cache[k]
+
     def get_google_trends_data(self, ticker: str, timeframe: str = 'today 3-m', geo='', gprop='') -> Dict[str, Any]:
         # Default response structure - always return valid data
         default_response = {
@@ -304,11 +318,13 @@ class GoogleTrendsCollector:
             "interest_over_time": {},
             "related_queries": {"top": {}, "rising": {}}
         }
-        
+
         if not self.pytrends:
             self.logger.warning("Google Trends not available, returning defaults")
             return default_response
-        
+
+        self._prune_cache()
+
         # Check cache first
         cache_key = f"{ticker}_{timeframe}_{geo}_{gprop}"
         current_time = time.time()
@@ -387,7 +403,11 @@ class GoogleTrendsCollector:
                     'timestamp': time.time(),
                     'failed': False
                 }
-                
+                if len(self.cache) > 200:
+                    oldest_keys = sorted(self.cache, key=lambda k: self.cache[k].get('timestamp', 0))[:50]
+                    for k in oldest_keys:
+                        del self.cache[k]
+
                 return result
                 
             except requests.exceptions.Timeout:

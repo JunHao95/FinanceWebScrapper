@@ -97,7 +97,9 @@ class FinvizScraper(BaseScraper):
                             data["Cash Per Share (Finviz)"] = value
         else:
             self.logger.warning(f"Could not find snapshot table for {ticker} on Finviz")
-        
+
+        soup.decompose()
+
         # Scrape Cash Flow tab for detailed cash flow metrics
         try:
             cashflow_url = f"https://finviz.com/quote.ashx?t={ticker}&ty=c&p=d&b=1"
@@ -129,7 +131,9 @@ class FinvizScraper(BaseScraper):
                             data["Cash (Finviz)"] = value
                         elif label == "Cash & Short Term Investments" and value:
                             data["Cash and ST Investments (Finviz)"] = value
-            
+
+            cf_soup.decompose()
+
             if any(key.startswith("Operating Cash Flow") or key.startswith("Free Cash Flow") for key in data.keys()):
                 self.logger.info(f"Successfully scraped cash flow data from Finviz for {ticker}")
         

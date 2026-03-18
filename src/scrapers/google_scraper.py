@@ -91,10 +91,12 @@ class GoogleFinanceScraper(BaseScraper):
                     if eps_match and "EPS (Google)" not in data:
                         data["EPS (Google)"] = eps_match.group(1)
                 
+                soup.decompose()
+
                 # If we found at least one metric, break the loop
                 if data:
                     break
-                    
+
             except Exception as e:
                 self.logger.warning(f"Failed to fetch Google Finance data from {url}: {str(e)}")
                 continue

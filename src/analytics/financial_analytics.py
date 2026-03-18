@@ -164,7 +164,8 @@ class FinancialAnalytics:
                 returns = np.log(prices / prices.shift(1))
             else:  # simple returns
                 returns = prices.pct_change()
-            
+            del prices  # release the full price matrix before returns processing
+
             # Drop rows with NaN values (first row will always be NaN after pct_change)
             returns = returns.dropna()
             

@@ -82,7 +82,7 @@ class YahooFinanceScraper(BaseScraper):
             try:
                 analysis_response = make_request(analysis_url, headers=self.headers)
                 analysis_soup = BeautifulSoup(analysis_response.text, 'html.parser')
-                
+
                 # Looking for EPS estimates and growth rates
                 tables = analysis_soup.find_all('table')
                 for table in tables:
@@ -97,10 +97,13 @@ class YahooFinanceScraper(BaseScraper):
                                     data["EPS Estimate Current Year (Yahoo)"] = cells[1].text.strip()
                                 elif "next year" in header and len(cells) > 1:
                                     data["EPS Estimate Next Year (Yahoo)"] = cells[1].text.strip()
-            
+                analysis_soup.decompose()
+
             except Exception as e:
                 self.logger.warning(f"Error scraping Yahoo Finance analysis page: {str(e)}")
-        
+
+            soup.decompose()
+
         except Exception as e:
             self.logger.error(f"Error scraping Yahoo Finance statistics page: {str(e)}")
         

@@ -18,6 +18,7 @@ import concurrent.futures
 import threading
 import time
 import traceback
+import gc
 
 try:
     import openai
@@ -340,12 +341,13 @@ def fundamental_analysis():
                 'error': analysis['error']
             }), 500
         
+        gc.collect()
         return jsonify({
             'success': True,
             'analysis': analysis,
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
-    
+
     except Exception as e:
         logger.error(f"Error in fundamental_analysis endpoint: {str(e)}")
         return jsonify({
@@ -418,7 +420,7 @@ def scrape_data():
             # Use up to 6 parallel workers for multiple tickers
             # Scale workers based on portfolio size using sqrt for better scaling
             import math
-            max_ticker_workers = min(6, max(3, int(math.sqrt(len(tickers)) * 1.5)))
+            max_ticker_workers = min(4, max(2, int(math.sqrt(len(tickers)) * 1.5)))
             logger.info(f"Using {max_ticker_workers} parallel workers for {len(tickers)} tickers")
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_ticker_workers) as executor:
                 futures = [executor.submit(process_ticker, ticker) for ticker in tickers]
@@ -560,7 +562,8 @@ def scrape_data():
         all_data = convert_numpy_types(all_data)
         cnn_data = convert_numpy_types(cnn_data)
         analytics_data = convert_numpy_types(analytics_data)
-        
+
+        gc.collect()
         return jsonify({
             'success': True,
             'data': all_data,
