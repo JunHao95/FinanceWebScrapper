@@ -116,6 +116,18 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('FormManager.initEventListeners not available');
     }
+
+    // Initialize chip input widget
+    if (typeof FormManager !== 'undefined' && typeof FormManager.initChipInput === 'function') {
+        safeInitialize('FormManager.ChipInput', FormManager.initChipInput.bind(FormManager));
+    }
+
+    // Set initial tab accent from the default active main-tab button
+    const activeMainBtn = document.querySelector('.main-tab-button.active');
+    const activeMainTab = document.querySelector('.main-tab-content.active');
+    if (activeMainBtn && activeMainTab) {
+        activeMainTab.style.setProperty('--tab-accent', activeMainBtn.getAttribute('data-accent') || '#667eea');
+    }
     
     // Initialize stock scraper (depends on: API, AppState, Utils, DisplayManager, TabManager, FormManager)
     if (typeof StockScraper !== 'undefined' && typeof StockScraper.init === 'function') {

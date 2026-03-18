@@ -174,6 +174,7 @@ const StockScraper = {
         }
 
         document.getElementById('resultsSection').classList.add('active');
+        document.body.classList.add('results-loaded');
 
         // Initialize Portfolio Health card (synchronously, before auto-run starts)
         if (window.PortfolioHealth) {

@@ -202,6 +202,97 @@ const FormManager = {
     },
 
     /**
+     * Initialize chip input widget
+     */
+    initChipInput() {
+        const rawInput = document.getElementById('ticker-input-raw');
+        const chipList = document.getElementById('chip-list');
+        const hiddenInput = document.getElementById('tickers');
+        if (!rawInput || !chipList || !hiddenInput) return;
+
+        const syncHidden = () => {
+            hiddenInput.value = Array.from(chipList.querySelectorAll('.chip'))
+                .map(c => c.dataset.ticker).join(',');
+        };
+
+        const addChip = (value) => {
+            const ticker = value.trim().toUpperCase().replace(/[^A-Z0-9.]/g, '');
+            if (!ticker) return;
+            if (Array.from(chipList.querySelectorAll('.chip')).some(c => c.dataset.ticker === ticker)) return;
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.dataset.ticker = ticker;
+            chip.innerHTML = `<span class="mono">${ticker}</span><button type="button" class="chip-remove" aria-label="Remove ${ticker}">×</button>`;
+            chip.querySelector('.chip-remove').addEventListener('click', () => {
+                chip.remove(); syncHidden(); this.syncAllocationSection();
+            });
+            chipList.appendChild(chip);
+            syncHidden();
+            this.syncAllocationSection();
+            rawInput.value = '';
+            const tooltip = document.getElementById('ticker-validation-tooltip');
+            if (tooltip) { tooltip.textContent = ''; tooltip.className = 'ticker-tooltip'; }
+        };
+
+        rawInput.addEventListener('keydown', (e) => {
+            if (e.key === ',' || e.key === 'Enter') {
+                e.preventDefault();
+                addChip(rawInput.value);
+            } else if (e.key === 'Backspace' && rawInput.value === '') {
+                const chips = chipList.querySelectorAll('.chip');
+                if (chips.length) { chips[chips.length - 1].remove(); syncHidden(); this.syncAllocationSection(); }
+            }
+        });
+
+        rawInput.addEventListener('paste', () => {
+            setTimeout(() => {
+                if (rawInput.value.includes(',')) {
+                    rawInput.value.split(',').forEach(t => addChip(t));
+                    rawInput.value = '';
+                }
+            }, 10);
+        });
+
+        // Popular ticker badges
+        document.querySelectorAll('.ticker-badge').forEach(btn => {
+            btn.addEventListener('click', () => addChip(btn.dataset.ticker));
+        });
+
+        // Live validation — debounced 300 ms
+        let _valTimer = null;
+        rawInput.addEventListener('input', () => {
+            clearTimeout(_valTimer);
+            const tooltip = document.getElementById('ticker-validation-tooltip');
+            if (!tooltip) return;
+            const sym = rawInput.value.trim().toUpperCase();
+            if (!sym) { tooltip.textContent = ''; tooltip.className = 'ticker-tooltip'; return; }
+            _valTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/validate_ticker?symbol=${encodeURIComponent(sym)}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    tooltip.textContent = data.valid ? `✓ ${data.name}` : '✗ Unknown symbol';
+                    tooltip.className = `ticker-tooltip ${data.valid ? 'valid' : 'invalid'}`;
+                } catch (_) { /* network error — stay silent */ }
+            }, 300);
+        });
+
+        this._addChip = addChip;
+    },
+
+    /**
+     * Toggle settings drawer open/closed
+     */
+    toggleSettingsDrawer() {
+        const drawer = document.getElementById('settings-drawer');
+        const backdrop = document.getElementById('drawer-backdrop');
+        if (!drawer || !backdrop) return;
+        const opening = !drawer.classList.contains('drawer-open');
+        drawer.classList.toggle('drawer-open', opening);
+        backdrop.classList.toggle('active', opening);
+    },
+
+    /**
      * Clear form
      */
     clearForm() {
@@ -217,6 +308,15 @@ const FormManager = {
         scrapeForm.reset();
         sourceAll.checked = true;
         resultsSection.classList.remove('active');
+        document.body.classList.remove('results-loaded');
+
+        // Clear chip UI
+        const chipList = document.getElementById('chip-list');
+        if (chipList) chipList.innerHTML = '';
+        const rawInput = document.getElementById('ticker-input-raw');
+        if (rawInput) rawInput.value = '';
+        const tooltip = document.getElementById('ticker-validation-tooltip');
+        if (tooltip) { tooltip.textContent = ''; tooltip.className = 'ticker-tooltip'; }
 
         if (typeof AppState !== 'undefined') {
             AppState.currentData = null;
@@ -265,14 +365,17 @@ const FormManager = {
             });
         }
 
-        // Toggle defaults note when advanced section opens/closes
-        const advDet = document.getElementById('advanced-settings');
-        const defaultsNote = document.getElementById('defaultsNote');
-        if (advDet && defaultsNote) {
-            advDet.addEventListener('toggle', () => {
-                defaultsNote.style.display = advDet.open ? 'none' : 'block';
-            });
-        }
+        // Drawer backdrop + ESC key close
+        const backdrop = document.getElementById('drawer-backdrop');
+        if (backdrop) backdrop.addEventListener('click', () => this.toggleSettingsDrawer());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const drawer = document.getElementById('settings-drawer');
+                if (drawer && drawer.classList.contains('drawer-open')) this.toggleSettingsDrawer();
+            }
+        });
+        const drawerClose = document.getElementById('drawer-close-btn');
+        if (drawerClose) drawerClose.addEventListener('click', () => this.toggleSettingsDrawer());
     }
 };
 

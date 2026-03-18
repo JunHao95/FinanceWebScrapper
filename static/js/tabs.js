@@ -86,14 +86,14 @@ const TabManager = {
                 return;
             }
 
-            // Activate clicked button - improved event handling
-            if (event) {
-                const targetButton = event.target.closest('.main-tab-button');
-                if (targetButton) {
-                    targetButton.classList.add('active');
-                } else if (event.currentTarget) {
-                    event.currentTarget.classList.add('active');
-                }
+            // Activate clicked button and apply per-tab accent colour
+            const targetButton = event
+                ? (event.target.closest('.main-tab-button') || event.currentTarget)
+                : document.querySelector(`.main-tab-button[onclick*="${tabName}"]`);
+            if (targetButton) {
+                targetButton.classList.add('active');
+                const accent = targetButton.getAttribute('data-accent') || '#667eea';
+                if (selectedTab) selectedTab.style.setProperty('--tab-accent', accent);
             }
         } catch (error) {
             console.error('Error switching main tabs:', error);

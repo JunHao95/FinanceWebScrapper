@@ -237,9 +237,10 @@ const DisplayManager = {
         }
         
         analyticsDiv.innerHTML = html;
-        
+
         // Use replaceChildren() for clarity instead of innerHTML = '' + appendChild
         analyticsResultsDiv.replaceChildren(analyticsDiv);
+        document.body.classList.add('results-loaded');
     },
 
     /**
