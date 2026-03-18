@@ -2030,6 +2030,29 @@ def chat():
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
+_ticker_validation_cache = {}
+
+@app.route('/api/validate_ticker', methods=['GET'])
+def validate_ticker():
+    symbol = request.args.get('symbol', '').strip().upper()
+    if not symbol:
+        return jsonify({'valid': False, 'name': ''})
+    if symbol in _ticker_validation_cache:
+        return jsonify(_ticker_validation_cache[symbol])
+    try:
+        import yfinance as yf
+        t = yf.Ticker(symbol)
+        fi = t.fast_info
+        name = getattr(fi, 'display_name', None) or getattr(fi, 'company_name', None)
+        if not name:
+            info = t.info
+            name = info.get('longName') or info.get('shortName') or ''
+        result = {'valid': bool(name), 'name': name or symbol}
+    except Exception:
+        result = {'valid': False, 'name': ''}
+    _ticker_validation_cache[symbol] = result
+    return jsonify(result)
+
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
