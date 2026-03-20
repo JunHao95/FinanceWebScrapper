@@ -1363,3 +1363,47 @@ body.results-loaded .skeleton-preview {
 #chatbot-send-btn:active {
     transform: scale(0.98);
 }
+
+/* Phase 10.1 — Agent pill tabs */
+#chatbot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#chatbot-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+#chatbot-agent-tabs {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.agent-pill {
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.agent-pill.active {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.55);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.agent-pill:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.85);
+}

@@ -1960,6 +1960,22 @@ def portfolio_sharpe():
         logger.error(f"Error in portfolio_sharpe: {e}")
         return jsonify({'error': str(e)}), 500
 
+SYSTEM_PROMPTS = {
+    'quant': (
+        "You are an expert MFE (Master of Financial Engineering) quantitative assistant "
+        "named 'QuantAssistant'. Respond informatively but concisely, focusing on financial "
+        "data and quantitative analysis principles."
+    ),
+    'financial': (
+        "You are a sell-side financial analyst named 'FinancialAnalyst'. "
+        "Your domain is company fundamentals: P/E ratios, revenue trends, EPS, earnings analysis, "
+        "sector dynamics, and macro trends. Respond in concise bullet-point analyst style — "
+        "key metrics first, brief context, one actionable insight. "
+        "Avoid stochastic models, derivatives, and quant math — those are QuantAssistant's domain."
+    ),
+}
+
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """
@@ -1968,11 +1984,12 @@ def chat():
     try:
         data = request.json or {}
         message = data.get("message", "").strip()
-        
+
         if not message:
             return jsonify({"error": "Message is required."}), 400
-            
-        system_prompt = "You are an expert MFE (Master of Financial Engineering) quantitative assistant named 'QuantAssistant'. Respond informatively but concisely, focusing on financial data and quantitative analysis principles."
+
+        agent = data.get('agent', 'quant')
+        system_prompt = SYSTEM_PROMPTS.get(agent, SYSTEM_PROMPTS['quant'])
         
         # Check if we have a Groq API Key setup in the environment
         groq_api_key = os.environ.get('GROQ_API_KEY')
