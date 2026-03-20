@@ -197,3 +197,34 @@ Plans:
 - [x] 10-01-PLAN.md — Integrate QuantAssistant chatbot (backend endpoint + frontend widget) (CHAT-01)
 - [ ] 10-02-PLAN.md — Upgrade backend to generate dynamic LLM replies (CHAT-01)
 
+
+### Phase 10.1: FinancialAnalyst Agent & Chatbot Toggle (INSERTED)
+
+**Goal**: A FinancialAnalyst agent exists alongside QuantAssistant in the chatbot, and users can toggle between the two agents via a UI control in the chat widget — each agent has a distinct persona and response style.
+**Depends on**: Phase 10
+**Requirements**: CHAT-02, CHAT-03
+**Success Criteria** (what must be TRUE):
+  1. The chatbot widget contains a toggle or selector that switches between QuantAssistant and FinancialAnalyst agents.
+  2. Sending a message while FinancialAnalyst is selected returns a response from the FinancialAnalyst persona (distinct from QuantAssistant).
+  3. Switching agents clears or visually separates the chat history so the user knows they are talking to a different agent.
+  4. The active agent label is visible in the chat header at all times.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10.1-01-PLAN.md — Test scaffold (Wave 0) + backend SYSTEM_PROMPTS dict + agent field dispatch in /api/chat (CHAT-02)
+- [ ] 10.1-02-PLAN.md — CSS pill tab styles + chatbot.js agent state/toggle/history swap + human verify (CHAT-03)
+
+### Phase 11: Responsive Layout & Dashboard Customisation
+**Goal**: The app is fully usable on mobile and tablet (hamburger nav, stacked charts, fluid chip input) and supports dashboard personalisation via localStorage (saved ticker presets, pinned/reordered result cards, persisted settings).
+**Depends on**: Phase 10
+**Requirements**: RESP-01, RESP-02, RESP-03, DASH-01, DASH-02, DASH-03
+**Success Criteria** (what must be TRUE):
+  1. On a 375px-wide viewport, all tab navigation collapses to a hamburger menu and all Plotly charts stack vertically without horizontal scroll.
+  2. The chip input and Run Analysis button are full-width and tappable on mobile.
+  3. A user can save the current ticker set as a named preset; selecting it from a dropdown restores those tickers.
+  4. A user can pin/reorder result cards; the order persists across page reloads via localStorage.
+  5. Settings (preferred data source, any toggles) persist in localStorage across sessions.
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 11 to break down)
