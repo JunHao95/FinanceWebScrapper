@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: milestone
 status: Roadmap defined; awaiting plan-phase for Phase 6
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-13T12:21:13.749Z"
+stopped_at: Phase 10.1 context gathered
+last_updated: "2026-03-20T14:25:35.036Z"
 last_activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
 progress:
-  total_phases: 10
+  total_phases: 13
   completed_phases: 10
   total_plans: 23
   completed_plans: 23
@@ -137,6 +137,11 @@ Recent decisions affecting current work:
 - [Phase 10-chatbot-integration]: The chatbot is implemented as a floating widget fixed to the bottom right of the screen.
 - [Phase 10-chatbot-integration]: A generic /api/chat route was added to seamlessly respond via QuantAssistant dummy text, setting up future LLM integration.
 
+### Roadmap Evolution
+
+- Phase 10.1 inserted after Phase 10: FinancialAnalyst Agent & Chatbot Toggle — add FinancialAnalyst persona alongside QuantAssistant with agent toggle in the chat widget (URGENT)
+- Phase 11 added: Responsive Layout & Dashboard Customisation — mobile-first CSS (hamburger nav, stacked charts, fluid chip input) + localStorage personalisation (ticker presets, pinned/reordered cards, persisted settings)
+
 ### Pending Todos
 
 - Plan Phase 6: Form Streamlining & Smart Defaults (FORM-01..08)
@@ -148,6 +153,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-13T12:00:25.934Z
-Stopped at: Completed 10-01-PLAN.md
-Resume file: None
+Last session: 2026-03-20T14:25:35.027Z
+Stopped at: Phase 10.1 context gathered
+Resume file: .planning/phases/10.1-financialanalyst-agent-chatbot-toggle/10.1-CONTEXT.md
