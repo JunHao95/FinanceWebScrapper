@@ -1989,8 +1989,20 @@ def chat():
             return jsonify({"error": "Message is required."}), 400
 
         agent = data.get('agent', 'quant')
+        page_context = data.get("context", "")
+        history = data.get("history", [])
         system_prompt = SYSTEM_PROMPTS.get(agent, SYSTEM_PROMPTS['quant'])
-        
+
+        effective_system_prompt = system_prompt
+        if page_context and isinstance(page_context, str) and page_context.strip():
+            effective_system_prompt = system_prompt + "\n\n" + page_context.strip()
+
+        history_messages = [
+            {"role": ("assistant" if h.get("sender") == "bot" else "user"), "content": h.get("text", "")}
+            for h in (history or [])[-10:]
+            if h.get("text")
+        ]
+
         # Check if we have a Groq API Key setup in the environment
         groq_api_key = os.environ.get('GROQ_API_KEY')
         
@@ -2005,11 +2017,12 @@ def chat():
             payload = {
                 "model": MODEL,
                 "messages": [
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": effective_system_prompt},
+                    *history_messages,
                     {"role": "user", "content": message}
                 ]
             }
-            
+
             response = requests.post(URL, json=payload, headers=headers, timeout=30)
             response.raise_for_status()
             
@@ -2024,7 +2037,8 @@ def chat():
             payload = {
                 "model": MODEL,
                 "messages": [
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": effective_system_prompt},
+                    *history_messages,
                     {"role": "user", "content": message}
                 ],
                 "stream": False
