@@ -231,10 +231,12 @@ Plans:
 
 ### Phase 12: Integrating Chatbot to the Details in Stock Analysis, Stochastic models tabs etc so the chatbot can access the content scrapped
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Every chatbot message includes a structured snapshot of current page state (scraped metrics, portfolio analytics, stochastic model outputs) appended to the agent system prompt — both QuantAssistant and FinancialAnalyst give contextually grounded, data-specific answers without any user action.
+**Requirements**: CTX-01, CTX-02, CTX-03, CTX-04, CTX-05
 **Depends on:** Phase 11
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 12 to break down)
+- [ ] 12-01-PLAN.md — Wave 0 test scaffold: extend test_chat_route.py with failing tests for context injection and history wiring (CTX-01, CTX-02, CTX-03)
+- [ ] 12-02-PLAN.md — Backend extension: /api/chat reads context + history, appends context to system prompt, includes history in Groq/Ollama payload (CTX-01, CTX-02, CTX-03)
+- [ ] 12-03-PLAN.md — Frontend wiring: window.pageContext, buildContextSnapshot(), sendMessage() extension, context indicator UI, stochastic result hooks (CTX-04, CTX-05)
