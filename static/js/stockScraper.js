@@ -105,7 +105,43 @@ const StockScraper = {
                 AppState.currentCnnData = result.cnn_data;
                 AppState.currentTickers = tickers;
                 AppState.currentAnalytics = result.analytics_data || {};
-                
+
+                // Populate pageContext from scrape result
+                window.pageContext.tickers = tickers.slice();
+                window.pageContext.cnnFearGreed = result.cnn_data
+                    ? { score: result.cnn_data.score, label: result.cnn_data.label }
+                    : null;
+                window.pageContext.tickerData = {};
+                tickers.forEach(function(ticker) {
+                    const raw = (result.data && result.data[ticker]) || {};
+                    const fa = raw['_fundamental_analysis'] || null;
+                    let fundamentalSummary = '';
+                    if (fa && typeof fa === 'object') {
+                        const s = fa.summary || fa.overall_assessment || fa.recommendation || '';
+                        fundamentalSummary = typeof s === 'string' ? s.slice(0, 300) : '';
+                    }
+                    window.pageContext.tickerData[ticker] = {
+                        name: raw['Company Name'] || raw['name'] || '',
+                        price: raw['Current Price'] || raw['Price'] || null,
+                        pe: raw['P/E Ratio'] || raw['P/E'] || raw['pe_ratio'] || null,
+                        eps: raw['EPS'] || null,
+                        roe: raw['ROE'] || null,
+                        rsi: raw['RSI'] || null,
+                        sentimentOverall: (raw.sentiment && raw.sentiment.overall) || raw['Overall Sentiment'] || null,
+                        sentimentNews: (raw.sentiment && raw.sentiment.news) || null,
+                        sentimentReddit: (raw.sentiment && raw.sentiment.reddit) || null,
+                        var95: null,
+                        regime: null,
+                        fundamentals: fundamentalSummary
+                    };
+                });
+                const analytics = result.analytics_data || {};
+                window.pageContext.portfolio = {
+                    sharpe: analytics.sharpe_ratio || analytics.sharpe || null,
+                    var95: analytics.var_95 || analytics.portfolio_var || null,
+                    correlation: analytics.top_correlation || null
+                };
+
                 this.displayResults(result);
                 Utils.showAlert('Data scraped successfully!', 'success');
             } else {

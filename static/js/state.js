@@ -17,3 +17,13 @@ const AppState = {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = AppState;
 }
+
+// ── Shared page context (populated after each scrape / model run) ────────────
+window.pageContext = {
+    tickers: [],
+    tickerData: {},
+    portfolio: {},
+    cnnFearGreed: null,
+    stochasticResults: {},
+    rlResults: {}
+};
