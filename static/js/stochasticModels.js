@@ -145,6 +145,15 @@ async function runRegimeDetection() {
             margin: { t: 40, l: 60, r: 20, b: 50 }
         });
 
+        // Capture regime result to pageContext
+        if (window.pageContext) {
+            window.pageContext.stochasticResults = window.pageContext.stochasticResults || {};
+            window.pageContext.stochasticResults['regime_' + ticker] = {
+                ticker: ticker,
+                signal: data.signal,
+                currentRegime: (data.filtered_probs && data.filtered_probs.slice(-1)[0] >= 0.5) ? 'RISK_OFF' : 'RISK_ON'
+            };
+        }
     } catch (err) {
         resultsDiv.innerHTML = renderAlert(`Request failed: ${err.message}`);
     }
@@ -279,6 +288,15 @@ async function runHestonCalibration() {
                         height: 380,
                         margin: { t: 50, l: 70, r: 20, b: 50 }
                     });
+                }
+                // Capture Heston result to pageContext
+                if (window.pageContext && cal) {
+                    window.pageContext.stochasticResults = window.pageContext.stochasticResults || {};
+                    window.pageContext.stochasticResults['heston_' + ticker] = {
+                        rmse: cal.rmse,
+                        feller: cal.feller_condition_satisfied,
+                        params: cal.calibrated_params
+                    };
                 }
             } catch (err) {
                 if (resultsDiv) resultsDiv.innerHTML = renderAlert(`Result fetch failed: ${err.message}`);
@@ -470,6 +488,16 @@ async function runCIRModel() {
                 height: 350,
                 margin: { t: 40, l: 70, r: 20, b: 50 }
             }, { responsive: true });
+        }
+
+        // Capture CIR result to pageContext
+        if (window.pageContext && r) {
+            window.pageContext.stochasticResults = window.pageContext.stochasticResults || {};
+            window.pageContext.stochasticResults['cir_model'] = {
+                model: r.model || model,
+                feller_satisfied: r.feller_condition_satisfied,
+                short_rate: r0
+            };
         }
 
     } catch (err) {
@@ -1145,6 +1173,15 @@ async function runMarkovChain() {
                 height: 320,
                 margin: { t: 40, l: 70, r: 20, b: 50 }
             }, { responsive: true });
+        }
+
+        // Capture Markov chain result to pageContext
+        if (window.pageContext) {
+            window.pageContext.stochasticResults = window.pageContext.stochasticResults || {};
+            window.pageContext.stochasticResults['markov_chain'] = {
+                mode: mode,
+                summary: r.steady_state || r.absorption_probs || null
+            };
         }
 
     } catch (err) {

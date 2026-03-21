@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="agent-pill active" data-agent="quant">QuantAssistant</button>
                     <button class="agent-pill" data-agent="financial">FinancialAnalyst</button>
                 </div>
+                <div id="chatbot-context-indicator" style="font-size:10px;color:rgba(255,255,255,0.45);padding:0 18px 6px;min-height:16px;letter-spacing:0.01em;"></div>
                 <button id="chatbot-close-btn" aria-label="Close chat">&times;</button>
             </div>
             <div id="chatbot-messages"></div>
@@ -149,6 +150,78 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pill) switchAgent(pill.dataset.agent);
     });
 
+    // ── Context helpers ───────────────────────────────────────────────────
+    function buildContextSnapshot() {
+        const pc = window.pageContext || {};
+        const tickers = pc.tickers || [];
+        if (tickers.length === 0) return null;
+
+        const lines = ['=== Page Context ==='];
+        lines.push('Active tickers: ' + tickers.join(', '));
+        lines.push('');
+
+        const MAX_FULL = 4;
+        const isAbbrev = tickers.length > MAX_FULL;
+
+        tickers.forEach(t => {
+            const d = (pc.tickerData || {})[t] || {};
+            if (isAbbrev) {
+                lines.push(t + ': Price $' + (d.price != null ? d.price : 'N/A') +
+                    ' | P/E ' + (d.pe != null ? d.pe : 'N/A') +
+                    ' | RSI ' + (d.rsi != null ? d.rsi : 'N/A') +
+                    ' | Regime ' + (d.regime != null ? d.regime : 'N/A'));
+            } else {
+                lines.push(t + (d.name ? ' (' + d.name + ')' : '') + ':');
+                lines.push('  Price: $' + (d.price != null ? d.price : 'N/A') +
+                    ' | P/E: ' + (d.pe != null ? d.pe : 'N/A') +
+                    ' | EPS: $' + (d.eps != null ? d.eps : 'N/A') +
+                    ' | ROE: ' + (d.roe != null ? d.roe : 'N/A') +
+                    ' | RSI: ' + (d.rsi != null ? d.rsi : 'N/A'));
+                lines.push('  Sentiment: Overall ' + (d.sentimentOverall != null ? d.sentimentOverall : 'N/A') +
+                    ' | News ' + (d.sentimentNews != null ? d.sentimentNews : 'N/A') +
+                    ' | Reddit ' + (d.sentimentReddit != null ? d.sentimentReddit : 'N/A'));
+                lines.push('  Regime: ' + (d.regime != null ? d.regime : 'N/A') +
+                    ' | VaR (95%): ' + (d.var95 != null ? d.var95 : 'N/A'));
+                if (d.fundamentals) lines.push('  Fundamentals: ' + d.fundamentals);
+            }
+            lines.push('');
+        });
+
+        const p = pc.portfolio || {};
+        if (Object.keys(p).some(k => p[k] != null)) {
+            lines.push('Portfolio:');
+            if (p.sharpe != null) lines.push('  Sharpe: ' + p.sharpe);
+            if (p.var95 != null) lines.push('  VaR (95%): ' + p.var95);
+            if (p.correlation != null) lines.push('  Correlation: ' + p.correlation);
+            lines.push('');
+        }
+
+        if (pc.cnnFearGreed) {
+            lines.push('CNN Fear & Greed: ' + pc.cnnFearGreed.score + ' (' + pc.cnnFearGreed.label + ')');
+            lines.push('');
+        }
+
+        const stoch = pc.stochasticResults || {};
+        const stochKeys = Object.keys(stoch);
+        if (stochKeys.length > 0) {
+            lines.push('Stochastic Model Results (last run):');
+            stochKeys.forEach(k => {
+                const s = JSON.stringify(stoch[k]);
+                lines.push('  ' + k + ': ' + (s.length > 200 ? s.slice(0, 200) + '...' : s));
+            });
+            lines.push('');
+        }
+
+        return lines.join('\n');
+    }
+
+    function updateContextIndicator() {
+        const tickers = (window.pageContext && window.pageContext.tickers) || [];
+        const el = document.getElementById('chatbot-context-indicator');
+        if (!el) return;
+        el.textContent = tickers.length > 0 ? 'Context: ' + tickers.join(', ') : '';
+    }
+
     // ── Send message ──────────────────────────────────────────────────────
     const sendMessage = async () => {
         const text = inputField.value.trim();
@@ -163,7 +236,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, agent: activeAgent })
+                body: JSON.stringify({
+                    message: text,
+                    agent: activeAgent,
+                    context: buildContextSnapshot() || '',
+                    history: (agentHistories[activeAgent] || []).slice(-10)
+                })
             });
 
             const data = await response.json();
@@ -188,4 +266,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Initialize: seed QuantAssistant greeting ──────────────────────────
     appendMessage('bot', AGENT_CONFIG.quant.greeting);
+    updateContextIndicator();
 });

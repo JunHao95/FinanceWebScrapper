@@ -164,6 +164,11 @@ async function runAutoRegime(ticker, startDate, endDate) {
         const regimeLabel = (data.filtered_probs && data.filtered_probs.length > 0 && data.filtered_probs[data.filtered_probs.length - 1] >= 0.5) ? 'RISK_OFF' : 'RISK_ON';
         if (window.PortfolioHealth) PortfolioHealth.updateRegime(ticker, regimeLabel);
 
+        // Capture regime label to pageContext
+        if (window.pageContext && window.pageContext.tickerData && window.pageContext.tickerData[ticker]) {
+            window.pageContext.tickerData[ticker].regime = regimeLabel;
+        }
+
     } catch (err) {
         const badge = document.getElementById('autoRegimeBadge_' + ticker);
         if (badge) {
