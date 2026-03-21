@@ -68,3 +68,63 @@ def test_chat_unknown_agent_fallback(client, monkeypatch):
     data = response.get_json()
     assert "reply" in data
     assert data["reply"]
+
+
+# --- CTX-01 / CTX-02 / CTX-03: context + history injection tests (TDD RED) ---
+
+
+def test_chat_with_context(client, monkeypatch):
+    """CTX-01: POST /api/chat with a context string appends it to the Groq system prompt."""
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    with patch("webapp.requests.post", return_value=_groq_mock()) as mock_post:
+        client.post(
+            "/api/chat",
+            json={
+                "message": "what is the P/E?",
+                "agent": "quant",
+                "context": "=== Page Context ===\nActive tickers: AAPL",
+            },
+        )
+
+    payload = mock_post.call_args[1]["json"]
+    system_content = payload["messages"][0]["content"]
+    assert "=== Page Context ===" in system_content
+    assert "Active tickers: AAPL" in system_content
+
+
+def test_chat_no_context(client, monkeypatch):
+    """CTX-02: POST /api/chat with no context field uses the base system prompt unchanged."""
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    with patch("webapp.requests.post", return_value=_groq_mock()) as mock_post:
+        client.post("/api/chat", json={"message": "hello", "agent": "quant"})
+
+    payload = mock_post.call_args[1]["json"]
+    system_content = payload["messages"][0]["content"]
+    assert "=== Page Context ===" not in system_content
+
+
+def test_chat_with_history(client, monkeypatch):
+    """CTX-03: POST /api/chat with history includes prior turns between system and user messages."""
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    with patch("webapp.requests.post", return_value=_groq_mock()) as mock_post:
+        client.post(
+            "/api/chat",
+            json={
+                "message": "follow up",
+                "agent": "quant",
+                "history": [
+                    {"sender": "user", "text": "first message"},
+                    {"sender": "bot", "text": "first reply"},
+                ],
+            },
+        )
+
+    payload = mock_post.call_args[1]["json"]
+    messages = payload["messages"]
+    assert len(messages) >= 4  # system + history_user + history_assistant + current_user
+    assert messages[1]["role"] == "user"
+    assert messages[1]["content"] == "first message"
+    assert messages[2]["role"] == "assistant"
+    assert messages[2]["content"] == "first reply"
+    assert messages[-1]["role"] == "user"
+    assert messages[-1]["content"] == "follow up"
