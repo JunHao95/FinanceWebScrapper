@@ -234,7 +234,7 @@ Plans:
 **Goal:** Every chatbot message includes a structured snapshot of current page state (scraped metrics, portfolio analytics, stochastic model outputs) appended to the agent system prompt — both QuantAssistant and FinancialAnalyst give contextually grounded, data-specific answers without any user action.
 **Requirements**: CTX-01, CTX-02, CTX-03, CTX-04, CTX-05
 **Depends on:** Phase 11
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 12-01-PLAN.md — Wave 0 test scaffold: extend test_chat_route.py with failing tests for context injection and history wiring (CTX-01, CTX-02, CTX-03)
