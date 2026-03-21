@@ -141,6 +141,7 @@ Recent decisions affecting current work:
 
 - Phase 10.1 inserted after Phase 10: FinancialAnalyst Agent & Chatbot Toggle — add FinancialAnalyst persona alongside QuantAssistant with agent toggle in the chat widget (URGENT)
 - Phase 11 added: Responsive Layout & Dashboard Customisation — mobile-first CSS (hamburger nav, stacked charts, fluid chip input) + localStorage personalisation (ticker presets, pinned/reordered cards, persisted settings)
+- Phase 12 added: Integrating Chatbot to the Details in Stock Analysis, Stochastic models tabs etc so the chatbot can access the content scrapped
 
 ### Pending Todos
 
