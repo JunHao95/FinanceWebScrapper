@@ -185,10 +185,6 @@ const StockScraper = {
 
         // Clear ticker results
         const tickerResultsDiv = document.getElementById('tickerResults');
-        // Phase 13: clear session expand state on new scrape
-        if (typeof HealthScore !== 'undefined') {
-            HealthScore.clearSession();
-        }
         tickerResultsDiv.innerHTML = '';
 
         // Display analytics
