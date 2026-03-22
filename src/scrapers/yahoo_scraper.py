@@ -197,7 +197,21 @@ class YahooFinanceScraper(BaseScraper):
                 data["Current Price (Yahoo)"] = f"{info.get('currentPrice'):.2f}"
             if info.get("marketCap"):
                 data["Market Cap (Yahoo)"] = f"{info.get('marketCap'):,.0f}"
-            
+
+            # Phase 14: Net Income and Total Assets for earnings quality module
+            net_income = info.get("netIncomeToCommon", None)
+            if net_income:
+                data["Net Income (Yahoo)"] = f"{net_income:,.0f}"
+
+            try:
+                bs = stock.balance_sheet
+                if not bs.empty and 'Total Assets' in bs.index:
+                    total_assets = bs.loc['Total Assets'].iloc[0]
+                    if total_assets:
+                        data["Total Assets (Yahoo)"] = f"{total_assets:,.0f}"
+            except Exception as e:
+                self.logger.warning(f"Error fetching Total Assets for {ticker}: {str(e)}")
+
             self.logger.info(f"Successfully fetched yfinance API data for {ticker}")
             
         except Exception as e:
