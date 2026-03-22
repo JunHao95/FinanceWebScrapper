@@ -218,6 +218,16 @@ const StockScraper = {
                     explanation: hs.explanation
                 };
             }
+            // Phase 14: write earnings quality to pageContext
+            if (typeof EarningsQuality !== 'undefined' && window.pageContext && window.pageContext.tickerData && window.pageContext.tickerData[ticker]) {
+                const eq = EarningsQuality.computeQuality(data, ticker);
+                window.pageContext.tickerData[ticker].earningsQuality = {
+                    label: eq.label,
+                    accrualsRatio: eq.accrualsRatio,
+                    cashConversionRatio: eq.cashConversionRatio,
+                    consistencyFlag: eq.consistencyFlag
+                };
+            }
         }
         
         // Switch to Auto Analysis tab so auto-run results are immediately visible

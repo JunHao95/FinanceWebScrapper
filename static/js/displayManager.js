@@ -145,6 +145,10 @@ const DisplayManager = {
         }
 
         div.innerHTML = html;
+        // Phase 14: inject earnings quality into existing deep-analysis-group
+        if (typeof EarningsQuality !== 'undefined') {
+            EarningsQuality.renderIntoGroup(ticker, data, div);
+        }
         return div;
     },
 
