@@ -296,10 +296,12 @@ Plans:
   3. The cash conversion ratio value (OCF divided by Net Income) is displayed as a numeric figure with two decimal places.
   4. An earnings consistency flag of "Consistent" or "Volatile" appears based on EPS growth stability, with a brief tooltip or label explaining the criterion.
   5. When OCF or Net Income data is absent from the scraped payload, the entire quality section renders "Insufficient Data" in place of the label and metrics — no JavaScript error is thrown.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 14 to break down)
+- [ ] 14-01-PLAN.md — Patch yahoo_scraper.py to expose Net Income and Total Assets fields; pytest scaffold (QUAL-02, QUAL-03)
+- [ ] 14-02-PLAN.md — earningsQuality.js module + displayManager/stockScraper/index.html wiring (QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05)
+- [ ] 14-03-PLAN.md — Human verify checkpoint: browser end-to-end checks (QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05)
 
 ### Phase 15: DCF Valuation
 **Goal**: Each ticker card displays an FCF-based intrinsic value estimate (price per share) alongside the current price premium or discount, with user-overridable WACC and growth rate inputs that recalculate the estimate locally without triggering a new scrape.
