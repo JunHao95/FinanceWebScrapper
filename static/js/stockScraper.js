@@ -185,6 +185,10 @@ const StockScraper = {
 
         // Clear ticker results
         const tickerResultsDiv = document.getElementById('tickerResults');
+        // Phase 13: clear session expand state on new scrape
+        if (typeof HealthScore !== 'undefined') {
+            HealthScore.clearSession();
+        }
         tickerResultsDiv.innerHTML = '';
 
         // Display analytics
@@ -209,6 +213,15 @@ const StockScraper = {
         for (const [ticker, data] of Object.entries(result.data)) {
             const tickerDiv = DisplayManager.createTickerCard(ticker, data);
             tickerResultsDiv.appendChild(tickerDiv);
+            // Phase 13: write health score to pageContext
+            if (typeof HealthScore !== 'undefined' && window.pageContext && window.pageContext.tickerData && window.pageContext.tickerData[ticker]) {
+                const hs = HealthScore.computeGrade(data, ticker);
+                window.pageContext.tickerData[ticker].healthScore = {
+                    grade: hs.grade,
+                    subScores: hs.subScores,
+                    explanation: hs.explanation
+                };
+            }
         }
         
         // Switch to Auto Analysis tab so auto-run results are immediately visible

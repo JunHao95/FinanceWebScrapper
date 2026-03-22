@@ -136,7 +136,14 @@ const DisplayManager = {
             }
         }
 
-        html += '</div>';
+        html += '</div>'; // closes metrics-grid
+
+        // Phase 13: append deep-analysis-group
+        if (typeof HealthScore !== 'undefined') {
+            const hs = HealthScore.computeGrade(data, ticker);
+            html += hs.html;
+        }
+
         div.innerHTML = html;
         return div;
     },
