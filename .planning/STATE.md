@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 13 — Financial Health Score (not started)
-Plan: —
-Status: Roadmap complete — awaiting /gsd:plan-phase 13
-Last activity: 2026-03-22 — v2.1 roadmap written; Phases 13–16 appended to ROADMAP.md
+Phase: 13 — Financial Health Score (in progress)
+Plan: 13-01 complete, 13-02 pending (human verification checkpoint)
+Status: Wave 1 complete — awaiting human verify checkpoint (Plan 13-02)
+Last activity: 2026-03-22 — Plan 13-01 executed; healthScore.js created and wired into displayManager, stockScraper, index.html
 
-Progress: [░░░░░░░░░░] 0%  (v2.1 phases: 0 of 4 complete)
+Progress: [██░░░░░░░░] 25%  (v2.1 phases: 0 of 4 complete; Phase 13 in progress)
 
 ## v2.1 Phase Overview
 
