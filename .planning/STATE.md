@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: milestone
-status: Roadmap defined; awaiting plan-phase for Phase 6
-stopped_at: Phase 10.1 context gathered
-last_updated: "2026-03-21T16:39:34.517Z"
-last_activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
+milestone: v2.1
+milestone_name: Deeper Stock Analysis
+status: Defining requirements
+stopped_at: —
+last_updated: "2026-03-22T00:00:00.000Z"
+last_activity: 2026-03-22 — Milestone v2.1 started
 progress:
-  total_phases: 14
-  completed_phases: 11
-  total_plans: 25
-  completed_plans: 25
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
-**Current focus:** Phase 6 — Form Streamlining & Smart Defaults (v2.0 milestone start)
+**Current focus:** Phase 13 — Financial Health Score (v2.1 milestone start)
 
 ## Current Position
 
-Phase: Phase 10 — chatbot-integration (in progress)
-Plan: 10-01
-Status: Roadmap defined; awaiting plan-phase for Phase 6
-Last activity: 2026-03-08 — Roadmap for v2.0 (phases 6-8) created
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-22 — Milestone v2.1 started
 
-Progress: [░░░░░░░░░░] 0%  (v2.0 phases: 0 of 3 complete)
+Progress: [░░░░░░░░░░] 0%  (v2.1 phases: 0 of 4 complete)
 
 ## Performance Metrics
 

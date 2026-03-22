@@ -16,13 +16,22 @@ Every completed MFE module becomes a working, interactive demo that a recruiter 
 - ✓ Portfolio analysis with stress testing and scenario parameters — existing
 - ✓ Financial analytics (ratios, metrics, ticker analysis) — existing
 
+### Validated
+
+- ✓ One-click analysis: ticker symbols as the only required input — v2.0/Phase 6
+- ✓ Advanced settings (data sources, API keys) collapsed behind a toggle — v2.0/Phase 6
+- ✓ Portfolio allocation supports both % Weight mode and Value mode — v2.0/Phase 6
+- ✓ After scrape completes, Regime Detection and Portfolio MDP run automatically — v2.0/Phase 7
+- ✓ Portfolio Health Card summarises VaR, Sharpe, and regime per ticker — v2.0/Phase 8
+- ✓ Chatbot widget with QuantAssistant + FinancialAnalyst personas — v2.0/Phase 10–10.1
+- ✓ Chatbot context wired to scraped page data — v2.0/Phase 12
+
 ### Active
 
-- [ ] One-click analysis: ticker symbols as the only required input — sources, analytics, and regime/MDP run automatically
-- [ ] Advanced settings (data sources, API keys) collapsed behind a toggle — visible only when needed
-- [ ] Portfolio allocation supports both % Weight mode and Value mode (auto-computed weights with live %-display)
-- [ ] After scrape completes, Regime Detection and Portfolio MDP run automatically with inline results
-- [ ] Portfolio Health Card summarises VaR, Sharpe, and regime per ticker at the top of results
+- [ ] Financial Health Score: A–F composite grade (liquidity, leverage, profitability, growth) displayed on each ticker card
+- [ ] Earnings Quality: accruals ratio, cash conversion, consistency flag per ticker
+- [ ] DCF Valuation: FCF-based intrinsic value estimate with user-overridable WACC/growth inputs
+- [ ] Peer Comparison: percentile ranks for P/E, P/B, ROE, operating margin vs. 5–10 sector peers from Finviz
 
 ### Out of Scope
 
@@ -55,15 +64,15 @@ Every completed MFE module becomes a working, interactive demo that a recruiter 
 | Validate model results before shipping | Showcase app must be correct, not just functional | — Pending |
 | Python backend for all models | MFE work is Python-native, keeps implementation authentic | — Pending |
 
-## Current Milestone: v2.0 One-Click Analysis Dashboard
+## Current Milestone: v2.1 Deeper Stock Analysis
 
-**Goal:** From ticker symbols to full analysis in one click — smart defaults eliminate all required configuration beyond the ticker input.
+**Goal:** Expand each stock card with a "Deep Analysis" group containing four new analysis modules — financial health grading, earnings quality scoring, DCF intrinsic value estimation, and peer percentile comparison.
 
 **Target features:**
-- Collapsed advanced settings (data sources, API keys hidden by default)
-- Portfolio allocation with % Weight / Value mode toggle + currency selector
-- Auto-run Regime Detection and Portfolio MDP after scrape completes
-- Portfolio Health Card with VaR, Sharpe, regime labels shown at top of results
+- Financial Health Score (A–F grade from liquidity, leverage, profitability, growth)
+- Earnings Quality (accruals ratio, cash conversion, consistency flag)
+- DCF Valuation (FCF-based intrinsic value with user-overridable WACC/growth)
+- Peer Comparison (percentile ranks vs. sector peers from Finviz)
 
 ---
-*Last updated: 2026-03-08 after v2.0 milestone start*
+*Last updated: 2026-03-22 after v2.1 milestone start*
