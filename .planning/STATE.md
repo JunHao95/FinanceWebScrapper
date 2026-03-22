@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Deeper Stock Analysis
-status: Defining requirements
-stopped_at: —
+status: Roadmap complete — ready to plan Phase 13
+stopped_at: Phase 13 (not started)
 last_updated: "2026-03-22T00:00:00.000Z"
-last_activity: 2026-03-22 — Milestone v2.1 started
+last_activity: 2026-03-22 — v2.1 roadmap created (Phases 13–16)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -18,19 +18,28 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-08)
+See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
 **Current focus:** Phase 13 — Financial Health Score (v2.1 milestone start)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 13 — Financial Health Score (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-22 — Milestone v2.1 started
+Status: Roadmap complete — awaiting /gsd:plan-phase 13
+Last activity: 2026-03-22 — v2.1 roadmap written; Phases 13–16 appended to ROADMAP.md
 
 Progress: [░░░░░░░░░░] 0%  (v2.1 phases: 0 of 4 complete)
+
+## v2.1 Phase Overview
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 13 | Financial Health Score | FHLTH-01..04 | Not started |
+| 14 | Earnings Quality | QUAL-01..05 | Not started |
+| 15 | DCF Valuation | DCF-01..05 | Not started |
+| 16 | Peer Comparison | PEER-01..05 | Not started |
 
 ## Performance Metrics
 
@@ -84,6 +93,12 @@ Progress: [░░░░░░░░░░] 0%  (v2.1 phases: 0 of 4 complete)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [v2.1 Roadmap]: Deep Analysis group appended bottom of per-ticker card after Sentiment group; Phase 13 creates the div.deep-analysis-group container so Phases 14–16 can append without modifying card HTML again
+- [v2.1 Roadmap]: Health (FHLTH), Quality (QUAL), DCF modules fire in parallel after primary scrape; Peers fires after those three complete
+- [v2.1 Roadmap]: FHLTH IDs used (not HEALTH — HEALTH is taken by v2.0 Portfolio Health Card)
+- [v2.1 Roadmap]: Peer Comparison is the only phase introducing a new external network call; create peer_scraper.py with 30-minute in-memory TTL cache
+- [v2.1 Roadmap]: Phases 13–15 derive entirely from already-scraped data — no new scrape triggers needed
+- [v2.1 Roadmap]: Phase 16 uses Finviz to fetch 5–10 sector peers; cache key is (ticker, sector) to avoid re-fetching within 30 minutes
 - [Phase 02-02]: Vasicek feller_ratio returns None (not a number) — Vasicek allows negative rates so Feller condition does not apply
 - [Phase 02-02]: Route dispatch uses data.get('model','cir').lower() — backward-compatible; missing model field defaults to CIR
 - [Phase 02-02]: vasicek_yield_curve mirrors cir_yield_curve signature exactly for Phase 3 frontend wiring compatibility
@@ -142,18 +157,20 @@ Recent decisions affecting current work:
 - Phase 10.1 inserted after Phase 10: FinancialAnalyst Agent & Chatbot Toggle — add FinancialAnalyst persona alongside QuantAssistant with agent toggle in the chat widget (URGENT)
 - Phase 11 added: Responsive Layout & Dashboard Customisation — mobile-first CSS (hamburger nav, stacked charts, fluid chip input) + localStorage personalisation (ticker presets, pinned/reordered cards, persisted settings)
 - Phase 12 added: Integrating Chatbot to the Details in Stock Analysis, Stochastic models tabs etc so the chatbot can access the content scrapped
+- Phases 13–16 added: v2.1 Deeper Stock Analysis — Financial Health Score, Earnings Quality, DCF Valuation, Peer Comparison
 
 ### Pending Todos
 
-- Plan Phase 6: Form Streamlining & Smart Defaults (FORM-01..08)
+- Run /gsd:plan-phase 13 to break Phase 13 into executable plans
 
 ### Blockers/Concerns
 
 - [Phase 2]: MDP backend resolved — portfolio_mdp_value_iteration implemented in plan 02-01; blocker cleared
 - [Phase 3]: Calibration latency on Render free tier unconfirmed (estimated 60-120s) — measure during Phase 1 to choose between SSE streaming vs. pre-caching
+- [Phase 16]: Finviz peer scraping is rate-sensitive; 30-minute TTL cache mitigates this but peer fetch timeout handling must be tested explicitly
 
 ## Session Continuity
 
-Last session: 2026-03-21T16:39:34.507Z
-Stopped at: Phase 10.1 context gathered
+Last session: 2026-03-22T00:00:00.000Z
+Stopped at: v2.1 roadmap written — Phases 13–16 appended to ROADMAP.md
 Resume file: None

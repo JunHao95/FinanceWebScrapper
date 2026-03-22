@@ -6,6 +6,8 @@ This milestone completes the Stochastic Models section and builds the ML-in-Fina
 
 Milestone v2.0 (One-Click Analysis Dashboard) adds Phases 6-8, delivering one-click analysis with smart form defaults, auto-run extended analytics, and a Portfolio Health summary card. Phase 9 closes gaps identified by the v2.0 milestone audit.
 
+Milestone v2.1 (Deeper Stock Analysis) adds Phases 13-16, expanding each ticker card with a "Deep Analysis" group containing financial health grading, earnings quality scoring, DCF intrinsic value estimation, and peer percentile comparison.
+
 ## Phases
 
 **Phase Numbering:**
@@ -23,6 +25,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Auto-Run Extended Analysis After Scrape** - After scrape completes, Regime Detection and Portfolio MDP trigger automatically with inline results and status badges in the Analytics tab (completed 2026-03-10)
 - [x] **Phase 8: Portfolio Health Summary Card** - A concise Portfolio Health card appears at the top of results after all analyses complete, showing VaR, Sharpe, and regime per ticker (completed 2026-03-10)
 - [x] **Phase 9: Health Card Deep-Links & Auto-Run Hardening** - Health card metric clicks navigate to specific analytics sections; autoRun.js implicit global dependencies hardened (gap closure from v2.0 audit) (completed 2026-03-11)
+- [ ] **Phase 10: Chatbot Integration** - Floating chatbot widget with QuantAssistant persona and Flask /api/chat backend
+- [ ] **Phase 10.1: FinancialAnalyst Agent & Chatbot Toggle** (INSERTED) - FinancialAnalyst persona alongside QuantAssistant with UI agent toggle
+- [ ] **Phase 11: Responsive Layout & Dashboard Customisation** - Mobile-first CSS and localStorage personalisation
+- [ ] **Phase 12: Chatbot Context Wiring** - Structured page-state snapshot injected into every chatbot message
+- [ ] **Phase 13: Financial Health Score** - Altman Z-score-inspired composite A–F grade per ticker card, computed from already-scraped balance sheet fields with no new network calls
+- [ ] **Phase 14: Earnings Quality** - Accruals ratio, cash conversion, and consistency flag per ticker card using scraped OCF/EPS, no new network calls
+- [ ] **Phase 15: DCF Valuation** - FCF-based intrinsic value estimate with user-overridable WACC/growth inputs, recalculates without re-scraping
+- [ ] **Phase 16: Peer Comparison** - Percentile ranks for P/E, P/B, ROE, and operating margin vs. 5–10 sector peers fetched from Finviz with a 30-minute in-memory TTL cache
 
 ## Phase Details
 
@@ -174,7 +184,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 10.1 → 11 → 12 → 13 → 14 → 15 → 16
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -187,6 +197,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Auto-Run Extended Analysis After Scrape | 2/2 | Complete   | 2026-03-10 |
 | 8. Portfolio Health Summary Card | 2/2 | Complete   | 2026-03-10 |
 | 9. Health Card Deep-Links & Auto-Run Hardening | 1/1 | Complete   | 2026-03-11 |
+| 10. Chatbot Integration | 2/2 | Complete | - |
+| 10.1. FinancialAnalyst Agent & Chatbot Toggle | 2/2 | Complete | - |
+| 11. Responsive Layout & Dashboard Customisation | 0/? | Not started | - |
+| 12. Chatbot Context Wiring | 3/3 | Complete | - |
+| 13. Financial Health Score | 0/3 | Not started | - |
+| 14. Earnings Quality | 0/3 | Not started | - |
+| 15. DCF Valuation | 0/3 | Not started | - |
+| 16. Peer Comparison | 0/3 | Not started | - |
 
 ### Phase 10: chatbot-integration
 **Goal**: Integrate a chatbot in the FinanceWebScrapper web and having QuantAssisant agent residing in the chatbot
@@ -240,3 +258,74 @@ Plans:
 - [ ] 12-01-PLAN.md — Wave 0 test scaffold: extend test_chat_route.py with failing tests for context injection and history wiring (CTX-01, CTX-02, CTX-03)
 - [ ] 12-02-PLAN.md — Backend extension: /api/chat reads context + history, appends context to system prompt, includes history in Groq/Ollama payload (CTX-01, CTX-02, CTX-03)
 - [ ] 12-03-PLAN.md — Frontend wiring: window.pageContext, buildContextSnapshot(), sendMessage() extension, context indicator UI, stochastic result hooks (CTX-04, CTX-05)
+
+---
+
+## v2.1 Milestone — Deeper Stock Analysis (Phases 13–16)
+
+**Design decisions encoded here:**
+- All four modules render into `div.deep-analysis-group` appended to each ticker card, below the existing Sentiment group
+- Phase 13 creates the `div.deep-analysis-group` container; Phases 14–16 append into it
+- Health (FHLTH), Quality (QUAL), and DCF modules fire in parallel after the primary scrape completes; Peers (PEER) fires after those three complete
+- FHLTH IDs are used (not HEALTH, which is taken by v2.0 Portfolio Health Card)
+- Peers is the only phase introducing a new external network call; all other phases derive from already-scraped data
+
+### Phase 13: Financial Health Score
+**Goal**: Each ticker card displays a composite financial health grade (A–F) derived from already-scraped balance sheet and profitability fields — no new network calls, computed purely from data available after the primary scrape.
+**Depends on**: Phase 12
+**Requirements**: FHLTH-01, FHLTH-02, FHLTH-03, FHLTH-04
+**Success Criteria** (what must be TRUE):
+  1. After scraping any ticker, the ticker card shows a financial health grade badge (A, B, C, D, or F) in the new "Deep Analysis" section at the bottom of the card.
+  2. Expanding the grade badge reveals four sub-scores (liquidity, leverage, profitability, growth) with their individual values displayed numerically.
+  3. A one-sentence explanation summarising the dominant positive and negative factors appears beneath the grade (e.g., "Strong ROE offset by high debt/equity").
+  4. When one or more component data fields are absent from the scraped payload, the grade still renders with available sub-scores and a visible warning flag indicating which component is missing.
+  5. The `div.deep-analysis-group` container is injected into every ticker card by `displayManager.js` so that Phases 14–16 can append their sections without modifying card HTML again.
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 13 to break down)
+
+### Phase 14: Earnings Quality
+**Goal**: Each ticker card displays an earnings quality label (High / Medium / Low) alongside three supporting metrics — accruals ratio, cash conversion ratio, and an earnings consistency flag — all derived from scraped OCF and EPS data without any new network calls.
+**Depends on**: Phase 13 (deep-analysis-group container)
+**Requirements**: QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05
+**Success Criteria** (what must be TRUE):
+  1. After scraping a ticker, the Deep Analysis section shows an earnings quality label of "High", "Medium", or "Low" with a colour-coded indicator.
+  2. The accruals ratio value (Net Income minus OCF divided by Total Assets) is displayed as a numeric figure with two decimal places.
+  3. The cash conversion ratio value (OCF divided by Net Income) is displayed as a numeric figure with two decimal places.
+  4. An earnings consistency flag of "Consistent" or "Volatile" appears based on EPS growth stability, with a brief tooltip or label explaining the criterion.
+  5. When OCF or Net Income data is absent from the scraped payload, the entire quality section renders "Insufficient Data" in place of the label and metrics — no JavaScript error is thrown.
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 14 to break down)
+
+### Phase 15: DCF Valuation
+**Goal**: Each ticker card displays an FCF-based intrinsic value estimate (price per share) alongside the current price premium or discount, with user-overridable WACC and growth rate inputs that recalculate the estimate locally without triggering a new scrape.
+**Depends on**: Phase 13 (deep-analysis-group container)
+**Requirements**: DCF-01, DCF-02, DCF-03, DCF-04, DCF-05
+**Success Criteria** (what must be TRUE):
+  1. After scraping a ticker with available Alpha Vantage FCF data, the Deep Analysis section shows an intrinsic value estimate as a dollar figure per share.
+  2. The card displays whether the current market price is at a premium or discount vs. the DCF estimate, expressed as a signed percentage (e.g., "+23% premium" or "-11% discount").
+  3. The three key DCF assumptions (FCF growth rate, terminal growth rate, WACC) are visible alongside the estimate so a user can assess the model's inputs at a glance.
+  4. Editing the WACC or growth rate input fields and clicking "Recalculate" updates the intrinsic value and premium/discount percentage without triggering a new scrape or page reload.
+  5. When Alpha Vantage FCF data is absent or zero, the DCF section displays "DCF unavailable — FCF data missing" and suppresses all numeric outputs.
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 15 to break down)
+
+### Phase 16: Peer Comparison
+**Goal**: Each ticker card displays the ticker's P/E, P/B, ROE, and operating margin as percentile ranks against 5–10 sector peers fetched from Finviz, with a toggle to reveal the raw peer data table — peers are cached in-memory for 30 minutes to avoid redundant network calls.
+**Depends on**: Phase 13 (deep-analysis-group container), Phase 14, Phase 15 (all three fire before peers)
+**Requirements**: PEER-01, PEER-02, PEER-03, PEER-04, PEER-05
+**Success Criteria** (what must be TRUE):
+  1. After scraping a ticker, the Deep Analysis section shows four percentile rank values (P/E, P/B, ROE, operating margin) expressed as "Xth percentile" against the sector peer group.
+  2. The peer group label (e.g., "Technology — comparable group: AAPL, MSFT, GOOGL ...") is visible so the user knows which companies were used as benchmarks.
+  3. Each of the four metrics shows an above-median or below-median indicator (e.g., a coloured arrow or badge) so the user can assess relative positioning at a glance.
+  4. A "Show peers" toggle reveals a table of raw peer data (ticker, P/E, P/B, ROE, operating margin) and hides it again on second click.
+  5. When the Finviz peer fetch fails, times out, or returns fewer than two peers, the entire peer section renders "Peer data unavailable" and suppresses percentile rows — no unhandled exception surfaces to the user.
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 16 to break down)
