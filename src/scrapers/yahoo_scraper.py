@@ -179,6 +179,15 @@ class YahooFinanceScraper(BaseScraper):
             
             if info.get("totalDebt"):
                 data["Total Debt (Yahoo)"] = f"{info.get('totalDebt'):,.0f}"
+
+            # Liquidity & Leverage ratios (Phase 13)
+            if info.get("currentRatio"):
+                data["Current Ratio (Yahoo)"] = f"{info.get('currentRatio'):.2f}"
+            if info.get("quickRatio"):
+                data["Quick Ratio (Yahoo)"] = f"{info.get('quickRatio'):.2f}"
+            if info.get("debtToEquity"):
+                # yfinance returns debtToEquity as percentage (e.g. 148.5 = 1.485 ratio); convert to ratio
+                data["Debt to Equity (Yahoo)"] = f"{info.get('debtToEquity') / 100:.2f}"
             
             if info.get("ebitda"):
                 data["EBITDA (Yahoo)"] = f"{info.get('ebitda'):,.0f}"
