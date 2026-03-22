@@ -280,10 +280,11 @@ Plans:
   3. A one-sentence explanation summarising the dominant positive and negative factors appears beneath the grade (e.g., "Strong ROE offset by high debt/equity").
   4. When one or more component data fields are absent from the scraped payload, the grade still renders with available sub-scores and a visible warning flag indicating which component is missing.
   5. The `div.deep-analysis-group` container is injected into every ticker card by `displayManager.js` so that Phases 14–16 can append their sections without modifying card HTML again.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 13 to break down)
+- [ ] 13-01-PLAN.md — healthScore.js module + displayManager/stockScraper/index.html wiring (FHLTH-01, FHLTH-02, FHLTH-03, FHLTH-04)
+- [ ] 13-02-PLAN.md — Human verify checkpoint: browser end-to-end checks (FHLTH-01, FHLTH-02, FHLTH-03, FHLTH-04)
 
 ### Phase 14: Earnings Quality
 **Goal**: Each ticker card displays an earnings quality label (High / Medium / Low) alongside three supporting metrics — accruals ratio, cash conversion ratio, and an earnings consistency flag — all derived from scraped OCF and EPS data without any new network calls.
