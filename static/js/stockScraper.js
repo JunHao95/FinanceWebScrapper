@@ -120,14 +120,25 @@ const StockScraper = {
                         const s = fa.summary || fa.overall_assessment || fa.recommendation || '';
                         fundamentalSummary = typeof s === 'string' ? s.slice(0, 300) : '';
                     }
+                    // Find the first raw key that contains the given substring (case-insensitive),
+                    // mirroring the substring-match logic used by displayManager.js.
+                    function findVal(substring) {
+                        const lower = substring.toLowerCase();
+                        for (const k of Object.keys(raw)) {
+                            if (k.toLowerCase().includes(lower) && raw[k] != null && raw[k] !== '') {
+                                return raw[k];
+                            }
+                        }
+                        return null;
+                    }
                     window.pageContext.tickerData[ticker] = {
-                        name: raw['Company Name'] || raw['name'] || '',
-                        price: raw['Current Price'] || raw['Price'] || null,
-                        pe: raw['P/E Ratio'] || raw['P/E'] || raw['pe_ratio'] || null,
-                        eps: raw['EPS'] || null,
-                        roe: raw['ROE'] || null,
-                        rsi: raw['RSI'] || null,
-                        sentimentOverall: (raw.sentiment && raw.sentiment.overall) || raw['Overall Sentiment'] || null,
+                        name: findVal('Company Name') || findVal('name') || '',
+                        price: findVal('Current Price') || findVal('Price') || null,
+                        pe: findVal('P/E Ratio') || findVal('P/E') || null,
+                        eps: findVal('EPS (ttm)') || findVal('EPS (TTM)') || findVal('EPS') || null,
+                        roe: findVal('ROE') || null,
+                        rsi: findVal('RSI') || null,
+                        sentimentOverall: (raw.sentiment && raw.sentiment.overall) || findVal('Overall Sentiment') || null,
                         sentimentNews: (raw.sentiment && raw.sentiment.news) || null,
                         sentimentReddit: (raw.sentiment && raw.sentiment.reddit) || null,
                         var95: null,

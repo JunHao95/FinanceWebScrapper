@@ -214,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return lines.join('\n');
     }
+    window.buildContextSnapshot = buildContextSnapshot;
 
     function updateContextIndicator() {
         const tickers = (window.pageContext && window.pageContext.tickers) || [];
