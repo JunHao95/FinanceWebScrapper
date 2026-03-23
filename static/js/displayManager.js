@@ -149,6 +149,10 @@ const DisplayManager = {
         if (typeof EarningsQuality !== 'undefined') {
             EarningsQuality.renderIntoGroup(ticker, data, div);
         }
+        // Phase 15: inject DCF valuation into existing deep-analysis-group
+        if (typeof DCFValuation !== 'undefined') {
+            DCFValuation.renderIntoGroup(ticker, data, div);
+        }
         return div;
     },
 
