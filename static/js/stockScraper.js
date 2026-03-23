@@ -228,6 +228,19 @@ const StockScraper = {
                     consistencyFlag: eq.consistencyFlag
                 };
             }
+            // Phase 15: write DCF valuation to pageContext
+            if (typeof DCFValuation !== 'undefined' && window.pageContext && window.pageContext.tickerData && window.pageContext.tickerData[ticker]) {
+                const dcf = DCFValuation.computeValuation(data, 0.10, 0.10, 0.03);
+                window.pageContext.tickerData[ticker].dcfValuation = {
+                    intrinsicValue: dcf.intrinsicPerShare || null,
+                    intrinsicEquityTotal: dcf.intrinsicEquityTotal || null,
+                    premium: dcf.premium || null,
+                    wacc: 0.10,
+                    g1: 0.10,
+                    g2: 0.03,
+                    fcfSource: dcf.fcfSource || null
+                };
+            }
         }
         
         // Switch to Auto Analysis tab so auto-run results are immediately visible
