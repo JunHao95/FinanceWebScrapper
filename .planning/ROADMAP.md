@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 12. Chatbot Context Wiring | 3/3 | Complete | - |
 | 13. Financial Health Score | 1/2 | Complete    | 2026-03-22 |
 | 14. Earnings Quality | 2/3 | Complete    | 2026-03-22 |
-| 15. DCF Valuation | 0/3 | Not started | - |
+| 15. DCF Valuation | 0/2 | Not started | - |
 | 16. Peer Comparison | 0/3 | Not started | - |
 
 ### Phase 10: chatbot-integration
@@ -313,10 +313,11 @@ Plans:
   3. The three key DCF assumptions (FCF growth rate, terminal growth rate, WACC) are visible alongside the estimate so a user can assess the model's inputs at a glance.
   4. Editing the WACC or growth rate input fields and clicking "Recalculate" updates the intrinsic value and premium/discount percentage without triggering a new scrape or page reload.
   5. When Alpha Vantage FCF data is absent or zero, the DCF section displays "DCF unavailable — FCF data missing" and suppresses all numeric outputs.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 15 to break down)
+- [ ] 15-01-PLAN.md — dcfValuation.js module + displayManager/stockScraper/index.html wiring (DCF-01, DCF-02, DCF-03, DCF-04, DCF-05)
+- [ ] 15-02-PLAN.md — Human verify checkpoint: browser end-to-end checks (DCF-01, DCF-02, DCF-03, DCF-04, DCF-05)
 
 ### Phase 16: Peer Comparison
 **Goal**: Each ticker card displays the ticker's P/E, P/B, ROE, and operating margin as percentile ranks against 5–10 sector peers fetched from Finviz, with a toggle to reveal the raw peer data table — peers are cached in-memory for 30 minutes to avoid redundant network calls.
