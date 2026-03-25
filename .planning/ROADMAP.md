@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 12: Chatbot Context Wiring** - Structured page-state snapshot injected into every chatbot message
 - [x] **Phase 13: Financial Health Score** - Altman Z-score-inspired composite A–F grade per ticker card, computed from already-scraped balance sheet fields with no new network calls (completed 2026-03-22)
 - [x] **Phase 14: Earnings Quality** - Accruals ratio, cash conversion, and consistency flag per ticker card using scraped OCF/EPS, no new network calls (completed 2026-03-22)
-- [ ] **Phase 15: DCF Valuation** - FCF-based intrinsic value estimate with user-overridable WACC/growth inputs, recalculates without re-scraping
+- [x] **Phase 15: DCF Valuation** - FCF-based intrinsic value estimate with user-overridable WACC/growth inputs, recalculates without re-scraping (completed 2026-03-25)
 - [ ] **Phase 16: Peer Comparison** - Percentile ranks for P/E, P/B, ROE, and operating margin vs. 5–10 sector peers fetched from Finviz with a 30-minute in-memory TTL cache
 
 ## Phase Details
@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 12. Chatbot Context Wiring | 3/3 | Complete | - |
 | 13. Financial Health Score | 1/2 | Complete    | 2026-03-22 |
 | 14. Earnings Quality | 2/3 | Complete    | 2026-03-22 |
-| 15. DCF Valuation | 1/2 | In Progress|  |
+| 15. DCF Valuation | 1/2 | Complete    | 2026-03-25 |
 | 16. Peer Comparison | 0/3 | Not started | - |
 
 ### Phase 10: chatbot-integration
