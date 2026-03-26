@@ -2063,6 +2063,94 @@ def chat():
 
 _ticker_validation_cache = {}
 
+_peer_cache = {}        # { sector: { "data": [...], "fetched_at": float, "peers": [...] } }
+_ticker_sector_map = {}  # { ticker: sector } — avoids re-scraping to find sector
+
+
+@app.route('/api/peers', methods=['GET'])
+def get_peers():
+    ticker = request.args.get('ticker', '').strip().upper()
+    if not ticker:
+        return jsonify({'error': 'ticker parameter required'})
+    try:
+        now = time.time()
+
+        # Fast path: if we already know this ticker's sector and the cache is warm, skip scrape
+        known_sector = _ticker_sector_map.get(ticker)
+        if known_sector and known_sector in _peer_cache:
+            entry = _peer_cache[known_sector]
+            if now - entry['fetched_at'] < 1800:
+                cached_peer_data = entry['data']
+                cached_peers = entry['peers']
+                sector = known_sector
+
+                def percentile_rank(rows, field, target):
+                    if target is None:
+                        return 50
+                    vals = sorted([r[field] for r in rows if r[field] is not None])
+                    if len(vals) < 2:
+                        return 50
+                    if target not in vals:
+                        return 50
+                    idx = vals.index(target)
+                    return round(100 * idx / (len(vals) - 1))
+
+                ticker_row = next((r for r in cached_peer_data if r['ticker'] == ticker), None)
+                if ticker_row:
+                    percentiles = {
+                        'pe':        {'value': ticker_row['pe'],        'rank': percentile_rank(cached_peer_data, 'pe',        ticker_row['pe'])},
+                        'pb':        {'value': ticker_row['pb'],        'rank': percentile_rank(cached_peer_data, 'pb',        ticker_row['pb'])},
+                        'roe':       {'value': ticker_row['roe'],       'rank': percentile_rank(cached_peer_data, 'roe',       ticker_row['roe'])},
+                        'op_margin': {'value': ticker_row['op_margin'], 'rank': percentile_rank(cached_peer_data, 'op_margin', ticker_row['op_margin'])},
+                    }
+                    return jsonify({'sector': sector, 'peers': cached_peers, 'peer_data': cached_peer_data, 'percentiles': percentiles})
+
+        scraper = FinvizScraper()
+        raw = scraper.get_peer_data(ticker)
+        sector = raw.get('sector', '')
+        peer_data = raw.get('peer_data', [])
+
+        if len(peer_data) < 2:
+            return jsonify({'error': 'Peer data unavailable: fewer than 2 comparable companies'})
+
+        # Store in sector-scoped cache and update ticker->sector map
+        _peer_cache[sector] = {'data': peer_data, 'fetched_at': now, 'peers': raw.get('peers', [])}
+        _ticker_sector_map[ticker] = sector
+
+        # Nearest-rank percentile calculation
+        def percentile_rank(rows, field, target):
+            if target is None:
+                return 50
+            vals = sorted([r[field] for r in rows if r[field] is not None])
+            if len(vals) < 2:
+                return 50
+            if target not in vals:
+                return 50
+            idx = vals.index(target)
+            return round(100 * idx / (len(vals) - 1))
+
+        ticker_row = next((r for r in peer_data if r['ticker'] == ticker), None)
+        if not ticker_row:
+            return jsonify({'error': 'Ticker not found in peer data'})
+
+        percentiles = {
+            'pe':        {'value': ticker_row['pe'],        'rank': percentile_rank(peer_data, 'pe',        ticker_row['pe'])},
+            'pb':        {'value': ticker_row['pb'],        'rank': percentile_rank(peer_data, 'pb',        ticker_row['pb'])},
+            'roe':       {'value': ticker_row['roe'],       'rank': percentile_rank(peer_data, 'roe',       ticker_row['roe'])},
+            'op_margin': {'value': ticker_row['op_margin'], 'rank': percentile_rank(peer_data, 'op_margin', ticker_row['op_margin'])},
+        }
+
+        return jsonify({
+            'sector': sector,
+            'peers': raw.get('peers', []),
+            'peer_data': peer_data,
+            'percentiles': percentiles,
+        })
+    except Exception as e:
+        logger.error(f"Error in get_peers for {ticker}: {e}")
+        return jsonify({'error': f'Peer data unavailable: {str(e)}'})
+
+
 @app.route('/api/validate_ticker', methods=['GET'])
 def validate_ticker():
     symbol = request.args.get('symbol', '').strip().upper()

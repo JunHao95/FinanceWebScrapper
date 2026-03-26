@@ -12,6 +12,9 @@ from webapp import app as flask_app
 @pytest.fixture
 def client():
     flask_app.config['TESTING'] = True
+    import webapp
+    webapp._peer_cache.clear()
+    webapp._ticker_sector_map.clear()
     with flask_app.test_client() as c:
         yield c
 
@@ -65,10 +68,6 @@ class TestPeersCacheHit:
     """Cache: second call with same ticker should not re-invoke get_peer_data."""
 
     def test_peers_cache_hit(self, client):
-        # Clear cache state before test
-        import webapp
-        webapp._peer_cache.clear()
-
         with patch(
             "src.scrapers.finviz_scraper.FinvizScraper.get_peer_data",
             return_value=_make_peer_data(),

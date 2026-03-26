@@ -147,3 +147,91 @@ class FinvizScraper(BaseScraper):
             self.logger.warning(f"No data found for {ticker} on Finviz")
             
         return data
+
+    def get_peer_data(self, ticker):
+        """
+        Fetch similar stocks and their 4 key metrics from Finviz.
+
+        Args:
+            ticker (str): Primary stock ticker (e.g. "AAPL")
+
+        Returns:
+            dict: {
+                "sector": str,
+                "peers": [peer_ticker, ...],          # peer tickers only (not primary)
+                "peer_data": [                         # primary + peers rows
+                    {"ticker": str, "pe": float|None, "pb": float|None,
+                     "roe": float|None, "op_margin": float|None},
+                    ...
+                ]
+            }
+        """
+        url = f"https://finviz.com/quote.ashx?t={ticker}"
+        response = make_request(url, headers=self.headers, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # --- Extract sector ---
+        sector = ""
+        snapshot_table = soup.find('table', class_='snapshot-table2')
+        if snapshot_table:
+            for row in snapshot_table.find_all('tr'):
+                cells = row.find_all('td')
+                for i in range(0, len(cells), 2):
+                    if i + 1 < len(cells) and cells[i].text.strip() == "Sector":
+                        sector = cells[i + 1].text.strip()
+
+        # --- Extract similar stock tickers ---
+        peer_tickers = []
+        try:
+            similar_label = soup.find(string=lambda t: t and t.strip() == 'Similar')
+            if similar_label:
+                similar_td = similar_label.find_parent('td')
+                if similar_td:
+                    next_td = similar_td.find_next_sibling('td')
+                    if next_td:
+                        # Tickers are in <a> tags or comma-separated text
+                        links = next_td.find_all('a')
+                        if links:
+                            peer_tickers = [a.text.strip() for a in links if a.text.strip()]
+                        else:
+                            peer_tickers = [t.strip() for t in next_td.text.split(',') if t.strip()]
+        except Exception as e:
+            self.logger.warning(f"Could not parse similar stocks for {ticker}: {e}")
+
+        soup.decompose()
+
+        # Limit to 10 peers
+        peer_tickers = peer_tickers[:10]
+
+        def _parse_metric(value):
+            """Convert string metric to float, return None on failure."""
+            if not value or value in ('-', 'N/A', ''):
+                return None
+            try:
+                return float(value.replace('%', '').replace(',', ''))
+            except (ValueError, AttributeError):
+                return None
+
+        def _fetch_metrics(tkr):
+            """Fetch pe/pb/roe/op_margin for a single ticker."""
+            try:
+                data = self._scrape_data(tkr)
+                return {
+                    "ticker": tkr,
+                    "pe": _parse_metric(data.get("P/E Ratio (Finviz)")),
+                    "pb": _parse_metric(data.get("P/B Ratio (Finviz)")),
+                    "roe": _parse_metric(data.get("ROE (Finviz)")),
+                    "op_margin": _parse_metric(data.get("Operating Margin (Finviz)")),
+                }
+            except Exception as e:
+                self.logger.warning(f"Failed to fetch metrics for {tkr}: {e}")
+                return {"ticker": tkr, "pe": None, "pb": None, "roe": None, "op_margin": None}
+
+        # Primary ticker first, then peers
+        peer_data = [_fetch_metrics(ticker)] + [_fetch_metrics(p) for p in peer_tickers]
+
+        return {
+            "sector": sector,
+            "peers": peer_tickers,
+            "peer_data": peer_data,
+        }
