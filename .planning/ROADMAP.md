@@ -329,7 +329,9 @@ Plans:
   3. Each of the four metrics shows an above-median or below-median indicator (e.g., a coloured arrow or badge) so the user can assess relative positioning at a glance.
   4. A "Show peers" toggle reveals a table of raw peer data (ticker, P/E, P/B, ROE, operating margin) and hides it again on second click.
   5. When the Finviz peer fetch fails, times out, or returns fewer than two peers, the entire peer section renders "Peer data unavailable" and suppresses percentile rows — no unhandled exception surfaces to the user.
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 16 to break down)
+- [ ] 16-01-PLAN.md — Backend: extend FinvizScraper.get_peer_data + /api/peers route with sector TTL cache + pytest scaffold (PEER-05)
+- [ ] 16-02-PLAN.md — Frontend: peerComparison.js async module + displayManager/index.html wiring (PEER-01, PEER-02, PEER-03, PEER-04, PEER-05)
+- [ ] 16-03-PLAN.md — Human verify checkpoint: browser end-to-end checks (PEER-01 through PEER-05)
