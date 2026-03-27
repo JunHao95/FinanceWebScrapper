@@ -82,6 +82,7 @@ A high-performance Python application for scraping and analyzing financial metri
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
 - **Sector-Scoped Cache**: 30-minute TTL cache keyed by sector — tickers in the same sector share one fetch, avoiding redundant Finviz requests.
+- **Updated Finviz parsing**: peer tickers now extracted from `data-boxover-ticker` span attributes (new 2025 layout); sector extracted from `sec_` screener link. Legacy `Similar` td fallback retained.
 - **Peer Comparison UI**: `peerComparison.js` IIFE module renders percentile rows with above/below-median badges inside the Deep Analysis section. Shows a spinner during load, "Peer Comparison: Unavailable" on failure, and a collapsible "N/4 above median" header with an optional raw peer table on success.
 
 ### Collapsible Ticker Display
