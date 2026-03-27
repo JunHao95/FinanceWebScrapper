@@ -147,3 +147,114 @@ class FinvizScraper(BaseScraper):
             self.logger.warning(f"No data found for {ticker} on Finviz")
             
         return data
+
+    def get_peer_data(self, ticker):
+        """
+        Fetch similar stocks and their 4 key metrics from Finviz.
+
+        Args:
+            ticker (str): Primary stock ticker (e.g. "AAPL")
+
+        Returns:
+            dict: {
+                "sector": str,
+                "peers": [peer_ticker, ...],          # peer tickers only (not primary)
+                "peer_data": [                         # primary + peers rows
+                    {"ticker": str, "pe": float|None, "pb": float|None,
+                     "roe": float|None, "op_margin": float|None},
+                    ...
+                ]
+            }
+        """
+        url = f"https://finviz.com/quote.ashx?t={ticker}"
+        response = make_request(url, headers=self.headers, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # --- Extract sector ---
+        # Finviz (2025+): sector link has href containing "sec_" in quote-links div.
+        # Fallback: legacy snapshot-table2 "Sector" td label.
+        sector = ""
+        sector_link = soup.find('a', class_='tab-link',
+                                href=lambda h: h and 'sec_' in h and 'screener' in h)
+        if sector_link:
+            sector = sector_link.text.strip()
+        if not sector:
+            snapshot_table = soup.find('table', class_='snapshot-table2')
+            if snapshot_table:
+                for row in snapshot_table.find_all('tr'):
+                    cells = row.find_all('td')
+                    for i in range(0, len(cells), 2):
+                        if i + 1 < len(cells) and cells[i].text.strip() == "Sector":
+                            sector = cells[i + 1].text.strip()
+
+        # --- Extract peer stock tickers ---
+        # Finviz (2025+): peers are in span[data-boxover-ticker] elements
+        # inside a div preceded by an <a>Peers</a> label.
+        # Fallback: legacy "Similar" td label for older page versions.
+        peer_tickers = []
+        try:
+            # New layout: <a class="tab-link" href="screener.ashx?t=...">Peers</a>:
+            #             <span style="font-size:11px">
+            #               <span data-boxover-ticker="MSFT"><a>MSFT</a></span> ...
+            peers_link = soup.find('a', class_='tab-link', string='Peers')
+            if peers_link:
+                peer_span = peers_link.find_next_sibling('span')
+                if peer_span:
+                    peer_tickers = [
+                        sp.get('data-boxover-ticker', '').strip()
+                        for sp in peer_span.find_all('span', attrs={'data-boxover-ticker': True})
+                        if sp.get('data-boxover-ticker', '').strip()
+                    ]
+            # Legacy fallback: "Similar" td label
+            if not peer_tickers:
+                similar_label = soup.find(string=lambda t: t and t.strip() == 'Similar')
+                if similar_label:
+                    similar_td = similar_label.find_parent('td')
+                    if similar_td:
+                        next_td = similar_td.find_next_sibling('td')
+                        if next_td:
+                            links = next_td.find_all('a')
+                            if links:
+                                peer_tickers = [a.text.strip() for a in links if a.text.strip()]
+                            else:
+                                peer_tickers = [t.strip() for t in next_td.text.split(',') if t.strip()]
+        except Exception as e:
+            self.logger.warning(f"Could not parse peer stocks for {ticker}: {e}")
+
+        soup.decompose()
+
+        # Limit to 10 peers
+        peer_tickers = peer_tickers[:10]
+
+        def _parse_metric(value):
+            """Convert string metric to float, return None on failure."""
+            if not value or value in ('-', 'N/A', ''):
+                return None
+            try:
+                return float(value.replace('%', '').replace(',', ''))
+            except (ValueError, AttributeError):
+                return None
+
+        def _fetch_metrics(tkr):
+            """Fetch pe/pb/roe/op_margin for a single ticker."""
+            try:
+                data = self._scrape_data(tkr)
+                return {
+                    "ticker": tkr,
+                    "pe": _parse_metric(data.get("P/E Ratio (Finviz)")),
+                    "pb": _parse_metric(data.get("P/B Ratio (Finviz)")),
+                    "roe": _parse_metric(data.get("ROE (Finviz)")),
+                    "op_margin": _parse_metric(data.get("Operating Margin (Finviz)")),
+                }
+            except Exception as e:
+                self.logger.warning(f"Failed to fetch metrics for {tkr}: {e}")
+                return {"ticker": tkr, "pe": None, "pb": None, "roe": None, "op_margin": None}
+
+        # Primary ticker first, then peers
+        peer_data = [_fetch_metrics(ticker)] + [_fetch_metrics(p) for p in peer_tickers]
+
+        return {
+            "sector": sector,
+            "peers": peer_tickers,
+            "peer_data": peer_data,
+        }
