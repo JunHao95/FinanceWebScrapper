@@ -153,6 +153,10 @@ const DisplayManager = {
         if (typeof DCFValuation !== 'undefined') {
             DCFValuation.renderIntoGroup(ticker, data, div);
         }
+        // Phase 16: inject peer comparison into existing deep-analysis-group
+        if (typeof PeerComparison !== 'undefined') {
+            PeerComparison.renderIntoGroup(ticker, data, div);
+        }
         return div;
     },
 
