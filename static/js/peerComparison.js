@@ -45,6 +45,10 @@
 
     var METRIC_ORDER = ['pe', 'pb', 'roe', 'op_margin'];
 
+    // Valuation multiples: higher rank = more expensive relative to peers = negative signal.
+    // Quality metrics: higher rank = better performance = positive signal.
+    var LOWER_IS_BETTER = { pe: true, pb: true };
+
     function _ordinalSuffix(n) {
         var s = ['th', 'st', 'nd', 'rd'];
         var v = n % 100;
@@ -53,15 +57,18 @@
 
     function buildSuccessHTML(ticker, resp) {
         var percentiles = resp.percentiles || {};
-        var aboveCount = 0;
+        var favourableCount = 0;
 
-        // Count above-median
+        // Count metrics with a favourable signal (cheap valuation or strong quality)
         METRIC_ORDER.forEach(function (key) {
             var p = percentiles[key];
-            if (p && p.rank != null && p.rank >= 50) aboveCount++;
+            if (p && p.rank != null) {
+                var isFavourable = LOWER_IS_BETTER[key] ? p.rank < 50 : p.rank >= 50;
+                if (isFavourable) favourableCount++;
+            }
         });
 
-        var headerLabel = aboveCount + '/4 above median';
+        var headerLabel = favourableCount + '/4 favourable';
 
         // Metric rows
         var rowsHTML = METRIC_ORDER.map(function (key) {
@@ -70,10 +77,11 @@
             var rankText = rankVal !== null ? _ordinalSuffix(rankVal) + ' percentile' : '-- percentile';
             var badgeHTML = '';
             if (rankVal !== null) {
-                if (rankVal >= 50) {
-                    badgeHTML = ' <span class="badge badge-success" style="font-size:10px;">ABOVE MEDIAN</span>';
+                var isFavourable = LOWER_IS_BETTER[key] ? rankVal < 50 : rankVal >= 50;
+                if (isFavourable) {
+                    badgeHTML = ' <span class="badge badge-success" style="font-size:10px;">FAVOURABLE</span>';
                 } else {
-                    badgeHTML = ' <span class="badge badge-danger" style="font-size:10px;">BELOW MEDIAN</span>';
+                    badgeHTML = ' <span class="badge badge-danger" style="font-size:10px;">UNFAVOURABLE</span>';
                 }
             }
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:13px;">' +
