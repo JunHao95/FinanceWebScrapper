@@ -205,63 +205,64 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 
 ### Financial Health Score
 
-- [ ] **FHLTH-01**: User can see a composite financial health grade (A–F) for each ticker on its stock card
-- [ ] **FHLTH-02**: User can see the four component sub-scores (liquidity, leverage, profitability, growth) that make up the overall grade
-- [ ] **FHLTH-03**: User can see a brief explanation of what drove the grade (e.g., "strong ROE offset by high debt/equity")
-- [ ] **FHLTH-04**: Score degrades gracefully when any single component is missing — partial score shown with a warning flag
+- [x] **FHLTH-01**: User can see a composite financial health grade (A–F) for each ticker on its stock card
+- [x] **FHLTH-02**: User can see the four component sub-scores (liquidity, leverage, profitability, growth) that make up the overall grade
+- [x] **FHLTH-03**: User can see a brief explanation of what drove the grade (e.g., "strong ROE offset by high debt/equity")
+- [x] **FHLTH-04**: Score degrades gracefully when any single component is missing — partial score shown with a warning flag
 
 ### Earnings Quality
 
-- [ ] **QUAL-01**: User can see an earnings quality label (High / Medium / Low) for each ticker
-- [ ] **QUAL-02**: User can see the accruals ratio (Net Income − OCF) / Total Assets displayed numerically
-- [ ] **QUAL-03**: User can see the cash conversion ratio (OCF / Net Income) displayed numerically
-- [ ] **QUAL-04**: User can see an earnings consistency flag (Consistent / Volatile) based on EPS growth stability
-- [ ] **QUAL-05**: Quality label degrades gracefully to "Insufficient Data" when OCF or Net Income is unavailable
+- [x] **QUAL-01**: User can see an earnings quality label (High / Medium / Low) for each ticker
+- [x] **QUAL-02**: User can see the accruals ratio (Net Income − OCF) / Total Assets displayed numerically
+- [x] **QUAL-03**: User can see the cash conversion ratio (OCF / Net Income) displayed numerically
+- [x] **QUAL-04**: User can see an earnings consistency flag (Consistent / Volatile) based on EPS growth stability
+- [x] **QUAL-05**: Quality label degrades gracefully to "Insufficient Data" when OCF or Net Income is unavailable
 
 ### DCF Valuation
 
-- [ ] **DCF-01**: User can see an intrinsic value estimate (price per share) derived from FCF
-- [ ] **DCF-02**: User can see whether the stock is trading at a premium or discount vs. the DCF estimate, expressed as a percentage
-- [ ] **DCF-03**: User can see the key assumptions (FCF growth rate, terminal growth rate, WACC) displayed alongside the estimate
-- [ ] **DCF-04**: User can override default growth and WACC assumptions via input fields and recalculate without re-scraping
-- [ ] **DCF-05**: Module displays "DCF unavailable — FCF data missing" if Alpha Vantage FCF is absent or zero
+- [x] **DCF-01**: User can see an intrinsic value estimate (price per share) derived from FCF
+- [x] **DCF-02**: User can see whether the stock is trading at a premium or discount vs. the DCF estimate, expressed as a percentage
+- [x] **DCF-03**: User can see the key assumptions (FCF growth rate, terminal growth rate, WACC) displayed alongside the estimate
+- [x] **DCF-04**: User can override default growth and WACC assumptions via input fields and recalculate without re-scraping
+- [x] **DCF-05**: Module displays "DCF unavailable — FCF data missing" if Alpha Vantage FCF is absent or zero
 
 ### Peer Comparison
 
-- [ ] **PEER-01**: User can see the ticker's P/E, P/B, ROE, and operating margin ranked as a percentile against 5–10 sector peers
-- [ ] **PEER-02**: User can see which sector peer group was used (e.g., "Technology — comparable group")
-- [ ] **PEER-03**: User can see a visual above/below-median indicator for each of the four metrics
-- [ ] **PEER-04**: User can toggle a "Show peers" control to reveal the raw peer data table
-- [ ] **PEER-05**: Module displays "Peer data unavailable" and hides percentile rows if Finviz peer fetch fails or times out
+- [x] **PEER-01**: User can see the ticker's P/E, P/B, ROE, and operating margin ranked as a percentile against 5–10 sector peers
+- [x] **PEER-02**: User can see which sector peer group was used (e.g., "Technology — comparable group")
+- [x] **PEER-03**: User can see a visual above/below-median indicator for each of the four metrics
+- [x] **PEER-04**: User can toggle a "Show peers" control to reveal the raw peer data table
+- [x] **PEER-05**: Module displays "Peer data unavailable" and hides percentile rows if Finviz peer fetch fails or times out
 
 ## v2.1 Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FHLTH-01 | Phase 13: Financial Health Score | Pending |
-| FHLTH-02 | Phase 13: Financial Health Score | Pending |
-| FHLTH-03 | Phase 13: Financial Health Score | Pending |
-| FHLTH-04 | Phase 13: Financial Health Score | Pending |
-| QUAL-01 | Phase 14: Earnings Quality | Pending |
-| QUAL-02 | Phase 14: Earnings Quality | Pending |
-| QUAL-03 | Phase 14: Earnings Quality | Pending |
-| QUAL-04 | Phase 14: Earnings Quality | Pending |
-| QUAL-05 | Phase 14: Earnings Quality | Pending |
-| DCF-01 | Phase 15: DCF Valuation | Pending |
-| DCF-02 | Phase 15: DCF Valuation | Pending |
-| DCF-03 | Phase 15: DCF Valuation | Pending |
-| DCF-04 | Phase 15: DCF Valuation | Pending |
-| DCF-05 | Phase 15: DCF Valuation | Pending |
-| PEER-01 | Phase 16: Peer Comparison | Pending |
-| PEER-02 | Phase 16: Peer Comparison | Pending |
-| PEER-03 | Phase 16: Peer Comparison | Pending |
-| PEER-04 | Phase 16: Peer Comparison | Pending |
-| PEER-05 | Phase 16: Peer Comparison | Pending |
+| FHLTH-01 | Phase 13: Financial Health Score | Complete |
+| FHLTH-02 | Phase 13: Financial Health Score | Complete |
+| FHLTH-03 | Phase 13: Financial Health Score | Complete |
+| FHLTH-04 | Phase 13: Financial Health Score | Complete |
+| QUAL-01 | Phase 14: Earnings Quality | Complete |
+| QUAL-02 | Phase 14: Earnings Quality | Complete |
+| QUAL-03 | Phase 14: Earnings Quality | Complete |
+| QUAL-04 | Phase 14: Earnings Quality | Complete |
+| QUAL-05 | Phase 14: Earnings Quality | Complete |
+| DCF-01 | Phase 15: DCF Valuation | Complete |
+| DCF-02 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| DCF-03 | Phase 15: DCF Valuation | Complete |
+| DCF-04 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| DCF-05 | Phase 15: DCF Valuation | Complete |
+| PEER-01 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| PEER-02 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| PEER-03 | Phase 16: Peer Comparison | Complete |
+| PEER-04 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| PEER-05 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
 
 **v2.1 Coverage:**
 - v2.1 requirements: 19 total
 - Mapped to phases: 19
 - Unmapped: 0 ✓
+- Gap closure: DCF-02, DCF-04, PEER-01, PEER-02, PEER-04, PEER-05 reassigned to Phase 17
 
 ---
 *Requirements defined: 2026-03-03*

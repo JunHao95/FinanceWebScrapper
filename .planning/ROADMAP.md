@@ -33,6 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Earnings Quality** - Accruals ratio, cash conversion, and consistency flag per ticker card using scraped OCF/EPS, no new network calls (completed 2026-03-22)
 - [x] **Phase 15: DCF Valuation** - FCF-based intrinsic value estimate with user-overridable WACC/growth inputs, recalculates without re-scraping (completed 2026-03-25)
 - [x] **Phase 16: Peer Comparison** - Percentile ranks for P/E, P/B, ROE, and operating margin vs. 5–10 sector peers fetched from Finviz with a 30-minute in-memory TTL cache (completed 2026-03-27)
+- [ ] **Phase 17: Bug Fixes — Re-scrape & DCF Badge** - Fix peer section silently empty on re-scrape (BREAK-01) and stale DCF premium badge after Recalculate (BREAK-02); update REQUIREMENTS.md v2.1 docs (gap closure from v2.1 audit)
 
 ## Phase Details
 
@@ -205,6 +206,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 14. Earnings Quality | 2/3 | Complete    | 2026-03-22 |
 | 15. DCF Valuation | 1/2 | Complete    | 2026-03-26 |
 | 16. Peer Comparison | 3/3 | Complete    | 2026-04-05 |
+| 17. Bug Fixes — Re-scrape & DCF Badge | 0/1 | Not started | - |
 
 ### Phase 10: chatbot-integration
 **Goal**: Integrate a chatbot in the FinanceWebScrapper web and having QuantAssisant agent residing in the chatbot
@@ -335,3 +337,17 @@ Plans:
 - [ ] 16-01-PLAN.md — Backend: extend FinvizScraper.get_peer_data + /api/peers route with sector TTL cache + pytest scaffold (PEER-05)
 - [ ] 16-02-PLAN.md — Frontend: peerComparison.js async module + displayManager/index.html wiring (PEER-01, PEER-02, PEER-03, PEER-04, PEER-05)
 - [ ] 16-03-PLAN.md — Human verify checkpoint: browser end-to-end checks (PEER-01 through PEER-05)
+
+### Phase 17: Bug Fixes — Re-scrape & DCF Badge
+**Goal**: Peer comparison section renders correctly on re-scrape of the same ticker; DCF recalculate shows exactly one premium/discount badge; all 19 v2.1 requirements marked Complete in documentation.
+**Depends on**: Phase 16
+**Requirements**: PEER-01, PEER-02, PEER-03, PEER-04, PEER-05, DCF-02, DCF-04
+**Gap Closure**: Closes BREAK-01 and BREAK-02 from v2.1 audit
+**Success Criteria** (what must be TRUE):
+  1. Scraping the same ticker twice in one session shows the peer comparison section both times — no silent skip on second scrape.
+  2. Clicking Recalculate in the DCF section shows exactly one premium/discount badge (not two stale + fresh side-by-side).
+  3. All 19 v2.1 requirements in REQUIREMENTS.md are marked `[x] Complete`.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 17-01-PLAN.md — Fix BREAK-01 (clearSession in stockScraper.js) + BREAK-02 (single DCF badge in dcfValuation.js) + REQUIREMENTS.md docs update (PEER-01 through PEER-05, DCF-02, DCF-04)
