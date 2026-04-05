@@ -13,3 +13,11 @@
 - **Do NOT push to `origin main` without explicit approval from the user.**
   - After merging to local `main`, stop and ask: "Merged into local `main` — please confirm you're ready to push to `origin/main`."
   - Only run `git push origin main` after the user confirms.
+
+## README Updates
+
+- **Before every commit that introduces a new feature or bug fix, update `README.md`** to reflect the change.
+  - For new features: add a brief description under the relevant section (e.g. Features, Usage) capturing what was added and why it matters.
+  - For bug fixes: update any affected documentation (e.g. known limitations, usage notes) if the fix changes observable behavior.
+  - Keep updates concise — one to three sentences is usually enough to capture the essence.
+- Do NOT commit feature/fix code without first staging the `README.md` update alongside it.
