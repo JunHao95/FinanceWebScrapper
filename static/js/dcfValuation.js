@@ -151,14 +151,14 @@
             headerLabel = '\uD83D\uDCB0 DCF Value: ($' + equityTotalB + 'B equity)  \u25BC';
         }
 
-        // Premium / discount badge
-        let premiumHTML = '';
+        // Premium / discount badge — single source of truth in named div (BREAK-02 fix)
+        let badgeInnerHTML = '';
         if (result.premium !== null) {
-            const isDiscount   = result.premium < 0;
-            const badgeClass   = isDiscount ? 'badge-success' : 'badge-danger';
-            const sign         = isDiscount ? '' : '+';
-            const label        = isDiscount ? 'Discount' : 'Premium';
-            premiumHTML =
+            const isDiscount = result.premium < 0;
+            const badgeClass  = isDiscount ? 'badge-success' : 'badge-danger';
+            const sign        = isDiscount ? '' : '+';
+            const label       = isDiscount ? 'Discount' : 'Premium';
+            badgeInnerHTML =
                 '<div class="metric-item">' +
                 '<span class="metric-label">vs Current Price</span>' +
                 '<span class="metric-value">' +
@@ -199,8 +199,7 @@
             // Collapsible body
             '<div class="dcf-body">' +
             intrinsicRow +
-            premiumHTML +
-            '<div id="dcf-premium-' + ticker + '" style="display:none;"></div>' +
+            '<div id="dcf-premium-' + ticker + '">' + badgeInnerHTML + '</div>' +
             fcfNote +
             // Assumption inputs
             '<div class="metric-item" style="flex-wrap:wrap;gap:4px;align-items:center;">' +

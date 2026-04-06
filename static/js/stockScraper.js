@@ -183,6 +183,12 @@ const StockScraper = {
         // Display CNN metrics
         DisplayManager.displayCnnMetrics(result.cnn_data);
 
+        // Clear deep-analysis module session caches before rebuilding cards (BREAK-01 fix)
+        if (typeof HealthScore !== 'undefined')     HealthScore.clearSession();
+        if (typeof EarningsQuality !== 'undefined') EarningsQuality.clearSession();
+        if (typeof DCFValuation !== 'undefined')    DCFValuation.clearSession();
+        if (typeof PeerComparison !== 'undefined')  PeerComparison.clearSession();
+
         // Clear ticker results
         const tickerResultsDiv = document.getElementById('tickerResults');
         tickerResultsDiv.innerHTML = '';
