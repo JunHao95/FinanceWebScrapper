@@ -248,15 +248,15 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 | QUAL-04 | Phase 14: Earnings Quality | Complete |
 | QUAL-05 | Phase 14: Earnings Quality | Complete |
 | DCF-01 | Phase 15: DCF Valuation | Complete |
-| DCF-02 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| DCF-02 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Complete |
 | DCF-03 | Phase 15: DCF Valuation | Complete |
-| DCF-04 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| DCF-04 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Complete |
 | DCF-05 | Phase 15: DCF Valuation | Complete |
-| PEER-01 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
-| PEER-02 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| PEER-01 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Complete |
+| PEER-02 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Complete |
 | PEER-03 | Phase 16: Peer Comparison | Complete |
-| PEER-04 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
-| PEER-05 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Pending |
+| PEER-04 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Complete |
+| PEER-05 | Phase 17: Bug Fixes — Re-scrape & DCF Badge | Complete |
 
 **v2.1 Coverage:**
 - v2.1 requirements: 19 total
