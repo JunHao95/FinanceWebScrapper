@@ -26,12 +26,16 @@ Every completed MFE module becomes a working, interactive demo that a recruiter 
 - ✓ Chatbot widget with QuantAssistant + FinancialAnalyst personas — v2.0/Phase 10–10.1
 - ✓ Chatbot context wired to scraped page data — v2.0/Phase 12
 
+### Validated
+
+- ✓ Financial Health Score: A–F composite grade (liquidity, leverage, profitability, growth) — v2.1/Phase 13
+- ✓ Earnings Quality: accruals ratio, cash conversion, consistency flag per ticker — v2.1/Phase 14
+- ✓ DCF Valuation: FCF-based intrinsic value estimate with user-overridable WACC/growth inputs — v2.1/Phase 15
+- ✓ Peer Comparison: percentile ranks for P/E, P/B, ROE, operating margin vs. 5–10 sector peers from Finviz — v2.1/Phase 16
+
 ### Active
 
-- [ ] Financial Health Score: A–F composite grade (liquidity, leverage, profitability, growth) displayed on each ticker card
-- [ ] Earnings Quality: accruals ratio, cash conversion, consistency flag per ticker
-- [ ] DCF Valuation: FCF-based intrinsic value estimate with user-overridable WACC/growth inputs
-- [ ] Peer Comparison: percentile ranks for P/E, P/B, ROE, operating margin vs. 5–10 sector peers from Finviz
+- [ ] Trading Indicators sub-tab: per-ticker 2×2 grid (Liquidity Sweep, Order Flow, Anchored VWAP, Volume Profile) with composite bias signal
 
 ### Out of Scope
 
@@ -64,15 +68,16 @@ Every completed MFE module becomes a working, interactive demo that a recruiter 
 | Validate model results before shipping | Showcase app must be correct, not just functional | — Pending |
 | Python backend for all models | MFE work is Python-native, keeps implementation authentic | — Pending |
 
-## Current Milestone: v2.1 Deeper Stock Analysis
+## Current Milestone: v2.2 Trading Indicators
 
-**Goal:** Expand each stock card with a "Deep Analysis" group containing four new analysis modules — financial health grading, earnings quality scoring, DCF intrinsic value estimation, and peer percentile comparison.
+**Goal:** Add a Trading Indicators sub-tab to the Analysis Results tab showing per-ticker technical analysis across four indicator modules — Liquidity Sweep, Order Flow, Anchored VWAP, and Volume Profile — with a composite bullish/bearish/neutral bias signal.
 
 **Target features:**
-- Financial Health Score (A–F grade from liquidity, leverage, profitability, growth)
-- Earnings Quality (accruals ratio, cash conversion, consistency flag)
-- DCF Valuation (FCF-based intrinsic value with user-overridable WACC/growth)
-- Peer Comparison (percentile ranks vs. sector peers from Finviz)
+- Liquidity Sweep (swept swing highs/lows detection + signal label)
+- Order Flow (buy/sell pressure delta, volume divergence, imbalance candle detection)
+- Anchored VWAP (auto-anchors to 52-wk high/low/earnings + custom anchor input)
+- Volume Profile (POC/VAH/VAL levels + horizontal histogram)
+- Composite bias signal with one-line rationale per ticker
 
 ---
-*Last updated: 2026-03-22 after v2.1 milestone start*
+*Last updated: 2026-04-08 after v2.2 milestone start*

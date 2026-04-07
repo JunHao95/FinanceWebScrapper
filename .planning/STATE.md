@@ -1,45 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Milestone — Deeper Stock Analysis
-status: verifying
-stopped_at: Phase 17 context gathered
-last_updated: "2026-04-06T17:30:11.217Z"
-last_activity: 2026-03-22 — Plan 13-01 executed; healthScore.js created and wired into displayManager, stockScraper, index.html
+milestone: v2.2
+milestone_name: Milestone — Trading Indicators
+status: defining requirements
+stopped_at: Milestone v2.2 started
+last_updated: "2026-04-08T00:00:00.000Z"
+last_activity: 2026-04-08 — Milestone v2.2 started
 progress:
-  total_phases: 18
-  completed_phases: 17
-  total_plans: 39
-  completed_plans: 39
-  percent: 25
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
-**Current focus:** Phase 13 — Financial Health Score (v2.1 milestone start)
+**Current focus:** Milestone v2.2 — Trading Indicators (defining requirements)
 
 ## Current Position
 
-Phase: 13 — Financial Health Score (in progress)
-Plan: 13-01 complete, 13-02 pending (human verification checkpoint)
-Status: Wave 1 complete — awaiting human verify checkpoint (Plan 13-02)
-Last activity: 2026-03-22 — Plan 13-01 executed; healthScore.js created and wired into displayManager, stockScraper, index.html
-
-Progress: [██░░░░░░░░] 25%  (v2.1 phases: 0 of 4 complete; Phase 13 in progress)
-
-## v2.1 Phase Overview
-
-| Phase | Name | Requirements | Status |
-|-------|------|--------------|--------|
-| 13 | Financial Health Score | FHLTH-01..04 | Not started |
-| 14 | Earnings Quality | QUAL-01..05 | Not started |
-| 15 | DCF Valuation | DCF-01..05 | Not started |
-| 16 | Peer Comparison | PEER-01..05 | Not started |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-08 — Milestone v2.2 started
 
 ## Performance Metrics
 
