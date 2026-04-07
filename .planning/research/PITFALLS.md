@@ -1,168 +1,267 @@
 # Domain Pitfalls
 
-**Domain:** MFE showcase web app — stochastic financial models + ML in finance
-**Researched:** 2026-03-03
-**Confidence:** HIGH (based on direct code review of all WIP modules + domain expertise)
+**Domain:** Trading Indicators sub-tab — Liquidity Sweep, Order Flow, Anchored VWAP, Volume Profile, Composite Bias
+**Researched:** 2026-04-07
+**Confidence:** HIGH (derived from indicator mathematics, OHLCV constraints, existing codebase patterns, and Plotly rendering characteristics specific to this system)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, recruiter embarrassment, or model invalidity.
+Mistakes that cause misleading signals, silent wrong outputs, or rewrites.
 
 ---
 
-### Pitfall 1: Transition Matrix Rows That Don't Sum to One After Custom Input
+### Pitfall 1: Look-Ahead Bias in Swing High/Low Detection (Liquidity Sweep)
 
-**What goes wrong:** `credit_transitions.py` normalises `SP_TRANSITION_MATRIX` on load, but the `custom_matrix` path in `credit_risk_analysis()` passes an external matrix straight through without re-normalisation. A recruiter entering a custom transition matrix with rounding error (e.g., rows summing to 0.999) will get probabilities that silently drift — default probabilities become slightly wrong and the survival curve dips below or above 1. This is immediately visible if anyone checks the numbers against a textbook.
+**What goes wrong:** The standard n-bar swing detection algorithm marks a candle as a swing high if it is the highest close (or high) among the N bars before AND after it. On historical data this is fine — the "N bars after" are already known. But when this same function is called on live/current data (or the tail of a lookback window), the current bar does not yet have N confirmed bars after it. The swing point is only confirmed N bars later, but the code may flag it as confirmed on the current bar.
 
-**Why it happens:** Normalisation is applied once at module load for the hardcoded matrix, but not as a defensive step inside functions that accept external input.
+**Why it happens:** A typical implementation is:
+```python
+for i in range(n, len(highs) - n):
+    if highs[i] == max(highs[i-n:i+n+1]):
+        swing_highs.append(i)
+```
+When called on data that includes today (`i = len-1-n` to `len-1`), the last `n` bars cannot form confirmed swings — but if the loop boundary is written as `range(n, len(highs))` instead, the last bar is evaluated as a swing high using only past data. The result looks confirmed but isn't.
 
-**Consequences:** The n-year matrix power `P^n` computes transition probabilities that don't form a proper stochastic matrix. Survival curves become non-monotone. A quant recruiter spotting a survival probability that increases over time will not ask a follow-up question — they will close the tab.
+**Consequences:** A "swept" liquidity zone may be reported as confirmed when the sweep candle is actually the most recent candle — the very candle we are trying to signal on. This is not a display artifact; it means the signal is generated using future information in any backtesting context, and in a live display the swing is not yet confirmed. The composite bias signal will misfire.
 
-**Warning signs:**
-- Survival curve values > 1.0 or non-monotone
-- Default probability at year 30 less than year 10 for the same rating
-- Any row of an n-year transition matrix summing to something other than 1.0
+**Detection:** Check whether `swing_detection` loop upper bound is `len(data)` (wrong — look-ahead on tail) or `len(data) - n` (correct — only n-confirmed swings).
 
 **Prevention:**
-- Add a `_validate_transition_matrix(P)` helper that asserts rows sum to 1 (within 1e-6) and all entries are in [0,1]. Call it at the top of every function accepting a matrix parameter.
-- Normalise the custom matrix before use, and surface a warning if normalisation correction exceeded 1%.
+- Enforce `range(n, len(highs) - n)` as the loop range so the last `n` bars are never flagged as swings.
+- Treat the most recent n bars as "pending confirmation" — do not include any bar in `swing_highs` or `swing_lows` unless there are at least `n` confirmed bars after it.
+- In the UI, display the "last confirmed swing" date separately from the current date. If the last confirmed swing is more than `n` bars old, state "no recent confirmed swing."
+- Add a test: fetch 90 days of data, detect swings, then fetch 91 days. No swing index should shift backward on the original 90 bars. If it does, look-ahead is present.
 
-**Phase:** Stochastic Models validation pass (before frontend wiring is considered complete).
+**Phase:** Backend swing detection implementation — validate before wiring to composite signal.
 
 ---
 
-### Pitfall 2: Heston "Little Heston Trap" — Branch Cut Discontinuity in the Characteristic Function
+### Pitfall 2: "Swept" vs. "Approaching" Liquidity Zones Are Not Distinguished (Liquidity Sweep)
 
-**What goes wrong:** The Heston CF implementation in `fourier_pricer.py` uses the Albrecher et al. (2007) numerically stable reparameterisation, which is correct. However, the `_compute_p1_p2` quadrature integrates from `1e-5` to `500.0`. For long maturities (T > 2 years) or deep OTM options, the integrand oscillates rapidly and the upper bound of 500 may be insufficient — the quadrature silently under-integrates, producing a price that is too low. This is undetectable without a benchmark comparison.
+**What goes wrong:** A liquidity sweep is not just the price reaching a prior swing level — it requires a close *beyond* the swing level followed by a reversal. A common implementation only checks whether the current high exceeded the prior swing high, marking it as "swept." But a candle that closes above the swing high and continues higher is a breakout, not a sweep. A sweep requires the close to return below the swing high by candle close (on daily data).
 
-**Why it happens:** The integration limit is fixed at 500. The Carr-Madan and Gil-Pelaez formulations require the integrand to have decayed to near-zero at the truncation point. For extreme parameters or long maturities, convergence is slower.
+**Why it happens:** The sweep condition check is written as `current_high > prior_swing_high` rather than `current_high > prior_swing_high AND current_close < prior_swing_high`.
 
-**Consequences:** Heston call prices that are below Black-Scholes intrinsic value for long-dated options, or that violate put-call parity by a visible margin. Any recruiter running `C - P = S - K*exp(-rT)` mentally will notice.
-
-**Warning signs:**
-- `P1 < P2` when the stock is far above the strike (a theoretical violation)
-- Call price below intrinsic value `max(S - K*exp(-rT), 0)` for short maturities
-- Large discrepancy between Heston price and BS price when vol-of-vol is small (they should converge as `sigma_v → 0`)
+**Consequences:** Breakout candles are flagged as sweeps. The signal fires on every momentum breakout and produces false bullish-reversal signals during trending markets. A viewer comparing the chart to price action will immediately see sweep labels on straight-up rallies.
 
 **Prevention:**
-- Add an integration limit adaptive strategy: for T > 1 year, increase to 1000; for T > 5, increase to 2000.
-- Add a post-price sanity check: assert `call >= max(S - K*exp(-rT), 0)` (intrinsic value floor) and assert put-call parity holds to within 0.01% of spot price.
-- Benchmark against Black-Scholes at `sigma_v = 0.001` (near-zero vol-of-vol); Heston should converge to BS.
+- For a bullish sweep (sweep of lows, then reversal): `current_low < prior_swing_low AND current_close > prior_swing_low`.
+- For a bearish sweep (sweep of highs, then reversal): `current_high > prior_swing_high AND current_close < prior_swing_high`.
+- Display the sweep candle with a distinct label ("Swept High" / "Swept Low") and the prior swing level as a horizontal reference line on the chart, so the user can visually verify the close-back-below condition.
 
-**Phase:** Fourier pricing validation (required before the UI demo is shown to anyone).
+**Phase:** Backend liquidity sweep logic — core correctness check before any UI wiring.
 
 ---
 
-### Pitfall 3: MSE Calibration Without Relative Weighting — Deep ITM Options Dominate
+### Pitfall 3: Order Flow Proxy Direction Is Ambiguous Without Tick Data (Order Flow)
 
-**What goes wrong:** Both `HestonCalibrator` and `MertonCalibrator` minimise raw MSE in dollar price terms: `(model_price - market_price)^2`. Deep in-the-money options have large absolute prices (e.g., $50 for AAPL). OTM options are priced at $0.30. The calibration routine will effectively ignore the OTM options entirely, fitting the deep ITM options instead. But OTM options carry the most information about the volatility smile — exactly what Heston was designed to capture.
+**What goes wrong:** On daily OHLCV data there is no bid/ask split and no trade direction. The system must use proxy formulas. The most common proxy is the "close location" or a variant: `delta = (close - low) / (high - low) * volume - (high - close) / (high - close) * volume`. When `high == low` (a doji or halted-session bar), this formula produces a division-by-zero or NaN. If NaN propagates unchecked, cumulative delta calculations silently become NaN for all subsequent bars — the entire order flow chart appears empty with no error message.
 
-**Why it happens:** Absolute dollar MSE is the natural first implementation choice. The flaw is not obvious until you plot model vs. market IV across strikes.
+**Why it happens:** The edge case `high == low` is rare in large-cap US equities but occurs routinely for: newly listed tickers, tickers that hit circuit breakers, halted trading sessions, and any ticker on a day with zero intraday range (theoretical but possible in thin markets). A single NaN in a cumulative sum contaminates all downstream values.
 
-**Consequences:** Calibrated Heston parameters produce an IV smile that looks flat (near-BS behaviour) despite having stochastic vol parameters. A recruiter who knows Heston will ask "why doesn't your surface show a skew?" and the implicit vol surface visualisation will look wrong.
-
-**Warning signs:**
-- Calibrated `theta` (long-run variance) is close to the ATM implied variance but the smile is flat across strikes
-- Moneyness-sorted residuals show systematic over-pricing of OTM options
-- `rho` calibrates to a value near zero despite equities having well-known negative skew
+**Consequences:** The order flow panel renders empty (or shows a flat zero line) with no user-facing explanation. The composite bias signal component from order flow defaults to neutral, silently. The user sees nothing and has no idea whether the data is missing or the calculation failed.
 
 **Prevention:**
-- Use relative MSE: `((model_price - market_price) / market_price)^2`, or weight by vega: errors on high-vega contracts matter more.
-- Alternatively, calibrate to implied volatility differences rather than price differences.
-- At minimum, document the limitation in the UI: "Calibration uses price-MSE; OTM options are weighted by vega in production implementations."
+- Guard against zero range: `delta = ((close - low) / (high - low + 1e-10)) * volume * 2 - volume` — the epsilon avoids division by zero while keeping the formula meaningful.
+- After computing any rolling or cumulative series, assert `not np.isnan(series).any()`. If NaN is found, log the offending bar index and replace with forward-fill or zero, then surface a UI warning: "X bars with zero range were estimated as neutral."
+- Display the number of bars used and the number of bars where range = 0 in a tooltip or footnote.
 
-**Phase:** Model calibration implementation (before exposing calibration UI).
+**Phase:** Backend order flow calculation — add NaN guard before cumulative sum and divergence logic.
 
 ---
 
-### Pitfall 4: Bond Value Formula Uses Undiscounted Coupon Sum
+### Pitfall 4: Volume Divergence Definition Is Ambiguous — Silent Wrong Signal (Order Flow)
 
-**What goes wrong:** In `credit_transitions.py`, the `expected_bond_value()` function computes coupon present value as `coupon_rate * face_value * horizon` — a plain sum with no discounting. This is textbook-wrong: coupons at year 10 are worth less than coupons at year 1. For a 10-year horizon at 5% coupon, this overstates coupon PV by ~25% compared to the correctly discounted sum.
+**What goes wrong:** "Divergence" between price and order flow can mean (a) price makes a new high while cumulative delta is declining, (b) price makes a new high while the current bar's delta is negative, or (c) the rolling correlation of price and delta has changed sign. These produce very different signals on the same data. Implementing (b) is the easiest but most noisy; it will flag nearly every red bar on an up-trending stock as "divergence." The signal name "divergence" will be misleading to any trader who expects the classic definition (a).
 
-**Why it happens:** The docstring even says "(simplified (no discounting))." It was intentionally simplified, but it produces wrong numbers on the UI.
+**Why it happens:** The implementation defaults to the simplest per-bar check rather than the multi-bar divergence structure that the indicator name implies.
 
-**Consequences:** Expected bond values will be systematically too high for longer horizons. Anyone with a fixed income background — which includes virtually every credit quant recruiter — will immediately see that the expected value at year 10 exceeds what the bond should be worth even in the zero-default scenario.
-
-**Warning signs:**
-- Expected bond value at long horizons substantially exceeds `face_value + discounted coupon stream`
-- For the D (default) state the function correctly uses `recovery * face`, but all other states return inflated values
-- Values increase with horizon in a way that doesn't account for time value
+**Consequences:** The divergence signal fires on a large fraction of candles, diluting its value. The composite bias score will be noisy. A user familiar with order flow concepts will immediately notice that "divergence" fires on every single down-close day.
 
 **Prevention:**
-- Replace the coupon sum with a proper annuity formula: `coupon * face * (1 - exp(-r*T)) / r` for continuous discounting, or the standard bond PV formula for discrete.
-- Use a flat discount rate tied to the credit spread of each destination rating.
-- If keeping the simplification for scope reasons, display a prominent note in the UI: "Simplified model: coupons are not discounted. For demonstration only."
+- Use rolling window divergence: detect whether price made a N-bar high while cumulative delta over the same N bars is below its N-bar average. Window size should be parameterised (default: 5 bars).
+- Clearly document and label which definition is in use in the UI tooltip: "Divergence: price N-bar high with declining cumulative delta over same window."
+- Cap divergence signals at no more than one per lookback/5 (i.e., for a 90-day lookback, at most 18 divergence flags). If the algorithm produces more, the definition is too loose.
 
-**Phase:** Credit transitions backend validation (before connecting to frontend).
+**Phase:** Order flow divergence definition — design decision needed before implementation.
 
 ---
 
-### Pitfall 5: HMM Label Switching — Calm and Stressed States May Swap Between Runs
+### Pitfall 5: Anchored VWAP With Insufficient History Produces Meaningless or Misleading Values (Anchored VWAP)
 
-**What goes wrong:** `RegimeDetector._unpack_params()` determines which state is "calm" by comparing `sigma` values after optimisation (`calm_idx = np.argmin(self.sigma)`). This works if optimisation is stable, but with 5 random restarts, the optimiser may converge to a solution where state indices have swapped but the log-likelihood is equivalent. The `current_regime` label in results could say "calm" when the market is in the high-volatility state, or vice versa, depending on which restart happened to produce the best `res.success`.
+**What goes wrong:** Anchored VWAP is only meaningful when sufficient bars exist after the anchor. If the user requests a 30-day lookback and the anchor is the 52-week high, but the 52-week high occurred 200 trading days ago, the VWAP anchor date is outside the lookback window — no data is fetched for the anchor period, the VWAP starts at an arbitrary point near the left edge of the chart, and it purports to represent "VWAP since 52-week high" when it actually represents "VWAP since the start of the downloaded data."
 
-**Why it happens:** Gaussian HMMs have a label-switching problem — the likelihood is invariant to permutation of state labels. The post-fit relabelling by sigma magnitude (`argmin`) is the right fix, but only works reliably if the fitted sigmas are clearly ordered. When `sigma[0] ≈ sigma[1]` (ambiguous regime), the label assignment is arbitrary.
+This produces two sub-failures:
+1. **Silent truncation:** The anchor date is older than the fetched data; the VWAP is computed from the oldest available bar, not the true anchor.
+2. **Missing anchor entirely:** The 52-week high is within the fetched window but falls on a day with no volume data (e.g., a split-adjusted data artifact), causing the anchor to silently shift to the next available bar.
 
-**Consequences:** The UI shows "RISK_ON" during the 2020 COVID crash or "RISK_OFF" during a bull run, which is exactly the kind of catastrophic embarrassment that kills a demo.
+**Why it happens:** The data fetch uses the user-selected lookback (`30/90/180/365 days`) rather than fetching from the anchor date regardless of lookback. The anchor date is derived from yfinance `history()` which is already truncated to the lookback window.
 
-**Warning signs:**
-- Annualised `sigma` for "stressed" state is only slightly larger than "calm"
-- Historical stress fraction is outside the range 15-35% (for typical equity series, stressed periods should represent roughly 20-30% of time)
-- Regime sequence shows very frequent alternation (multiple regime switches per week)
+**Consequences:** VWAP from a truncated anchor drifts toward the current close because it accumulates fewer bars. It gives the appearance of a strong support/resistance level that doesn't actually reflect volume-weighted price since the true anchor. The signal label says "VWAP from 52-wk High" but the number is wrong.
 
 **Prevention:**
-- After fitting, enforce the convention `mu[calm] > mu[stressed]` as a secondary sort criterion in addition to `sigma`. Both conditions should hold simultaneously for a valid calm/stressed decomposition.
-- Add a confidence check: if `abs(sigma[calm] - sigma[stressed]) / sigma[stressed] < 0.2`, mark the result as "ambiguous regime" rather than making a firm RISK_ON/RISK_OFF call.
-- Validate on known periods: SPY 2020-03 should be stressed, 2021-07 should be calm.
+- Always fetch data from `max(anchor_date - 5 trading days, lookback_start_date)` as a minimum, but for VWAP anchors specifically, fetch from `min(anchor_date, today - 365)` regardless of the user's lookback selection. The chart can still display only the selected lookback window, but VWAP computation must start from the true anchor.
+- After computing VWAP, emit metadata: `{"anchor_date": "2024-03-15", "anchor_bar_index": 47, "bars_used_for_vwap": 183}`. If `anchor_bar_index == 0` (anchor fell on or before the first downloaded bar), surface a warning: "52-wk High anchor pre-dates available history. VWAP starts from earliest available date."
+- If the anchor date cannot be found in the fetched data (because it predates the history), explicitly state "Anchor outside selected window" rather than silently computing from an incorrect starting point.
 
-**Phase:** Regime detection validation (before UI display of signals).
+**Phase:** Backend VWAP anchor resolution — requires separate data fetch logic before computation.
 
 ---
 
-### Pitfall 6: CIR Feller Condition Violation Produces Negative Rates in Simulation (Not Caught in Closed-Form Path)
+### Pitfall 6: Multiple VWAP Lines Collide Visually and All Show As Identical Near Current Price (Anchored VWAP)
 
-**What goes wrong:** The closed-form CIR bond price function in `interest_rate_models.py` does not break when the Feller condition `2κθ > σ²` is violated — it returns a mathematically valid (but economically wrong) price because the formula is still defined. The CIR calibrator applies a Feller penalty of `10.0` in the objective, but after Nelder-Mead and parameter clipping, the returned parameters may still violate Feller. The UI reports `feller_condition_satisfied: False` but does not block the yield curve from being shown, meaning a user can generate and present a "CIR yield curve" from a parameterisation that, in the simulation domain, allows negative interest rates — which the CIR model was explicitly designed to prevent.
+**What goes wrong:** When three VWAP anchors (52-wk high, 52-wk low, earnings date) are all plotted on the same Plotly chart with a 30-day lookback, all three VWAPs will converge toward the current close price at the right edge of the chart. This is mathematically expected — VWAP computed over the last 30 bars will accumulate similarly regardless of which anchor it started from (if the anchor predates the window). The chart shows three nearly-identical lines on top of the price series, which looks broken to the user.
 
-**Why it happens:** The closed-form solution doesn't enforce Feller (it's a constraint on simulation behaviour, not the closed-form formula). The penalty in calibration is soft, not a hard constraint.
+**Why it happens:** The convergence is a feature of VWAP mathematics when the anchor is far in the past relative to the chart window. But the UI renders all three lines without explaining the convergence.
 
-**Consequences:** A recruiter who knows CIR theory will immediately ask "does this satisfy the Feller condition?" and the answer displayed in the UI will be "No." This invalidates the model's key advantage over Vasicek. It signals the student doesn't understand *why* CIR matters.
-
-**Warning signs:**
-- `feller_condition_satisfied: False` in calibration output
-- `kappa` is very small relative to `sigma^2 / (2 * theta)`
-- Calibrated short-end of the yield curve exhibits unusual curvature
+**Consequences:** The user sees three overlapping VWAP lines, cannot distinguish them, and concludes the implementation is wrong or the chart is broken. The visual adds noise rather than insight.
 
 **Prevention:**
-- During calibration, use hard parameter bounds that enforce Feller: `kappa >= sigma^2 / (2 * theta) + epsilon` at each evaluation step, or reparametrise as `kappa = sigma^2 / (2*theta) + exp(alpha)`.
-- In the UI, if Feller is violated, display a warning banner: "These parameters violate the Feller condition. In Monte Carlo simulation, negative rates would occur. Results shown are from the closed-form formula only."
-- Show the Feller ratio `2κθ / σ²` as a named metric so the user can see how close to the boundary the calibration landed.
+- Differentiate lines with distinct colors and dashed/dotted/solid styles, not just color alone.
+- Add a `distance_from_vwap_pct` label next to each line at the right edge: "52wk High VWAP: $183.40 (+2.1%)".
+- If two VWAP lines are within 0.3% of each other at the current price, show a note: "52-wk High and Earnings VWAPs are converged — treating as single level." This turns a visual bug into an informative observation.
+- For the 30-day lookback, hide anchors whose date precedes the lookback window start entirely, with a label: "Earnings VWAP: anchor outside 30-day window."
 
-**Phase:** CIR/interest rate model validation.
+**Phase:** Frontend VWAP chart rendering — line differentiation and convergence handling.
 
 ---
 
-### Pitfall 7: Calibration Latency Makes the Demo Appear Broken
+### Pitfall 7: Volume Profile Bin Count Sensitivity — Results Differ Dramatically Across Bin Counts (Volume Profile)
 
-**What goes wrong:** Heston calibration fetches a live options chain (yfinance API call), then runs a brute-force grid search over a 5-dimensional parameter space (`slice(0.1, 10.0, 2.5)` × `slice(0.01, 0.50, 0.12)` × ...) before Nelder-Mead. Each grid point evaluates Fourier integrals for up to 40 contracts. This can take 60-120 seconds on commodity hardware. The current JS frontend shows a loading spinner but gives no time estimate. A recruiter clicking "Calibrate" and waiting 90 seconds with no feedback will assume the app has crashed.
+**What goes wrong:** The Point of Control (POC) — the price level with the highest traded volume — is highly sensitive to bin count. With 20 bins on a $50 price range, each bin covers $2.50. With 100 bins, each covers $0.50. The POC can shift by several dollars depending on bin count because volume concentrations look different at different resolutions. A 30-day POC at 20 bins might be $183 but at 100 bins might be $185. Neither is "wrong" but they are not equivalent, and presenting one without context misleads the user.
 
-**Why it happens:** The two-stage brute+Nelder-Mead approach is computationally expensive by design (it's thorough). The UX doesn't account for this latency.
+**Why it happens:** Bin count is often hardcoded to a round number. On a 30-day lookback the price range may be $20 (for a $200 stock) — a fixed 50 bins gives $0.40/bin which is reasonable. On a 365-day lookback the range may be $80 — the same 50 bins gives $1.60/bin, dramatically coarser.
 
-**Consequences:** Demo abandonment at the most interesting model. If the recruiter stops before seeing calibration results, the most technically impressive feature is never seen.
-
-**Warning signs:**
-- No progress indicator beyond generic spinner
-- Browser request timeout if latency exceeds the default fetch timeout (typically 300s in some browsers)
-- User clicks "Calibrate" again thinking the first click didn't register, triggering a second expensive computation
+**Consequences:** POC/VAH/VAL levels jump when the user changes the lookback from 30 to 90 days — not because the market structure changed, but because the bin width changed. This looks like a bug.
 
 **Prevention:**
-- Add a server-sent event (SSE) or polling endpoint that streams progress: "Stage 1 grid search: 40%... Stage 2 Nelder-Mead: running..."
-- Alternatively, pre-compute calibration for 2-3 demo tickers on page load (cached results), with live calibration available as an "advanced" option.
-- Display the expected computation time upfront: "Heston calibration typically takes 30-90 seconds."
-- Add a 90-second client-side timeout with a graceful message, not a silent spinner.
+- Use adaptive bin count: `bins = max(20, min(100, int((price_range / current_price) * 500)))`. This keeps bin width at approximately 0.2% of current price regardless of range.
+- Document the bin width in the output: `{"poc": 183.40, "bin_width_usd": 0.42, "n_bins": 47}`.
+- Display the bin width visually: the horizontal histogram bars should visually represent the price granularity, not be invisible thin lines.
+- For the showcase: fix at 50 bins with a note in the UI — "Volume Profile uses 50 price bins." Consistency across lookbacks is more important for a demo than adaptive precision.
 
-**Phase:** Stochastic models UI integration.
+**Phase:** Backend volume profile computation — bin count decision must be made before any validation.
+
+---
+
+### Pitfall 8: POC/VAH/VAL Are Rendered as Points, Not Zones — Misleads Users (Volume Profile)
+
+**What goes wrong:** POC, VAH, and VAL are typically displayed as horizontal lines on a price chart. Plotly `add_shape` or a scatter trace at a single y-value renders these as hair-thin lines. At normal zoom levels on a 90-day daily chart, these lines are essentially invisible against candlestick bars. Users cannot see the levels that are supposed to be the primary output of the indicator.
+
+**Why it happens:** The natural implementation draws a horizontal line at `y = poc_price` with `line_width=1`, which renders at 1-2 pixels in most browsers.
+
+**Consequences:** The Volume Profile panel appears to have no visible output. A recruiter who doesn't know to zoom in will see only the histogram and wonder why there are no level markers.
+
+**Prevention:**
+- Use filled rectangles (`add_shape` with `type='rect'`, height = ±0.25% of the POC price) rather than lines. This gives the level visual thickness.
+- Alternatively, use Plotly `add_hline` with `line_width=2` and `annotation_text="POC"` — the annotation ensures the level is always labeled.
+- Use distinct colors: POC = red, VAH = green, VAL = blue, consistent across the app.
+- Ensure the horizontal histogram is rendered as a separate Plotly subplot axis (not overlaid on the price axis) — overlaying a horizontal histogram on a vertical price axis is a common Plotly layout mistake that causes the histogram to appear rotated incorrectly.
+
+**Phase:** Frontend Volume Profile chart layout — Plotly subplot configuration.
+
+---
+
+### Pitfall 9: Horizontal Volume Histogram Requires a Second X-Axis, Not a Second Y-Axis (Volume Profile)
+
+**What goes wrong:** A volume profile histogram is a horizontal bar chart where price is on the Y axis and volume is on the X axis. Rendering it alongside a price chart in the same Plotly subplot is non-trivial because the price chart uses date as X and price as Y. The naive approach adds volume as a second Y-axis trace, producing a vertical bar chart (volume vs. date) rather than a horizontal histogram (price vs. volume).
+
+**Why it happens:** Plotly's default multi-axis support is `yaxis2` for a second Y axis. Adding a trace with `yaxis='y2'` and expecting it to behave as a horizontal histogram requires explicit use of `type='bar'` with `orientation='h'` and a dedicated `xaxis2` pointing right-to-left. This is non-obvious and undocumented in most tutorial examples.
+
+**Consequences:** The volume profile appears as a standard vertical volume bar chart at the bottom of the price chart — indistinguishable from the regular volume subplot every charting package shows. The "horizontal histogram" feature of the volume profile (which is its defining visual) is absent.
+
+**Prevention:**
+- Render the volume profile as a completely separate Plotly subplot using `make_subplots(rows=1, cols=2, column_widths=[0.75, 0.25])`. Price+VWAP on col 1, horizontal histogram on col 2 with `orientation='h'`.
+- Pass `shared_yaxes=True` to `make_subplots` so the price level on the histogram aligns with the price axis on the chart.
+- In the 2×2 grid layout, the Volume Profile quadrant occupies one full cell — use `make_subplots` within that cell or pre-render the combined chart as a single Plotly figure.
+- Test alignment: the POC bar in the histogram must fall at exactly the same Y coordinate as the POC horizontal line on the price chart. Misalignment by even one bin is visually obvious.
+
+**Phase:** Volume Profile Plotly layout — this is a layout architecture decision, not a minor styling fix.
+
+---
+
+### Pitfall 10: Composite Bias Signal Is Overconfident When Indicators Are Computed on the Same Underlying Data (Composite Signal)
+
+**What goes wrong:** The composite bias is presented as "Bullish (3/4 indicators agree)" with the implication that independent evidence is converging. However, Liquidity Sweep, Order Flow, Anchored VWAP, and Volume Profile are all derived from the same OHLCV data for the same ticker over the same lookback window. Their signals are not independent: a strong uptrend will push close > VWAP (VWAP bullish), concentrate volume at higher prices (POC above midpoint = bullish), reduce sell-delta proxies (order flow bullish), and eliminate recent swept lows (liquidity sweep bullish). All four indicators agree in strong trends for the same mechanical reason — not because four separate information sources confirm the same view.
+
+**Why it happens:** The composite signal correctly aggregates the four sub-scores but incorrectly treats agreement as independent confirmation. The design of the composite bias scoring does not account for shared-factor exposure.
+
+**Consequences:** The composite signal will show 4/4 bullish on any strongly trending stock and 4/4 bearish on any strongly declining stock, almost always. This makes the signal a lagging trend-follower dressed up as a multi-indicator confirmation system. A viewer who tests it on a few tickers will notice it is always 4/4 in whatever direction the trend has been going.
+
+**Prevention:**
+- Do not present composite agreement as "probability" or "confidence." Instead label it: "Trend-following bias: X/4 indicators in agreement."
+- Add an explicit caveat in the UI: "All indicators are computed from the same daily OHLCV data. Agreement does not imply independent confirmation."
+- Consider including a counter-signal metric: compute how many indicators are at an extreme (e.g., VWAP distance > 2 standard deviations) and flag "potential mean reversion signal" when all four are at extremes in the same direction.
+- The composite signal is appropriate for demonstrating indicator mechanics; frame it as a teaching tool, not a trading system.
+
+**Phase:** Composite signal design and UI copy — framing decision needed before frontend implementation.
+
+---
+
+### Pitfall 11: Composite Bias Score Defaults to Neutral When Any Indicator Errors, Masking the Failure (Composite Signal)
+
+**What goes wrong:** If Volume Profile computation fails for a ticker (e.g., insufficient data, zero-volume days, yfinance returning a partial series), the composite signal computation receives `None` or an exception for that indicator's score. A defensive implementation replaces the missing score with 0 (neutral). The composite then shows "2/3 bullish" rather than "3/4 bullish" — but does not tell the user that one indicator failed to compute. The composite bias card renders without any warning.
+
+**Why it happens:** Error handling in the backend returns `{"bias": "neutral", "score": 0}` for failed sub-indicators so that the frontend always receives a response. The aggregation logic in the composite function counts non-None scores and computes the ratio, silently ignoring failures.
+
+**Consequences:** A user who notices the composite says "2/3" instead of "3/4" has no way to know whether this means one indicator genuinely disagrees or one indicator errored. For a showcase demo, a mysteriously silent failure is worse than a visible error — it looks like the code is hiding something.
+
+**Prevention:**
+- Return a structured sub-indicator status in the API response: `{"sub_indicators": {"liquidity_sweep": {"bias": "bullish", "ok": true}, "volume_profile": {"bias": null, "ok": false, "reason": "Insufficient data: 8 bars"}, ...}}`.
+- In the frontend composite card, render a distinct "unavailable" state for failed sub-indicators (e.g., grey dashes instead of a color-coded pill).
+- The composite ratio denominator should only count indicators where `ok == true`. If fewer than 3 of 4 indicators succeed, show a warning: "Composite based on X/4 indicators (Y unavailable)."
+
+**Phase:** Backend error propagation and frontend composite card rendering — must be designed as a system, not patched after the fact.
+
+---
+
+### Pitfall 12: 2x2 Plotly Grid Per Ticker Creates DOM and Memory Pressure for Multi-Ticker Analysis (Plotly Performance)
+
+**What goes wrong:** The existing analysis flow scrapes multiple tickers (the user enters 2-5 typically). For each ticker, a 2×2 Plotly grid is rendered: 4 subplots per ticker, 4 traces minimum per subplot = 16-20 Plotly traces per ticker. For 5 tickers, this is 80-100 traces and 10 separate `Plotly.newPlot` calls writing to 10 separate DOM containers. Plotly.js holds all trace data in JavaScript heap memory for interactive hover/zoom. On a mid-range laptop, this can consume 400-600 MB of RAM, making the browser tab noticeably sluggish or triggering a tab crash.
+
+**Why it happens:** The existing modules (DCF, Health Score, Peer Comparison) each render one small card per ticker. The trading indicators module multiplies the Plotly footprint by a factor of 4-8 per ticker compared to any existing module.
+
+**Consequences:** The tab becomes unresponsive after rendering 3-4 tickers. Scrolling through the analysis results page lags. In the worst case, the browser tab crashes and all prior analysis results are lost. This is the kind of demo failure that is visible and embarrassing.
+
+**Prevention:**
+- Use `Plotly.react()` instead of `Plotly.newPlot()` for any re-render (e.g., when the user changes lookback). `Plotly.react()` diffs traces in place and avoids full DOM teardown/rebuild.
+- Limit interactive mode: set `config: {staticPlot: true}` for all 4 subplots in the grid. This disables hover/zoom on the indicators grid (which are analytical reference charts, not interactive exploration tools). Static plots use dramatically less memory — approximately 10x reduction.
+- Implement deferred rendering: only render the trading indicators panel for the currently-visible ticker card. Lazy-render when the user scrolls to a ticker. A `IntersectionObserver` on the chart container div is the correct mechanism.
+- Cap the number of rendered ticker grids at 5. If more tickers are present, show a "Show Trading Indicators" button per ticker rather than auto-rendering all of them.
+
+**Phase:** Frontend rendering architecture — must be designed before any `Plotly.newPlot` calls are written.
+
+---
+
+### Pitfall 13: yfinance Returns Adjusted Close But Raw OHLCV for Volume Profile — Price/Volume Mismatch (Data Layer)
+
+**What goes wrong:** When yfinance `Ticker.history()` is called with `auto_adjust=True` (the default since yfinance 0.2.x), it returns split- and dividend-adjusted Close, Open, High, Low values. Volume is also adjusted (scaled by the inverse split ratio). However, the Volume Profile computation accumulates volume at each price level using the raw price values from the OHLCV frame. If some modules in the existing codebase fetch with `auto_adjust=False` (for other reasons), while the Volume Profile module fetches with `auto_adjust=True`, the POC price level will correspond to the adjusted price but may be labeled against the unadjusted price axis from another chart on the same panel.
+
+**Why it happens:** yfinance's `auto_adjust` default changed in version 0.2.x. Existing code in `technical_indicators.py` and `regime_detection.py` may use different default or explicit settings, creating inconsistency within the same codebase.
+
+**Prevention:**
+- Establish one canonical data fetching function for all Trading Indicators modules: `fetch_ohlcv(ticker, period_days, auto_adjust=True)`. All four indicator backends call this single function — never call yfinance directly in individual indicator modules.
+- Assert consistency: `assert df.index.tzinfo is None or df.index.tz is not None` to catch timezone-naive vs. timezone-aware index mismatches (a common yfinance 0.2.x issue).
+- Document the adjustment policy in a module-level comment: "All prices are split/dividend-adjusted. Volume is proportionally adjusted. Levels are expressed in adjusted-price terms."
+
+**Phase:** Data fetch abstraction layer — must be built before any individual indicator module.
+
+---
+
+### Pitfall 14: Lookback Window Changes Don't Invalidate Cached Anchor Dates (Anchored VWAP)
+
+**What goes wrong:** The 52-week high and 52-week low anchor dates are computed from a 365-day window. If the user runs analysis with a 365-day lookback, the 52-week high is correctly found. The user then changes the lookback to 30 days and re-runs. Now the 52-week high computed from the 365-day window is reused (because it was cached from the prior run or passed as a parameter), but the OHLCV data available for VWAP computation only covers 30 days. The anchor predates the data, triggering the silent truncation described in Pitfall 5 — but now it happens on a user-initiated re-run, not just on the first call.
+
+**Why it happens:** The anchor date lookup and the OHLCV fetch may be called with different lookback parameters if the frontend passes them as separate inputs, or if the backend memoizes the 52-week high lookup independently.
+
+**Prevention:**
+- The anchor date computation must always use the maximum lookback (365 days) regardless of the user's selected display lookback. The API endpoint should accept `display_lookback_days` (30/90/180/365) separately from the data fetch period, which is always 365 days for anchor resolution.
+- Never cache anchor dates between requests with different display_lookback values.
+- In the response, include `anchor_within_display_window: true/false` so the frontend can display the appropriate warning.
+
+**Phase:** Backend API parameter design — requires explicit lookback separation at the route level.
 
 ---
 
@@ -170,94 +269,41 @@ Mistakes that cause rewrites, recruiter embarrassment, or model invalidity.
 
 ---
 
-### Pitfall 8: Using Market Bid-Ask Midpoint as "Market Price" for Calibration
+### Pitfall 15: Imbalance Candle Detection Is Undefined Without an Explicit Threshold (Order Flow)
 
-**What goes wrong:** `VolatilitySurfaceBuilder` and the calibrators use `market_price` from the options chain, which is likely the last trade price or a bid-ask midpoint. For illiquid strikes, the bid-ask spread can be $1-3 wide on a $0.50 option. Calibrating to stale or wide-spread prices introduces substantial noise.
+**What goes wrong:** An "imbalance candle" has no universally accepted quantitative definition. Common definitions include: (a) candle body > 70% of total range, (b) close in top/bottom 25% of range with above-average volume, (c) the candle's body "gaps" into the prior candle's body (the ICT definition). Implementing one without documenting which definition was used leads to a showcase where a viewer asks "what counts as an imbalance?" and the answer is buried in backend code.
 
 **Prevention:**
-- Filter by minimum open interest (currently `min_volume=0` — set to at least 100) and maximum bid-ask spread as a fraction of mid (< 20%).
-- Use bid-ask midpoint explicitly: `(bid + ask) / 2` rather than last trade, and flag if `ask - bid > 0.5 * mid`.
-- In the UI, show how many contracts were filtered out and why.
+- Choose one definition (recommended: body > 70% of high-low range with volume > 1.2× 20-day average volume) and display it as a tooltip: "Imbalance: body spans >70% of candle range with above-average volume."
+- The threshold (70%, 1.2×) should be a named constant, not a magic number.
 
-**Phase:** Model calibration data cleaning.
+**Phase:** Order flow imbalance definition — document the decision before implementation.
 
 ---
 
-### Pitfall 9: HMM Fitted to Price Returns but Trading Signal Shown Without Lag Correction
+### Pitfall 16: Swing Detection N-Bar Parameter Has No Validated Default (Liquidity Sweep)
 
-**What goes wrong:** The `RegimeDetector` uses `filtered_probs[-1]` (the last filtered probability at time T) to generate a RISK_ON/RISK_OFF signal. Filtered probabilities at time T use data up to and including T — there is no look-ahead bias. However, the `smoothed_probs` (Kim smoother) use the full dataset and *do* look ahead. If smoothed probabilities are ever used to generate signals (or are displayed alongside filtered ones without clear labelling), a recruiter with HMM experience will correctly call this out as in-sample look-ahead.
+**What goes wrong:** The n-bar lookback for swing detection (how many bars on each side of a local high/low must be lower) has no standard value. Common values range from 2 to 10. On daily OHLCV data: n=2 produces hundreds of micro-swings; n=10 produces very few, and on a 30-day lookback may produce zero confirmed swings (since the last 10 bars are excluded from confirmation). If the default n is too large relative to the lookback, the UI shows "No liquidity sweeps detected" for most tickers, making the feature appear broken.
 
 **Prevention:**
-- Never use `smoothed_probs` for signal generation. Use them only for historical visualisation, labelled explicitly "In-sample smoothed (uses future data)."
-- In the UI, label `filtered_probs[-1]` as "Real-time estimate" and `smoothed_probs` as "Full-sample smoother (not tradeable)."
+- Default to n=3 for daily data with lookbacks of 30-90 days. For 180-365 day lookbacks, n=5 is more appropriate.
+- Make n adaptive: `n = max(2, min(5, lookback_days // 30))`.
+- If zero swings are detected, display "No confirmed swing highs/lows in selected window (n=3)" rather than a blank chart.
+- Show the swing count in the indicator metadata: "4 swing highs, 3 swing lows detected."
 
-**Phase:** Regime detection UI wiring.
+**Phase:** Swing detection parameter tuning — validate defaults against AAPL/SPY over multiple lookback windows.
 
 ---
 
-### Pitfall 10: MDP/Markov Decision Process Without a Well-Defined Reward Function or Validated Policy
+### Pitfall 17: Volume Profile Uses "Close Price" for Volume Attribution Instead of "Bar Midpoint" (Volume Profile)
 
-**What goes wrong:** The project lists "Markov Decision Process models" as a requirement, but the current code contains only `credit_transitions.py` (Markov chains, not MDPs). An MDP requires a reward function and a policy. Showing an MDP that uses an arbitrary or unexplained reward function, or one where the optimal policy is not validated against a known benchmark, signals a shallow understanding.
-
-**Prevention:**
-- If implementing MDP: define the state space (e.g., credit ratings), action space (hold/sell/hedge), and reward function (risk-adjusted return) explicitly, citing the formulation source.
-- Validate the policy against a simple baseline (e.g., always-hold) and show that the MDP policy dominates.
-- If MDP is out of scope for this milestone, remove it from the UI and defer clearly.
-
-**Phase:** MDP section design (before implementation).
-
----
-
-### Pitfall 11: Sigma Annualisation Inconsistency Between Models
-
-**What goes wrong:** `RegimeDetector` outputs `sigma_annualized = sigma_daily * sqrt(252)`. `HestonCalibrator` and `fourier_pricer.py` work with variance (`v0`, `theta`) as daily or annual depending on how input data is formatted. If the UI displays both "Heston theta = 0.04 (4% variance)" and "HMM calm sigma = 0.18 annualised (18% vol)", a user might compare them and get confused — or worse, a recruiter might notice that the units are inconsistent between the two modules when the same underlying asset is used.
+**What goes wrong:** To build a volume profile from OHLCV daily data, volume must be attributed to a price level. Two approaches: (a) attribute all bar volume to the close price, (b) attribute volume uniformly across the bar's high-low range. Approach (a) is simpler but produces artificial spikes at round-number close prices (e.g., a stock that closed at $190.00, $190.50, $190.25 three days in a row will show a massive volume spike at $190 even if price traded across a $5 range each day). Approach (b) better represents the actual traded range.
 
 **Prevention:**
-- Standardise all volatility outputs to annualised standard deviation throughout the UI.
-- For Heston: display `sqrt(theta) * 100` as "Long-run vol (%)" rather than raw variance.
-- For HMM: confirm `sigma_daily * sqrt(252)` is correct (it is, for log-returns).
-- Add a units legend to every volatility figure.
+- Use approach (b): distribute volume uniformly across the high-low range by incrementing all bins between `low_bin` and `high_bin` by `volume / n_bins_in_range`. This is more representative and smoother.
+- If approach (a) is used for simplicity, note it in the UI: "Volume attributed to daily close price (simplified). Actual traded range: $X–$Y."
 
-**Phase:** UI integration and display formatting.
-
----
-
-### Pitfall 12: yfinance API Failures Cause Silent Wrong Results (Not Errors)
-
-**What goes wrong:** Both `RegimeDetector.fetch_returns()` and `FinancialAnalytics.get_historical_returns()` use yfinance. yfinance has a known behaviour where it returns partial or empty data without raising exceptions for certain tickers or date ranges, especially for non-US tickers or tickers with recent corporate actions. The code handles `data.empty` but not cases where data is present but truncated (e.g., only 100 days returned when 1260 were requested). The HMM will fit on 100 observations and silently return parameters that are much less stable.
-
-**Prevention:**
-- After fetching, assert `len(log_ret) >= 0.7 * requested_days` and surface a warning if not met.
-- Display the actual data range used (start date, end date, number of observations) in the UI output.
-- For the demo, use tickers known to have long, clean histories (SPY, ^SPX, AAPL, MSFT) as defaults.
-
-**Phase:** All API-dependent modules.
-
----
-
-### Pitfall 13: ML in Finance Section — Data Leakage from Feature Engineering
-
-**What goes wrong:** When the ML module is added, the most common mistake in finance ML is computing features (e.g., rolling average, RSI, volatility) that use forward data when the rolling window straddles the train/test split. For example, if features are computed on the full dataset before splitting, a 20-day rolling mean at day 200 uses days 181-200, but if the split is at day 210, the test set features at day 201 will have been computed using data from days 182-201 — some of which was in the train set. This is standard data leakage.
-
-**Prevention:**
-- Always compute features within a TimeSeriesSplit cross-validation framework, or compute them strictly on training data and apply (not refit) the transformation to test data.
-- Use `sklearn.model_selection.TimeSeriesSplit` rather than `train_test_split` (which shuffles).
-- Show train vs. validation performance explicitly; if in-sample Sharpe >> out-of-sample Sharpe, flag it.
-
-**Phase:** ML in Finance module design (before any model training).
-
----
-
-### Pitfall 14: Calibration MSE Reported in Dollar Squared — Uninterpretable to Viewers
-
-**What goes wrong:** The calibration results return `mse` and `rmse` in raw dollar values (price MSE). An `rmse` of `$3.50` means the model is off by $3.50 per contract on average, but this number is meaningless without context (is $3.50 bad for a $100 option? Good for a $1 option?). A recruiter seeing `rmse: 3.47` will not know if this is a good or bad calibration.
-
-**Prevention:**
-- Add `relative_rmse_pct = rmse / mean(market_prices) * 100` to the result dict.
-- Display calibration quality as "Average relative error: X.X%" in the UI.
-- Provide a qualitative label: < 2% = "Good", 2-5% = "Acceptable", > 5% = "Poor fit."
-
-**Phase:** Calibration result UI display.
+**Phase:** Volume profile bin attribution logic — decision affects POC/VAH/VAL accuracy.
 
 ---
 
@@ -265,53 +311,39 @@ Mistakes that cause rewrites, recruiter embarrassment, or model invalidity.
 
 ---
 
-### Pitfall 15: Fixed Random Seed in Monte Carlo Hides Variance
+### Pitfall 18: The 2×2 Grid Quad Labels Are Ambiguous Without Per-Chart Titles
 
-**What goes wrong:** `monte_carlo_time_to_default` uses `rng = np.random.default_rng(42)` — a fixed seed. Every run gives identical results. This is correct for reproducibility, but a recruiter who clicks "Run" multiple times and gets identical results might ask whether this is truly Monte Carlo. More seriously, the fixed seed could happen to produce an unusual sample, and there is no way to estimate the Monte Carlo standard error of the default probability estimate.
+**What goes wrong:** A 2×2 Plotly grid with four subplots is visually complex. If the only title is the ticker symbol at the top, a viewer needs to read the axis labels to determine which quadrant is Liquidity Sweep vs. Volume Profile. In a demo context where reviewers are scanning quickly, this creates unnecessary cognitive load.
 
 **Prevention:**
-- Add a `seed` parameter (default 42 for reproducibility) and an option to use random seeds.
-- Display the Monte Carlo standard error alongside the estimate: `se = sqrt(p * (1-p) / n_simulations)`.
-- Show a "95% confidence interval" for the default probability.
+- Add a `title` to each subplot in `make_subplots(subplot_titles=["Liquidity Sweep", "Order Flow Delta", "Anchored VWAP", "Volume Profile"])`.
+- These become the `annotations` in the Plotly layout and appear above each quadrant automatically.
 
-**Phase:** Credit transitions UI.
+**Phase:** Frontend grid layout — one-line fix in `make_subplots` call.
 
 ---
 
-### Pitfall 16: BCC Model Has Unused `sigma_gbm` Parameter
+### Pitfall 19: Earnings Date Anchor Is Unavailable for Many Tickers (Anchored VWAP)
 
-**What goes wrong:** `bcc_price()` has a parameter `sigma_gbm: float` with the comment "kept for API compatibility; unused in BCC." If a recruiter reads the function signature, they will see an undocumented dead parameter. This suggests copy-paste from a previous version without cleanup.
+**What goes wrong:** The auto-anchor to earnings date requires fetching the most recent earnings date from yfinance (`Ticker.calendar`). For many tickers (ETFs, non-US ADRs, recently listed companies), `.calendar` returns an empty DataFrame or raises a KeyError. If the backend raises an unhandled exception here, the entire VWAP computation for that ticker fails, including the 52-wk high/low anchors that had no issue.
 
 **Prevention:**
-- Either remove the parameter (if no external callers) or rename to `_sigma_gbm_unused` with a deprecation note.
-- Add a docstring note explaining why it exists.
+- Wrap each anchor date lookup in a try/except independently. If the earnings anchor is unavailable, skip it gracefully and render only the 52-wk high/low VWAPs.
+- Return `{"earnings_anchor": null, "earnings_anchor_reason": "Not available for ETFs"}` in the API response so the frontend can label the missing line appropriately rather than just not rendering it.
 
-**Phase:** Code cleanup before any showcase.
+**Phase:** Backend anchor date resolution — independent error handling per anchor type.
 
 ---
 
-### Pitfall 17: No Input Validation on Stochastic Model API Endpoints
+### Pitfall 20: Composite Signal Card Duplicates the Per-Indicator Signals Without Adding New Information
 
-**What goes wrong:** The webapp accepts user-facing JSON for parameters like `kappa`, `theta`, `sigma_v`, `rho`. If a user (or curious recruiter) sends `rho = 1.5` or `sigma_v = -0.1`, the backend will either throw an unhandled exception or clip silently and return a result without informing the user that their input was invalid.
-
-**Prevention:**
-- Add explicit input validation in Flask routes with clear error messages returned in JSON: `{"error": "rho must be in (-1, 1), got 1.5"}`.
-- Validate ranges match known financial constraints: `kappa > 0`, `theta > 0`, `sigma_v > 0`, `-1 < rho < 1`, `0 < v0 < 1` (variance, not vol).
-
-**Phase:** All new API routes.
-
----
-
-### Pitfall 18: The "S&P Transition Matrix" is Presented as Current but Has No Source Date
-
-**What goes wrong:** `credit_transitions.py` uses `SP_TRANSITION_MATRIX` sourced from "S&P Global Ratings (illustrative; use latest published for production), 1981–2023 approximate." This disclaimer is in a code comment, not visible in the UI. A recruiter from a credit desk will know that S&P publishes updated transition matrices annually and that the 2023 matrix differs materially from the 1981-2023 average during stress periods.
+**What goes wrong:** If the composite bias card says "Bullish" and the four individual panels each already show their own bullish/bearish label, the composite card adds no new information. It becomes visual clutter. A viewer who sees "Bullish (3/4)" and then looks at the four charts to find which one is bearish has to cross-reference manually.
 
 **Prevention:**
-- Display the source and vintage of the transition matrix prominently in the UI: "Using S&P 1981-2023 average annual transition matrix. Source: S&P Global Ratings Transition Study."
-- Add a hyperlink to the S&P methodology document.
-- Note that custom matrices can be entered to override defaults.
+- The composite card must identify *which* indicator is the dissenting signal: "Bearish divergence: Volume Profile is bearish while the other three indicators are bullish. POC at $183 is below current price $189."
+- This turns the composite from a dumb aggregation into an interpretive layer with actual insight value.
 
-**Phase:** Credit transitions UI display.
+**Phase:** Composite card design — define the card's purpose before building the UI component.
 
 ---
 
@@ -319,48 +351,30 @@ Mistakes that cause rewrites, recruiter embarrassment, or model invalidity.
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|----------------|------------|
-| Credit transitions validation | Undiscounted coupon formula (Pitfall 4) | Fix before UI wiring; not a display issue, a math error |
-| Credit transitions validation | Custom matrix row normalisation (Pitfall 1) | Add validator function before any demo |
-| Fourier/Heston pricing | Integration limit insufficient for long T (Pitfall 2) | Benchmark against BS at near-zero vol-of-vol first |
-| Fourier/Heston pricing | Put-call parity check absent | Add as automated test before shipping |
-| Model calibration | Dollar-MSE dominance by ITM options (Pitfall 3) | Switch to relative MSE or IV-space calibration |
-| Model calibration | Calibration latency UX (Pitfall 7) | Add progress streaming or caching for demo tickers |
-| Model calibration | Uninterpretable MSE reported to UI (Pitfall 14) | Add relative RMSE % and qualitative label |
-| Regime detection | Label switching produces wrong signal (Pitfall 5) | Validate on 2020-03 (SPY must be stressed) |
-| Regime detection | Smoothed probs used for signal (Pitfall 9) | Only use filtered for signals; label smoothed clearly |
-| CIR interest rate | Feller violation silently accepted (Pitfall 6) | Hard-enforce in calibration; warn prominently in UI |
-| All stochastic models | yfinance partial data (Pitfall 12) | Assert minimum observation count; show date range |
-| All models | Sigma/variance unit inconsistency (Pitfall 11) | Standardise on annualised vol % throughout UI |
-| ML in Finance | Data leakage in feature engineering (Pitfall 13) | Use TimeSeriesSplit before any model training |
-| ML in Finance | Overfitting without out-of-sample validation | Show OOS Sharpe explicitly; compare to buy-and-hold |
-| All API endpoints | No parameter bounds validation (Pitfall 17) | Add validation layer in all new Flask routes |
+| Swing detection backend | Look-ahead bias on tail bars (Pitfall 1) | Loop bound must be `len - n`, not `len`; add regression test |
+| Sweep signal definition | Breakouts flagged as sweeps (Pitfall 2) | Require close-back-below condition before flagging sweep |
+| Order flow NaN propagation | Zero high-low range division (Pitfall 3) | Add epsilon guard before cumulative delta; assert no NaN |
+| Order flow divergence | Ambiguous definition fires on every red bar (Pitfall 4) | Define and document rolling-window divergence; cap signal frequency |
+| VWAP anchor resolution | Anchor predates fetched data, silent truncation (Pitfall 5) | Always fetch 365 days for anchor resolution regardless of display lookback |
+| VWAP anchor resolution | Lookback change reuses stale anchor (Pitfall 14) | Separate `display_lookback` from `data_fetch_period` at API design level |
+| VWAP chart rendering | Three converging lines look broken (Pitfall 6) | Distinct line styles + right-edge labels + convergence warning |
+| Volume profile bin count | POC shifts with lookback, looks like bug (Pitfall 7) | Adaptive bin width or fixed bins with documentation |
+| Volume profile chart | POC/VAH/VAL invisible as hairline (Pitfall 8) | Use filled rectangles or `add_hline` with annotation |
+| Volume profile chart | Horizontal histogram rendered as vertical (Pitfall 9) | Use `make_subplots` with `shared_yaxes=True`, `orientation='h'` |
+| Composite signal | False multi-source confidence (Pitfall 10) | Frame as "trend-following bias"; add extreme-reading counter-signal |
+| Composite signal | Silent indicator failure masked as neutral (Pitfall 11) | Structured sub-indicator status in API response; denominator tracks availability |
+| Multi-ticker rendering | DOM/memory pressure from 80+ Plotly traces (Pitfall 12) | `staticPlot: true` + lazy render + cap at 5 tickers |
+| Data fetch layer | Adjusted/unadjusted price mismatch (Pitfall 13) | Single canonical fetch function; explicit `auto_adjust=True` everywhere |
+| Earnings anchor | Unhandled KeyError crashes all VWAP (Pitfall 19) | Per-anchor try/except; return null anchor with reason field |
 
 ---
 
-## Recruiter-Specific Red Flags
-
-The following specific observations will immediately signal "this student doesn't understand what they built" to a quantitative recruiter:
-
-1. **Survival probability that increases over time.** This is impossible in a proper Markov chain model with an absorbing default state.
-
-2. **Heston call price below intrinsic value.** Violates the no-arbitrage lower bound. Visible in any numerical sanity check.
-
-3. **"CIR model does not satisfy Feller condition."** This is CIR's entire selling point over Vasicek. A violated Feller condition means the model you labelled "CIR" behaves like Vasicek (can go negative). This specific question is a classic screen.
-
-4. **Regime detector says "RISK_ON" during COVID March 2020.** Any recruiter will test the obvious stress period. If the signal is wrong, the model is wrong.
-
-5. **Calibration runs for 3 minutes and the app appears frozen.** Recruiters have 5-10 minutes for a demo. Losing 3 of them to a frozen spinner is fatal.
-
-6. **Implied volatility smile is flat after Heston calibration.** The entire point of Heston is to capture the smile. If calibration produces a flat IV surface, the student has implemented the formula but doesn't understand what it's for.
-
-7. **Merton jump compensation mu_bar = exp(mu_j + 0.5*delta_j^2) - 1 shown as a "jump size" in the UI without explanation.** This is the risk-neutral compensator, not the average physical jump. Mislabelling it in the UI suggests the student memorised the formula without understanding the measure change.
-
 ## Sources
 
-- Direct code review of all WIP modules (`credit_transitions.py`, `interest_rate_models.py`, `regime_detection.py`, `fourier_pricer.py`, `model_calibration.py`)
-- Albrecher, H., Mayer, P., Schachermayer, W., & Teichmann, J. (2007). "The Little Heston Trap." — referenced in `fourier_pricer.py` docstring
-- Heston, S.L. (1993). "A Closed-Form Solution for Options with Stochastic Volatility." — referenced in `fourier_pricer.py`
-- Hamilton, J.D. (1989). "A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle." — theoretical basis for `regime_detection.py`
-- Cox, J.C., Ingersoll, J.E., & Ross, S.A. (1985). "A Theory of the Term Structure of Interest Rates." — basis for `interest_rate_models.py`
-- Domain expertise in quantitative finance model validation and MFE recruiting standards
-- Confidence: HIGH — all pitfalls derived from direct inspection of implemented code, not speculative
+- Direct code review: `src/indicators/technical_indicators.py`, `static/js/stochasticModels.js`, `static/js/analyticsRenderer.js`, `webapp.py`
+- Existing PITFALLS.md (prior milestone) — patterns: silent NaN propagation (Pitfall 3 here mirrors yfinance partial data Pitfall 12 prior), look-ahead (mirrors HMM smoothed_probs Pitfall 9 prior)
+- Plotly.js documentation on `make_subplots`, `shared_yaxes`, `staticPlot`, `Plotly.react()` — configuration patterns for multi-panel performance
+- OHLCV order flow proxy literature: Corwin & Schultz (2012) high-low spread estimator; Easley, Lopez de Prado & O'Hara (2012) VPIN — basis for understanding daily-data limitations of order flow proxies
+- yfinance 0.2.x changelog — `auto_adjust=True` default change and `.calendar` DataFrame structure
+- Volume Profile construction methodology: standard TPO/fixed range volume profile literature (CME Group education materials)
+- Confidence: HIGH for Plotly/data layer pitfalls (direct code inspection); HIGH for indicator math pitfalls (domain expertise + standard references); MEDIUM for exact yfinance version behavior (training data knowledge, not live verification)
