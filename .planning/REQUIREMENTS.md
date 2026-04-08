@@ -311,30 +311,31 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SWEEP-01 | TBD | Pending |
-| SWEEP-02 | TBD | Pending |
-| SWEEP-03 | TBD | Pending |
-| FLOW-01 | TBD | Pending |
-| FLOW-02 | TBD | Pending |
-| FLOW-03 | TBD | Pending |
-| AVWAP-01 | TBD | Pending |
-| AVWAP-02 | TBD | Pending |
-| AVWAP-03 | TBD | Pending |
-| VPROF-01 | TBD | Pending |
-| VPROF-02 | TBD | Pending |
-| VPROF-03 | TBD | Pending |
-| BIAS-01 | TBD | Pending |
-| BIAS-02 | TBD | Pending |
-| BIAS-03 | TBD | Pending |
-| TIND-01 | TBD | Pending |
-| TIND-02 | TBD | Pending |
-| TIND-03 | TBD | Pending |
+| SWEEP-01 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| SWEEP-02 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| SWEEP-03 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| FLOW-01 | Phase 21: Order Flow | Pending |
+| FLOW-02 | Phase 21: Order Flow | Pending |
+| FLOW-03 | Phase 21: Order Flow | Pending |
+| AVWAP-01 | Phase 20: Anchored VWAP | Pending |
+| AVWAP-02 | Phase 20: Anchored VWAP | Pending |
+| AVWAP-03 | Phase 20: Anchored VWAP | Pending |
+| VPROF-01 | Phase 19: Volume Profile | Pending |
+| VPROF-02 | Phase 19: Volume Profile | Pending |
+| VPROF-03 | Phase 19: Volume Profile | Pending |
+| BIAS-01 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| BIAS-02 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| BIAS-03 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| TIND-01 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| TIND-02 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
+| TIND-03 | Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring | Pending |
 
 **v2.2 Coverage:**
 - v2.2 requirements: 18 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 18 ⚠
+- Mapped to phases: 18
+- Unmapped: 0 ✓
+- Phase 18 (Backend Scaffold) is an infrastructure phase with no direct REQ-IDs; it unblocks all 18 requirements
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-04-08 after v2.2 milestone start*
+*Last updated: 2026-04-08 — v2.2 roadmap created, all 18 requirements mapped to phases 19–22*

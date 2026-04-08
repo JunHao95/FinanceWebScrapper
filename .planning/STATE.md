@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Milestone — Trading Indicators
-status: defining requirements
-stopped_at: Milestone v2.2 started
+status: planning
+stopped_at: Roadmap created — ready for Phase 18 planning
 last_updated: "2026-04-08T00:00:00.000Z"
-last_activity: 2026-04-08 — Milestone v2.2 started
+last_activity: 2026-04-08 — v2.2 roadmap created (5 phases, 18 requirements)
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Every completed MFE module becomes a working, interactive demo that a recruiter can run and a peer can learn from.
-**Current focus:** Milestone v2.2 — Trading Indicators (defining requirements)
+**Current focus:** Milestone v2.2 — Trading Indicators (Phase 18: Backend Scaffold)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-08 — Milestone v2.2 started
+Phase: Phase 18 — Backend Scaffold
+Plan: — (not yet planned)
+Status: Planning (roadmap approved, phase planning not started)
+Last activity: 2026-04-08 — Roadmap created; 18 requirements mapped across 5 phases (18–22)
+
+```
+Progress [          ] 0% — 0/5 phases complete
+```
 
 ## Performance Metrics
 
@@ -82,6 +86,16 @@ Last activity: 2026-04-08 — Milestone v2.2 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [v2.2 Roadmap]: Build order: Volume Profile (Phase 19) → Anchored VWAP (Phase 20) → Order Flow (Phase 21) → Liquidity Sweep + Composite + Tab Wiring (Phase 22). Order dictated by implementation risk, not feature priority.
+- [v2.2 Roadmap]: Phase 18 is an infrastructure-only scaffold phase; it carries no REQ-IDs but is mandatory to unblock parallel backend/JS development in Phases 19–22.
+- [v2.2 Roadmap]: All four indicators use one canonical `fetch_ohlcv(ticker, days, auto_adjust=True)` function to prevent adjusted/unadjusted price mismatch across modules.
+- [v2.2 Roadmap]: AVWAP data fetch always covers 365 days regardless of display lookback; display lookback and anchor resolution are kept separate at API design level (query param `lookback` affects display only).
+- [v2.2 Roadmap]: Volume Profile must use `make_subplots(rows=1, cols=2, shared_yaxes=True)` — without it the histogram renders vertically and POC levels misalign.
+- [v2.2 Roadmap]: Swing detection loop bound is `range(n, len(highs) - n)` — not `range(n, len(highs))` — to prevent look-ahead bias. Regression test required before Phase 22 composite wiring.
+- [v2.2 Roadmap]: Composite bias label is "Trend-following bias" with a caveat text noting all indicators share the same OHLCV source. Composite denominator counts only `ok == true` sub-indicators.
+- [v2.2 Roadmap]: JS module follows `peerComparison.js` pattern: lazy-loaded on tab activation, per-ticker GET calls, session cache keyed by `ticker + '-' + lookback`, `clearSession()` called from `stockScraper.js displayResults()`.
+- [v2.2 Roadmap]: Trading Indicators tab renders into `div#tradingIndicatorsTabContent`, NOT into `deep-analysis-content-{TICKER}` — avoids conflict with v2.1 deep analysis architecture.
+- [v2.2 Roadmap]: All Trading Indicator Plotly charts use `staticPlot: true` to reduce memory pressure when multiple tickers are loaded.
 - [v2.1 Roadmap]: Deep Analysis group appended bottom of per-ticker card after Sentiment group; Phase 13 creates the div.deep-analysis-group container so Phases 14–16 can append without modifying card HTML again
 - [v2.1 Roadmap]: Health (FHLTH), Quality (QUAL), DCF modules fire in parallel after primary scrape; Peers fires after those three complete
 - [v2.1 Roadmap]: FHLTH IDs used (not HEALTH — HEALTH is taken by v2.0 Portfolio Health Card)
@@ -143,23 +157,25 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- v2.2 roadmap created: 5 phases (18–22), 18 requirements, all mapped
+- Phase 11 (Responsive Layout) deferred — not included in v2.2 roadmap
+- Phases 13–17: v2.1 complete
 - Phase 10.1 inserted after Phase 10: FinancialAnalyst Agent & Chatbot Toggle — add FinancialAnalyst persona alongside QuantAssistant with agent toggle in the chat widget (URGENT)
-- Phase 11 added: Responsive Layout & Dashboard Customisation — mobile-first CSS (hamburger nav, stacked charts, fluid chip input) + localStorage personalisation (ticker presets, pinned/reordered cards, persisted settings)
 - Phase 12 added: Integrating Chatbot to the Details in Stock Analysis, Stochastic models tabs etc so the chatbot can access the content scrapped
 - Phases 13–16 added: v2.1 Deeper Stock Analysis — Financial Health Score, Earnings Quality, DCF Valuation, Peer Comparison
 
 ### Pending Todos
 
-- Run /gsd:plan-phase 13 to break Phase 13 into executable plans
+- Run /gsd:plan-phase 18 to break Phase 18 into executable plans
 
 ### Blockers/Concerns
 
-- [Phase 2]: MDP backend resolved — portfolio_mdp_value_iteration implemented in plan 02-01; blocker cleared
-- [Phase 3]: Calibration latency on Render free tier unconfirmed (estimated 60-120s) — measure during Phase 1 to choose between SSE streaming vs. pre-caching
-- [Phase 16]: Finviz peer scraping is rate-sensitive; 30-minute TTL cache mitigates this but peer fetch timeout handling must be tested explicitly
+- [Phase 20]: Verify `yf.Ticker('AAPL').earnings_dates` attribute and DataFrame column names against installed yfinance version before Phase 20 implementation (5-minute check, MEDIUM confidence per research)
+- [Phase 22]: Composite bias majority threshold (2/3 vs. simple majority) to be decided before Phase 22 planning
+- [Phase 22]: Imbalance candle thresholds (70%/1.2×) should be calibrated empirically after Phase 21 — target 3–8 signals per 90-day window on AAPL/SPY
 
 ## Session Continuity
 
-Last session: 2026-04-05T15:30:00.007Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/17-bug-fixes-rescrape-dcf-badge/17-CONTEXT.md
+Last session: 2026-04-08
+Stopped at: Roadmap created for v2.2
+Resume file: .planning/ROADMAP.md (v2.2 phases 18–22)
