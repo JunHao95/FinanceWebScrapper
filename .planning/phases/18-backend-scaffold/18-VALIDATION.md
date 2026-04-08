@@ -40,8 +40,8 @@ created: 2026-04-08
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
 | 18-01-01 | 01 | 1 | SC-2 | unit | `pytest tests/test_trading_indicators.py::test_fetch_ohlcv_returns_ohlcv_dataframe -v` | ❌ W0 | ⬜ pending |
 | 18-01-02 | 01 | 1 | SC-2 | unit | `pytest tests/test_trading_indicators.py::test_fetch_ohlcv_uses_ticker_history -v` | ❌ W0 | ⬜ pending |
-| 18-01-03 | 01 | 1 | SC-1 | unit | `pytest tests/test_trading_indicators.py::test_route_returns_200 -v` | ❌ W0 | ⬜ pending |
-| 18-01-04 | 01 | 1 | SC-1 | unit | `pytest tests/test_trading_indicators.py::test_route_returns_placeholder_keys -v` | ❌ W0 | ⬜ pending |
+| 18-01-03 | 01 | 1 | SC-1 | unit | `pytest tests/test_trading_indicators.py::test_trading_indicators_200_shape -v` | ❌ W0 | ⬜ pending |
+| 18-01-04 | 01 | 1 | SC-1 | unit | `pytest tests/test_trading_indicators.py::test_trading_indicators_missing_ticker -v` | ❌ W0 | ⬜ pending |
 | 18-02-01 | 02 | 2 | SC-3 | manual | Open browser DevTools Network tab, load ticker, confirm JS calls route | N/A | ⬜ pending |
 | 18-02-02 | 02 | 2 | SC-4 | manual | Confirm no console errors in browser DevTools | N/A | ⬜ pending |
 

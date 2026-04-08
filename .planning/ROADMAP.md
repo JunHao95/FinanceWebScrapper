@@ -31,7 +31,10 @@ Phases are ordered by implementation risk, not alphabetically. Volume Profile is
   2. The canonical `fetch_ohlcv(ticker, days, auto_adjust=True)` function exists in `src/analytics/trading_indicators.py` and returns an OHLCV DataFrame with no adjusted/unadjusted mismatch.
   3. `static/js/tradingIndicators.js` exists with a `TradingIndicators.clearSession()` method and a per-ticker session cache keyed by `ticker + '-' + lookback`.
   4. A browser developer-tools network trace confirms the JS module calls the route and receives the stub JSON without any console error.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 18-01-PLAN.md — Python backend: fetch_ohlcv function, stub trading_indicators module, Flask GET route (wave 1)
+- [ ] 18-02-PLAN.md — Browser scaffold: tradingIndicators.js IIFE, tab button + content div in index.html, clearSession wiring, tabs.js update, DevTools checkpoint (wave 2)
 
 ### Phase 19: Volume Profile
 **Goal**: Each ticker's Trading Indicators panel shows a horizontal volume histogram with clearly visible POC, VAH, and VAL levels, a shaded 70% value area zone, a price-in-value-area badge, and adaptive bin sizing — establishing the Plotly `{traces, layout, signal}` payload shape that all subsequent indicators must follow.
@@ -87,7 +90,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 18. Backend Scaffold | 0/? | Not started | - |
+| 18. Backend Scaffold | 0/2 | Not started | - |
 | 19. Volume Profile | 0/? | Not started | - |
 | 20. Anchored VWAP | 0/? | Not started | - |
 | 21. Order Flow | 0/? | Not started | - |
