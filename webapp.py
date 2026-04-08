@@ -2151,6 +2151,29 @@ def get_peers():
         return jsonify({'error': f'Peer data unavailable: {str(e)}'})
 
 
+@app.route('/api/trading_indicators', methods=['GET'])
+def get_trading_indicators():
+    ticker = request.args.get('ticker', '').strip().upper()
+    lookback = int(request.args.get('lookback', 90))
+    if not ticker:
+        return jsonify({'error': 'ticker parameter required'})
+    try:
+        from src.analytics.trading_indicators import fetch_ohlcv
+        fetch_ohlcv(ticker, lookback)
+        return jsonify({
+            'ticker': ticker,
+            'lookback': lookback,
+            'volume_profile': {'status': 'stub'},
+            'anchored_vwap':  {'status': 'stub'},
+            'order_flow':     {'status': 'stub'},
+            'liquidity_sweep': {'status': 'stub'},
+            'composite_bias': {'status': 'stub'},
+        })
+    except Exception as e:
+        logger.error(f"Error in get_trading_indicators for {ticker}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/validate_ticker', methods=['GET'])
 def validate_ticker():
     symbol = request.args.get('symbol', '').strip().upper()
