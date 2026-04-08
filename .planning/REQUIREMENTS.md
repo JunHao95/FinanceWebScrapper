@@ -265,5 +265,76 @@ All 40 v1 requirements are complete. See `.planning/v1.0-MILESTONE-AUDIT.md` for
 - Gap closure: DCF-02, DCF-04, PEER-01, PEER-02, PEER-04, PEER-05 reassigned to Phase 17
 
 ---
+
+## v2.2 Requirements (Milestone v2.2 — Active)
+
+**Milestone:** v2.2 Trading Indicators
+**Goal:** Add a Trading Indicators fourth tab showing per-ticker 2×2 indicator grid (Liquidity Sweep, Order Flow, Anchored VWAP, Volume Profile) with a composite bias signal.
+
+### Liquidity Sweep
+
+- [ ] **SWEEP-01**: User sees a Bullish Sweep, Bearish Sweep, or No Sweep signal label for each ticker, derived from swing high/low detection with a lookback-adaptive n-bar window
+- [ ] **SWEEP-02**: Sweep detection n scales automatically with selected lookback (n=2 for 30d, n=3 for 90d, n=5 for 180d+); if zero swings are detected the panel displays "No confirmed swings in selected window (n=X)"
+- [ ] **SWEEP-03**: Plotly scatter markers appear on sweep candles and dashed horizontal lines are drawn at swept price levels on the Liquidity Sweep chart
+
+### Order Flow
+
+- [ ] **FLOW-01**: User sees a green/red buy/sell pressure delta bar chart with a cumulative delta overlay line for each ticker, computed from the (Close−Low)/(High−Low)×Volume proxy with epsilon guard on zero-range bars
+- [ ] **FLOW-02**: A volume divergence flag with displayed price-slope and volume-slope values appears when rolling-window trend directions diverge over a 10-bar window
+- [ ] **FLOW-03**: Imbalance candles (body > 70% of high-low range AND volume > 1.2× 20-day average) are annotated on the Order Flow chart with Bullish/Bearish labels
+
+### Anchored VWAP
+
+- [ ] **AVWAP-01**: User sees two AVWAP lines anchored to the 52-week high date and 52-week low date, overlaid on the price chart, with current price vs. each AVWAP reported as a sub-signal
+- [ ] **AVWAP-02**: A third AVWAP line anchored to the last earnings date is computed and displayed when available; if unavailable the panel notes "Earnings anchor unavailable" without crashing the other two lines
+- [ ] **AVWAP-03**: Each AVWAP line shows a right-edge distance label (e.g. "+2.1% above AVWAP"); when any two lines are within 0.3% of current price a convergence note is shown
+
+### Volume Profile
+
+- [ ] **VPROF-01**: User sees a horizontal volume histogram with POC (Point of Control), VAH, and VAL displayed as visible filled levels (not hairlines) and a shaded 70% value area zone
+- [ ] **VPROF-02**: A badge indicates whether the current price is inside or outside the value area
+- [ ] **VPROF-03**: Bin count adapts to price range (targeting ~0.2% bin width); bin width in USD is reported in the chart metadata
+
+### Composite Bias Signal
+
+- [ ] **BIAS-01**: Each ticker card shows a Bullish / Bearish / Neutral composite bias badge with a one-line rationale that identifies which sub-indicator dissents from the majority
+- [ ] **BIAS-02**: The composite card is labeled "Trend-following bias" with a caveat that all indicators share the same OHLCV data source
+- [ ] **BIAS-03**: Failed sub-indicators show a grey "unavailable" state; the composite denominator counts only successfully computed modules (e.g., "3/4 indicators" if one fails)
+
+### Tab & UX
+
+- [ ] **TIND-01**: A "Trading Indicators" fourth tab renders a 2×2 Plotly grid per scraped ticker, lazy-loaded on tab activation; `TradingIndicators.clearSession()` is called on re-scrape
+- [ ] **TIND-02**: A lookback dropdown (30/90/180/365 days) is visible in the tab; changing the value clears the session cache and re-fetches all tickers
+- [ ] **TIND-03**: All Trading Indicator Plotly charts render with `staticPlot: true` to prevent memory pressure when multiple tickers are loaded
+
+## v2.2 Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SWEEP-01 | TBD | Pending |
+| SWEEP-02 | TBD | Pending |
+| SWEEP-03 | TBD | Pending |
+| FLOW-01 | TBD | Pending |
+| FLOW-02 | TBD | Pending |
+| FLOW-03 | TBD | Pending |
+| AVWAP-01 | TBD | Pending |
+| AVWAP-02 | TBD | Pending |
+| AVWAP-03 | TBD | Pending |
+| VPROF-01 | TBD | Pending |
+| VPROF-02 | TBD | Pending |
+| VPROF-03 | TBD | Pending |
+| BIAS-01 | TBD | Pending |
+| BIAS-02 | TBD | Pending |
+| BIAS-03 | TBD | Pending |
+| TIND-01 | TBD | Pending |
+| TIND-02 | TBD | Pending |
+| TIND-03 | TBD | Pending |
+
+**v2.2 Coverage:**
+- v2.2 requirements: 18 total
+- Mapped to phases: 0 (pending roadmap creation)
+- Unmapped: 18 ⚠
+
+---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-22 after v2.1 milestone start*
+*Last updated: 2026-04-08 after v2.2 milestone start*
