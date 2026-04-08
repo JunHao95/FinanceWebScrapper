@@ -148,6 +148,9 @@
                         🤖 Auto Analysis
                         <span class="tab-badge" id="autoanalysisCount" style="display:none"></span>
                     </button>
+                    <button class="tab-button" onclick="switchTab('tradingindicators')" id="tradingIndicatorsTab">
+                        📊 Trading Indicators
+                    </button>
                 </div>
             </div>
 
@@ -223,6 +226,11 @@
 
                     <!-- Dynamic content injected by autoRun.js -->
                     <div id="autoAnalysisContent"></div>
+                </div>
+
+                <!-- Tab 4: Trading Indicators -->
+                <div class="tab-content" id="tradingIndicatorsTabContent">
+                    <!-- Phase 19–22 populate this with 2x2 Plotly grid per ticker -->
                 </div>
             </div>
 
@@ -1335,6 +1343,7 @@
     <script src="/static/js/earningsQuality.js"></script>
     <script src="/static/js/dcfValuation.js"></script>
     <script src="/static/js/peerComparison.js"></script>
+    <script src="/static/js/tradingIndicators.js"></script>
     <script src="/static/js/displayManager.js?v=2.2"></script>
     <script src="/static/js/analyticsRenderer.js?v=2.2"></script>
     <script src="/static/js/optionsDisplay.js"></script>

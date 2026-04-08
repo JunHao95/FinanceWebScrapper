@@ -84,6 +84,10 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Import Example**: `from python_snippets import snippet_yahoo_scraper`
 - **Key Feature**: Uses webapp's actual implementation classes for consistent results
 
+### Trading Indicators (Phase 18 scaffold)
+- **GET /api/trading_indicators?ticker=AAPL&lookback=90**: Returns stub JSON with placeholder keys for all four indicator panels (volume_profile, anchored_vwap, order_flow, liquidity_sweep, composite_bias). Real compute is added in Phases 19–22.
+- **tradingIndicators.js**: Browser IIFE module with per-ticker session cache and `clearSession()` wiring; calls the route and logs the stub response. Activates via the new "Trading Indicators" tab.
+
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
 - **Sector-Scoped Cache**: 30-minute TTL cache keyed by sector — tickers in the same sector share one fetch, avoiding redundant Finviz requests.

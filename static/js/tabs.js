@@ -13,7 +13,7 @@ const TabManager = {
             return;
         }
 
-        const validTabs = ['stocks', 'analytics', 'autoanalysis'];
+        const validTabs = ['stocks', 'analytics', 'autoanalysis', 'tradingindicators'];
         if (!validTabs.includes(tabName)) {
             console.error('Invalid tab name:', tabName);
             return;
@@ -49,6 +49,13 @@ const TabManager = {
                 if (autoanalysisTab && autoanalysisContent) {
                     autoanalysisTab.classList.add('active');
                     autoanalysisContent.classList.add('active');
+                }
+            } else if (tabName === 'tradingindicators') {
+                const tiTab = document.getElementById('tradingIndicatorsTab');
+                const tiContent = document.getElementById('tradingIndicatorsTabContent');
+                if (tiTab && tiContent) {
+                    tiTab.classList.add('active');
+                    tiContent.classList.add('active');
                 }
             }
         } catch (error) {
