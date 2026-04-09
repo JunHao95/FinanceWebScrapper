@@ -45,7 +45,10 @@ Plans:
   2. POC, VAH, and VAL are visible as filled levels or annotated horizontal lines — not hairlines — and the 70% value area between VAH and VAL is shaded in a distinct colour.
   3. A badge below the chart reads "Price inside value area" or "Price outside value area" reflecting the current close price position.
   4. The chart metadata or subtitle displays the bin width in USD so a user can verify the resolution (targeting approximately 0.2% bin width of price range).
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 19-01-PLAN.md — Python compute_volume_profile: unit tests + implementation + route update (wave 1)
+- [ ] 19-02-PLAN.md — JS rendering: _renderTickerCard + Plotly.newPlot + badge + visual checkpoint (wave 2)
 
 ### Phase 20: Anchored VWAP
 **Goal**: Each ticker's Anchored VWAP panel shows three VWAP lines — anchored to the 52-week high date, the 52-week low date, and the last earnings date — overlaid on the price chart, with right-edge distance labels and a convergence warning when any two lines are within 0.3% of current price.
