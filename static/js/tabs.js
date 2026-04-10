@@ -56,6 +56,12 @@ const TabManager = {
                 if (tiTab && tiContent) {
                     tiTab.classList.add('active');
                     tiContent.classList.add('active');
+                    if (typeof TradingIndicators !== 'undefined' &&
+                        window.pageContext && window.pageContext.tickers) {
+                        window.pageContext.tickers.forEach(function (ticker) {
+                            TradingIndicators.fetchForTicker(ticker, 90);
+                        });
+                    }
                 }
             }
         } catch (error) {
