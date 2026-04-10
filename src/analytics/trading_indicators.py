@@ -169,14 +169,16 @@ def compute_volume_profile(df: pd.DataFrame, ticker: str = '', lookback: int = 0
                   f'<sup>Bin width: ${bin_width:.2f} | POC: ${poc:.2f} | '
                   f'VAH: ${vah:.2f} | VAL: ${val:.2f}</sup>'),
         ),
-        height=420,
+        height=500,
         shapes=shapes,
         paper_bgcolor='#1e1e2e',
         plot_bgcolor='#1e1e2e',
         font=dict(color='#cdd6f4'),
         xaxis_rangeslider_visible=False,
-        xaxis2=dict(showticklabels=False),
-        margin=dict(l=10, r=10, t=60, b=10),
+        xaxis=dict(automargin=True),
+        yaxis=dict(automargin=True),
+        xaxis2=dict(showticklabels=False, automargin=True),
+        margin=dict(l=70, r=20, t=70, b=50),
     )
 
     d = fig.to_dict()

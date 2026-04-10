@@ -50,7 +50,11 @@
 
         var vp = resp.volume_profile;
         if (vp && vp.traces && vp.layout) {
-            Plotly.newPlot(vpDivId, vp.traces, vp.layout, { staticPlot: true });
+            Plotly.newPlot(vpDivId, vp.traces, vp.layout, {
+                responsive: true,
+                displayModeBar: true,
+                scrollZoom: true,
+            });
             var badgeEl = document.getElementById(badgeId);
             if (badgeEl) {
                 var inside = vp.signal === 'inside';
