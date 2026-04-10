@@ -1407,3 +1407,76 @@ body.results-loaded .skeleton-preview {
     background: rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.85);
 }
+
+/* ── Trading Indicators — Volume Profile ────────────────────────────── */
+.ti-ticker-card {
+    margin-bottom: 32px;
+}
+
+.ti-ticker-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 12px 0 6px 0;
+    color: #cdd6f4;
+}
+
+.ti-va-badge {
+    font-size: 14px;
+    margin: 8px 0 4px 0;
+}
+
+.ti-legend {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #a6adc8;
+}
+
+.ti-legend-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7f849c;
+    margin-bottom: 10px;
+}
+
+.ti-legend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 24px;
+    margin-bottom: 12px;
+}
+
+.ti-legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ti-swatch {
+    display: inline-block;
+    width: 28px;
+    min-width: 28px;
+    height: 10px;
+    margin-top: 4px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.ti-legend-desc {
+    color: #7f849c;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.ti-signal-guide {
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #a6adc8;
+}
