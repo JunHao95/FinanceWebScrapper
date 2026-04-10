@@ -84,9 +84,11 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Import Example**: `from python_snippets import snippet_yahoo_scraper`
 - **Key Feature**: Uses webapp's actual implementation classes for consistent results
 
-### Trading Indicators (Phase 18 scaffold)
-- **GET /api/trading_indicators?ticker=AAPL&lookback=90**: Returns stub JSON with placeholder keys for all four indicator panels (volume_profile, anchored_vwap, order_flow, liquidity_sweep, composite_bias). Real compute is added in Phases 19–22.
-- **tradingIndicators.js**: Browser IIFE module with per-ticker session cache and `clearSession()` wiring; calls the route and logs the stub response. Activates via the new "Trading Indicators" tab.
+### Trading Indicators (Phase 19 — Volume Profile)
+- **GET /api/trading_indicators?ticker=AAPL&lookback=90**: Returns real Volume Profile data (`traces`, `layout`, `signal`, `bin_width_usd`, `poc`, `vah`, `val`) using proportional-overlap volume distribution. POC, VAH, and VAL are computed via greedy expansion to capture ≥70% of total volume (value area).
+- **Volume Profile chart**: Dual-subplot Plotly figure — candlestick on the left, horizontal bar histogram on the right (shared y-axis). POC marked in orange, VAH/VAL in green/red dashed lines, 70% value area shaded in blue-transparent.
+- **Price-in-value-area badge**: Displayed below the chart in green ("Price inside value area") or red ("Price outside value area") depending on where the latest close sits relative to VAH/VAL.
+- **tradingIndicators.js**: Updated from Phase 18 stub to real `fetch` + `_renderTickerCard` with `Plotly.newPlot(..., { staticPlot: true })` and DOM badge rendering.
 
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
