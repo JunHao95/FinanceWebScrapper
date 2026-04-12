@@ -59,7 +59,10 @@ Plans:
   2. A third AVWAP line anchored to the last earnings date renders when available; when unavailable the panel shows "Earnings anchor unavailable" without removing or breaking the other two lines.
   3. When any two AVWAP lines are within 0.3% of current price, a convergence note appears on the panel identifying which lines are converging.
   4. The OHLCV fetch for anchor resolution always covers 365 days regardless of the display lookback, so a 30-day display can still compute a valid 52-week anchor.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — Python compute_anchored_vwap: TDD test scaffold + full implementation + webapp.py route update (wave 1)
+- [ ] 20-02-PLAN.md — JS rendering: extend _renderTickerCard() for AVWAP chart + convergence badge + earnings note + visual checkpoint (wave 2)
 
 ### Phase 21: Order Flow
 **Goal**: Each ticker's Order Flow panel shows a green/red buy/sell pressure delta bar chart with a cumulative delta overlay line, a volume divergence flag when price and volume trends diverge over a 10-bar window, and imbalance candle annotations marking bars where body size and volume exceed defined thresholds.
@@ -95,7 +98,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22
 |-------|----------------|--------|-----------|
 | 18. Backend Scaffold | 0/2 | Not started | - |
 | 19. Volume Profile | 0/? | Not started | - |
-| 20. Anchored VWAP | 0/? | Not started | - |
+| 20. Anchored VWAP | 0/2 | Not started | - |
 | 21. Order Flow | 0/? | Not started | - |
 | 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/? | Not started | - |
 
