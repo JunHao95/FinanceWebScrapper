@@ -73,7 +73,10 @@ Plans:
   2. When price slope and volume slope diverge over a 10-bar rolling window, a volume divergence flag appears on the panel displaying the actual price-slope and volume-slope values so the user can verify the signal.
   3. Bars where the body exceeds 70% of the high-low range AND volume exceeds 1.2× the 20-day average are annotated on the chart with "Bullish" or "Bearish" imbalance candle labels.
   4. Running the Order Flow computation on AAPL over a 90-day window produces no NaN values in the cumulative delta series, confirmed by the epsilon guard on zero-range bars.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 21-01-PLAN.md — Python: TestComputeOrderFlow TDD stubs + compute_order_flow implementation + webapp.py route wire (wave 1)
+- [ ] 21-02-PLAN.md — JS rendering: _renderTickerCard() Order Flow chart + divergence badge + legend + visual checkpoint (wave 2)
 
 ### Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring
 **Goal**: The fourth Trading Indicators tab is fully functional — Liquidity Sweep detection is live with adaptive n, look-ahead-safe loop bounds, and chart markers; the composite bias badge identifies the dissenting sub-indicator; the tab renders a 2×2 Plotly grid per ticker with a lookback dropdown that clears cache and re-fetches on change; all 18 v2.2 requirements are satisfied.
@@ -97,9 +100,9 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 18. Backend Scaffold | 0/2 | Not started | - |
-| 19. Volume Profile | 0/? | Not started | - |
+| 19. Volume Profile | 0/2 | Not started | - |
 | 20. Anchored VWAP | 0/2 | Not started | - |
-| 21. Order Flow | 0/? | Not started | - |
+| 21. Order Flow | 0/2 | Not started | - |
 | 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/? | Not started | - |
 
 ---
