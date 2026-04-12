@@ -2158,7 +2158,7 @@ def get_trading_indicators():
     if not ticker:
         return jsonify({'error': 'ticker parameter required'})
     try:
-        from src.analytics.trading_indicators import fetch_ohlcv, compute_volume_profile, compute_anchored_vwap
+        from src.analytics.trading_indicators import fetch_ohlcv, compute_volume_profile, compute_anchored_vwap, compute_order_flow
         df = fetch_ohlcv(ticker, lookback)
         df_365 = fetch_ohlcv(ticker, 365)
         return jsonify({
@@ -2166,7 +2166,7 @@ def get_trading_indicators():
             'lookback': lookback,
             'volume_profile': compute_volume_profile(df, ticker, lookback),
             'anchored_vwap':  compute_anchored_vwap(df_365, ticker, lookback),
-            'order_flow':     {'status': 'stub'},
+            'order_flow':     compute_order_flow(df, ticker, lookback),
             'liquidity_sweep': {'status': 'stub'},
             'composite_bias': {'status': 'stub'},
         })

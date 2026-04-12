@@ -399,8 +399,139 @@ def compute_anchored_vwap(df: pd.DataFrame, ticker: str, lookback: int) -> dict:
     }
 
 
-def compute_order_flow(df: pd.DataFrame) -> dict:
-    return {'status': 'stub'}
+def compute_order_flow(df: pd.DataFrame, ticker: str = '', lookback: int = 0) -> dict:
+    """
+    Compute Order Flow delta chart, volume divergence signal, and imbalance candle annotations.
+
+    Returns:
+        dict with keys: traces, layout, signal, divergence
+    """
+    if df is None or df.empty:
+        return {'status': 'error', 'message': 'empty dataframe'}
+
+    # 1. Epsilon guard: clip zero-range bars to avoid divide-by-zero
+    ranges = (df['High'] - df['Low']).clip(lower=1e-9)
+
+    # 2. Per-bar delta: buy_ratio in [0,1], mapped to [-vol, +vol]
+    buy_ratio = (df['Close'] - df['Low']) / ranges
+    delta = (2 * buy_ratio - 1) * df['Volume']
+
+    # 3. Cumulative delta
+    cumulative_delta = delta.cumsum()
+
+    # 4. Bar colours
+    bar_colors = ['#2ecc71' if v >= 0 else '#e74c3c' for v in delta]
+
+    # 5. Rolling slope helper (last 10 bars)
+    def _last_slope(series: pd.Series) -> float:
+        vals = series.dropna().values[-10:]
+        if len(vals) < 2:
+            return 0.0
+        x = np.arange(len(vals), dtype=float)
+        return float(np.polyfit(x, vals, 1)[0])
+
+    # 6. Divergence detection
+    price_slope = _last_slope(df['Close'])
+    vol_slope   = _last_slope(df['Volume'])
+    divergence_detected = bool((price_slope * vol_slope < 0) and (len(df) >= 10))
+
+    # 7. Imbalance candle detection
+    body = (df['Close'] - df['Open']).abs()
+    body_ratio = body / ranges
+    avg_vol_20 = df['Volume'].rolling(20, min_periods=1).mean()
+    is_imbalance = (body_ratio > 0.70) & (df['Volume'] > 1.2 * avg_vol_20)
+
+    # 8. Build Plotly figure (dual-axis)
+    fig = go.Figure()
+
+    # Delta bars on primary y-axis
+    delta_vals = _safe_list(delta)
+    fig.add_trace(go.Bar(
+        x=list(df.index.astype(str)),
+        y=delta_vals,
+        marker_color=bar_colors,
+        name='Delta',
+        yaxis='y',
+    ))
+
+    # Cumulative delta line on secondary y-axis
+    cum_vals = _safe_list(cumulative_delta)
+    fig.add_trace(go.Scatter(
+        x=list(df.index.astype(str)),
+        y=cum_vals,
+        mode='lines',
+        line=dict(color='#cdd6f4', width=1.5),
+        name='Cumulative Delta',
+        yaxis='y2',
+    ))
+
+    # 9. Imbalance annotations (yref='y', the delta bar axis)
+    annotations = []
+    delta_arr = delta.values
+    for i, flag in enumerate(is_imbalance):
+        if not flag:
+            continue
+        bar_val = delta_arr[i]
+        offset = abs(bar_val) * 0.05 if abs(bar_val) > 0 else 1.0
+        is_bullish = df['Close'].iloc[i] >= df['Open'].iloc[i]
+        annotations.append(dict(
+            x=str(df.index[i]),
+            y=float(bar_val) + offset if is_bullish else float(bar_val) - offset,
+            xref='x',
+            yref='y',
+            text='\u25b2' if is_bullish else '\u25bc',
+            showarrow=False,
+            font=dict(color='#2ecc71' if is_bullish else '#e74c3c', size=12),
+        ))
+
+    # 10. Zero-line shape
+    fig.update_layout(
+        paper_bgcolor=PAPER_BG,
+        plot_bgcolor=PLOT_BG,
+        font=dict(color=FONT_CLR),
+        title=f'Order Flow — {ticker}' if ticker else 'Order Flow',
+        yaxis=dict(title='Delta', gridcolor='#313244'),
+        yaxis2=dict(
+            title='Cumulative Delta',
+            overlaying='y',
+            side='right',
+            gridcolor='#313244',
+        ),
+        xaxis=dict(gridcolor='#313244'),
+        shapes=[dict(
+            type='line',
+            xref='paper', x0=0, x1=1,
+            yref='y', y0=0, y1=0,
+            line=dict(color='#7f849c', width=1, dash='dash'),
+        )],
+        annotations=annotations,
+        showlegend=True,
+        legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color=FONT_CLR)),
+    )
+
+    # 11. Determine overall signal from last cumulative delta slope
+    cum_slope = _last_slope(cumulative_delta)
+    if cum_slope > 0:
+        signal = 'bullish'
+    elif cum_slope < 0:
+        signal = 'bearish'
+    else:
+        signal = 'neutral'
+
+    # 12. Serialise
+    d = fig.to_dict()
+    d['layout'].pop('template', None)
+
+    return {
+        'traces':     d['data'],
+        'layout':     d['layout'],
+        'signal':     signal,
+        'divergence': {
+            'detected':    divergence_detected,
+            'price_slope': round(price_slope, 6),
+            'vol_slope':   round(vol_slope, 6),
+        },
+    }
 
 
 def compute_liquidity_sweep(df: pd.DataFrame) -> dict:
