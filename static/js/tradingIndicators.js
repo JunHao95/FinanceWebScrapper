@@ -144,6 +144,40 @@
         if (av && av.earnings_unavailable === true) {
             avwapNoteEl.textContent = 'Earnings anchor unavailable \u2014 only 52-wk high & low lines shown.';
         }
+
+        // AVWAP legend
+        var avwapLegendEl = document.createElement('div');
+        avwapLegendEl.className = 'ti-legend';
+        avwapLegendEl.innerHTML =
+            '<div class="ti-legend-title">How to read this chart</div>' +
+            '<div class="ti-legend-grid">' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:#4c9be8;height:3px;"></span>' +
+                '<div><strong>52-wk High AVWAP</strong> \u2014 VWAP anchored to the 52-week high date<br>' +
+                '<span class="ti-legend-desc">Price trading below this line means sellers who bought near the yearly peak are still underwater on average. A reclaim signals bullish recovery.</span></div>' +
+              '</div>' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:#fe8019;height:3px;"></span>' +
+                '<div><strong>52-wk Low AVWAP</strong> \u2014 VWAP anchored to the 52-week low date<br>' +
+                '<span class="ti-legend-desc">Price above this line means buyers who stepped in at the yearly low are in profit on average. Losing this level signals deteriorating demand.</span></div>' +
+              '</div>' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:#cba6f7;height:3px;"></span>' +
+                '<div><strong>Earnings AVWAP</strong> \u2014 VWAP anchored to the most recent earnings date<br>' +
+                '<span class="ti-legend-desc">Tracks the average cost basis of traders who positioned around the last earnings event. Acts as a key support/resistance since the report.</span></div>' +
+              '</div>' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:rgba(205,214,244,0.35);border-top:1px dashed rgba(205,214,244,0.5);height:0;"></span>' +
+                '<div><strong>Current Price</strong> \u2014 dashed reference line<br>' +
+                '<span class="ti-legend-desc">Shows where price sits relative to all three AVWAP anchors at a glance.</span></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="ti-signal-guide">' +
+              '<strong>Right-edge labels</strong> show the signed % distance between current price and each AVWAP line \u2014 positive means price is above that anchor\'s average cost basis, negative means below. ' +
+              '&nbsp;|&nbsp; ' +
+              '<strong>Convergence</strong>: when price comes within 0.3% of any AVWAP line, that line acts as a high-probability inflection point \u2014 watch for a bounce or breakdown.' +
+            '</div>';
+        card.appendChild(avwapLegendEl);
     }
 
     window.TradingIndicators = { fetchForTicker: fetchForTicker, clearSession: clearSession };
