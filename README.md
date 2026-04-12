@@ -90,6 +90,12 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Price-in-value-area badge**: Displayed below the chart in green ("Price inside value area") or red ("Price outside value area") depending on where the latest close sits relative to VAH/VAL.
 - **tradingIndicators.js**: Updated from Phase 18 stub to real `fetch` + `_renderTickerCard` with `Plotly.newPlot(..., { staticPlot: true })` and DOM badge rendering.
 
+### Trading Indicators (Phase 20 — Anchored VWAP)
+- **Anchored VWAP panel**: Rendered below the Volume Profile chart per ticker. Displays a candlestick chart (500px) with three AVWAP lines anchored to the 52-week High (blue), 52-week Low (orange), and most recent earnings date (purple).
+- **Right-edge labels**: Plotly annotations pinned to the chart's right edge show each AVWAP line name plus its signed percentage distance from the current price (e.g. "52-wk High: +2.1%").
+- **Convergence badge**: Warns when any AVWAP line is within 0.3% of current price; shows a muted confirmation when no lines converge.
+- **Earnings-unavailable note**: For ETFs (GLD, TLT) and tickers with no past earnings, a grey note replaces the earnings AVWAP line and explains the omission.
+
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
 - **Sector-Scoped Cache**: 30-minute TTL cache keyed by sector — tickers in the same sector share one fetch, avoiding redundant Finviz requests.

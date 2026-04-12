@@ -101,6 +101,49 @@
                 badgeEl.style.display    = 'block';
             }
         }
+
+        // --- Anchored VWAP panel ---
+        var avwapDivId   = 'avwapChart_' + ticker;
+        var avwapBadgeId = 'avwapBadge_' + ticker;
+        var avwapNoteId  = 'avwapNote_'  + ticker;
+
+        var avwapChartEl = document.createElement('div');
+        avwapChartEl.id = avwapDivId;
+        avwapChartEl.style.cssText = 'width:100%;height:500px;margin-top:24px;';
+        card.appendChild(avwapChartEl);
+
+        var avwapBadgeEl = document.createElement('div');
+        avwapBadgeEl.id = avwapBadgeId;
+        avwapBadgeEl.className = 'ti-va-badge';
+        card.appendChild(avwapBadgeEl);
+
+        var avwapNoteEl = document.createElement('div');
+        avwapNoteEl.id = avwapNoteId;
+        avwapNoteEl.style.cssText = 'color:#7f849c;font-size:12px;margin:4px 0 8px 0;';
+        card.appendChild(avwapNoteEl);
+
+        var av = resp.anchored_vwap;
+        if (av && av.traces && av.layout) {
+            Plotly.newPlot(avwapDivId, av.traces, av.layout, { staticPlot: true, responsive: true });
+        }
+
+        if (av && av.convergence !== undefined) {
+            var conv = av.convergence;
+            if (conv.length > 0) {
+                avwapBadgeEl.textContent = '\u26a0 Convergence: ' + conv.join(', ') + ' AVWAP within 0.3% of current price at $' + av.current_price.toFixed(2);
+                avwapBadgeEl.style.color = '#e74c3c';
+            } else {
+                avwapBadgeEl.textContent = '\u2714 No AVWAP convergence';
+                avwapBadgeEl.style.color = '#7f849c';
+            }
+            avwapBadgeEl.style.fontWeight = 'bold';
+            avwapBadgeEl.style.fontSize   = '14px';
+            avwapBadgeEl.style.display    = 'block';
+        }
+
+        if (av && av.earnings_unavailable === true) {
+            avwapNoteEl.textContent = 'Earnings anchor unavailable \u2014 only 52-wk high & low lines shown.';
+        }
     }
 
     window.TradingIndicators = { fetchForTicker: fetchForTicker, clearSession: clearSession };

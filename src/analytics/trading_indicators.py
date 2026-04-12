@@ -195,8 +195,208 @@ def compute_volume_profile(df: pd.DataFrame, ticker: str = '', lookback: int = 0
     }
 
 
-def compute_anchored_vwap(df: pd.DataFrame) -> dict:
-    return {'status': 'stub'}
+PAPER_BG = '#1e1e2e'
+PLOT_BG  = '#1e1e2e'
+FONT_CLR = '#cdd6f4'
+AVWAP_COLORS = {
+    'high':     '#4c9be8',
+    'low':      '#fe8019',
+    'earnings': '#cba6f7',
+    'ref_line': 'rgba(205,214,244,0.35)',
+}
+
+
+def _get_last_earnings_date(ticker: str):
+    """Return the most recent past earnings date (tz-naive) or None."""
+    try:
+        ed = yf.Ticker(ticker).earnings_dates
+        if ed is None or ed.empty:
+            return None
+        if 'Reported EPS' not in ed.columns:
+            return None
+        past = ed[ed['Reported EPS'].notna()]
+        if past.empty:
+            return None
+        last = past.index.max()
+        return last.tz_localize(None) if last.tzinfo is not None else last
+    except Exception:
+        return None
+
+
+def _avwap_series(df_full: pd.DataFrame, anchor_date, display_index: pd.DatetimeIndex) -> pd.Series:
+    """Compute AVWAP from anchor_date forward, reindexed to display_index."""
+    subset = df_full.loc[anchor_date:]
+    if subset.empty:
+        return pd.Series(index=display_index, dtype=float)
+    tp = (subset['High'] + subset['Low'] + subset['Close']) / 3.0
+    cum_v = subset['Volume'].cumsum().replace(0, np.nan)
+    cum_tpv = (tp * subset['Volume']).cumsum()
+    return (cum_tpv / cum_v).reindex(display_index)
+
+
+def _safe_list(series: pd.Series) -> list:
+    """Convert series to list, replacing NaN with None for JSON safety."""
+    return [None if pd.isna(v) else float(v) for v in series]
+
+
+def compute_anchored_vwap(df: pd.DataFrame, ticker: str, lookback: int) -> dict:
+    """
+    Compute Anchored VWAP for 52-wk High, 52-wk Low, and most recent earnings date.
+
+    Args:
+        df: 365-day OHLCV DataFrame (caller provides full history)
+        ticker: ticker symbol (for earnings date lookup)
+        lookback: display window size (last N rows of df)
+
+    Returns dict with keys: traces, layout, signal, convergence, current_price,
+    earnings_unavailable, labels
+    """
+    df_display = df.iloc[-lookback:] if len(df) >= lookback else df
+    display_index = df_display.index
+
+    wk52_high_date = df['High'].idxmax()
+    wk52_low_date  = df['Low'].idxmin()
+
+    earnings_ts = _get_last_earnings_date(ticker)
+    earnings_unavailable = True
+    if earnings_ts is not None:
+        if earnings_ts < df.index[0]:
+            earnings_unavailable = True
+            earnings_ts = None
+        else:
+            earnings_unavailable = False
+
+    avwap_high = _avwap_series(df, wk52_high_date, display_index)
+    avwap_low  = _avwap_series(df, wk52_low_date,  display_index)
+    avwap_earn = _avwap_series(df, earnings_ts, display_index) if earnings_ts is not None else None
+
+    current_price = float(df_display['Close'].iloc[-1])
+
+    avwap_high_val = float(avwap_high.iloc[-1]) if not pd.isna(avwap_high.iloc[-1]) else None
+    avwap_low_val  = float(avwap_low.iloc[-1])  if not pd.isna(avwap_low.iloc[-1])  else None
+    avwap_earn_val = float(avwap_earn.iloc[-1]) if (avwap_earn is not None and not pd.isna(avwap_earn.iloc[-1])) else None
+
+    # Convergence check (within 0.3%)
+    converging = []
+    for name, val in [('52-wk High', avwap_high_val), ('52-wk Low', avwap_low_val), ('Earnings', avwap_earn_val)]:
+        if val is not None and abs(current_price - val) / current_price <= 0.003:
+            converging.append(name)
+
+    # Signal
+    if avwap_high_val is not None and current_price > avwap_high_val:
+        signal = 'above'
+    elif avwap_low_val is not None and current_price < avwap_low_val:
+        signal = 'below'
+    else:
+        signal = 'between'
+
+    # Labels
+    def _pct_label(prefix, avwap_val):
+        if avwap_val is None:
+            return None
+        pct = (current_price - avwap_val) / avwap_val * 100
+        return f'{prefix}: {pct:+.1f}%'
+
+    label_high     = _pct_label('52-wk High', avwap_high_val)
+    label_low      = _pct_label('52-wk Low',  avwap_low_val)
+    label_earnings = _pct_label('Earnings',   avwap_earn_val)
+
+    x_dates = display_index.astype(str).tolist()
+
+    # Build figure
+    fig = go.Figure()
+
+    fig.add_trace(go.Candlestick(
+        x=x_dates,
+        open=df_display['Open'].tolist(),
+        high=df_display['High'].tolist(),
+        low=df_display['Low'].tolist(),
+        close=df_display['Close'].tolist(),
+        name=ticker,
+        showlegend=False,
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=x_dates, y=_safe_list(avwap_high),
+        mode='lines', name='52-wk High',
+        line=dict(color=AVWAP_COLORS['high'], width=1.5),
+        connectgaps=True,
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=x_dates, y=_safe_list(avwap_low),
+        mode='lines', name='52-wk Low',
+        line=dict(color=AVWAP_COLORS['low'], width=1.5),
+        connectgaps=True,
+    ))
+
+    if avwap_earn is not None:
+        fig.add_trace(go.Scatter(
+            x=x_dates, y=_safe_list(avwap_earn),
+            mode='lines', name='Earnings',
+            line=dict(color=AVWAP_COLORS['earnings'], width=1.5),
+            connectgaps=True,
+        ))
+
+    shapes = [dict(
+        type='line', xref='paper', x0=0, x1=1,
+        yref='y', y0=current_price, y1=current_price,
+        line=dict(color=AVWAP_COLORS['ref_line'], width=1, dash='dash'),
+    )]
+
+    annotations = []
+    for label_text, color in [
+        (label_high,     AVWAP_COLORS['high']),
+        (label_low,      AVWAP_COLORS['low']),
+        (label_earnings, AVWAP_COLORS['earnings']),
+    ]:
+        if label_text is None:
+            continue
+        # Find y value for annotation
+        if label_text.startswith('52-wk High') and avwap_high_val is not None:
+            y_val = avwap_high_val
+        elif label_text.startswith('52-wk Low') and avwap_low_val is not None:
+            y_val = avwap_low_val
+        elif label_text.startswith('Earnings') and avwap_earn_val is not None:
+            y_val = avwap_earn_val
+        else:
+            continue
+        annotations.append(dict(
+            xref='paper', x=1.0, xanchor='left',
+            yref='y', y=y_val,
+            text=label_text,
+            showarrow=False,
+            font=dict(size=10, color=color),
+        ))
+
+    fig.update_layout(
+        title=f'{ticker} — Anchored VWAP ({lookback}d)',
+        height=500,
+        paper_bgcolor=PAPER_BG,
+        plot_bgcolor=PLOT_BG,
+        font=dict(color=FONT_CLR),
+        xaxis_rangeslider_visible=False,
+        shapes=shapes,
+        annotations=annotations,
+        margin=dict(l=70, r=120, t=70, b=50),
+    )
+
+    d = fig.to_dict()
+    d['layout'].pop('template', None)
+
+    return {
+        'traces': d['data'],
+        'layout': d['layout'],
+        'signal': signal,
+        'convergence': converging,
+        'current_price': current_price,
+        'earnings_unavailable': earnings_unavailable,
+        'labels': {
+            'high':     label_high,
+            'low':      label_low,
+            'earnings': label_earnings,
+        },
+    }
 
 
 def compute_order_flow(df: pd.DataFrame) -> dict:
