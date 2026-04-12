@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.2
-milestone_name: Milestone — Trading Indicators
+milestone_name: milestone
 status: planning
-stopped_at: Roadmap created — ready for Phase 18 planning
-last_updated: "2026-04-08T00:00:00.000Z"
-last_activity: 2026-04-08 — v2.2 roadmap created (5 phases, 18 requirements)
+stopped_at: Phase 20 context gathered
+last_updated: "2026-04-12T02:58:35.476Z"
+last_activity: 2026-04-08 — Roadmap created; 18 requirements mapped across 5 phases (18–22)
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -166,7 +165,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Run /gsd:plan-phase 18 to break Phase 18 into executable plans
+- Plan and execute Phase 20 (Anchored VWAP)
 
 ### Blockers/Concerns
 
@@ -176,6 +175,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-08
-Stopped at: Roadmap created for v2.2
-Resume file: .planning/ROADMAP.md (v2.2 phases 18–22)
+Last session: 2026-04-12T02:58:35.467Z
+Stopped at: Phase 20 context gathered
+Resume file: .planning/phases/20-anchored-vwap/20-CONTEXT.md
