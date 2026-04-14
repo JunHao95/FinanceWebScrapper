@@ -644,6 +644,9 @@ This project is for educational purposes. Web scraping may violate terms of serv
 
 ## 📝 Changelog
 
+### Phase 21 Hotfix (April 2026)
+- 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.
+
 ### Milestone v2.1 — Deeper Stock Analysis (March 2026)
 - 🆕 **Financial Health Score** (Phase 13): Client-side letter-grade (A–F) scoring using current ratio, quick ratio, debt-to-equity, and interest coverage; collapsible deep-analysis panel with state preserved across re-scrapes
 - 🆕 **Earnings Quality** (Phase 14): Accruals ratio, cash conversion ratio (OCF / net income), and EPS consistency flag — surfaces whether earnings are cash-backed; Net Income and Total Assets added to Yahoo scraper
