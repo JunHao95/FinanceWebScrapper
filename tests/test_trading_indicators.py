@@ -266,3 +266,127 @@ class TestComputeAnchoredVwap:
             assert len(t['x']) == lookback, (
                 f"Expected trace length {lookback}, got {len(t['x'])}"
             )
+
+
+def _make_ohlcv(n=30, price_start=100.0, price_step=0.5, vol_start=1000.0, vol_step=0.0,
+                doji_idx=None):
+    """Build a synthetic OHLCV DataFrame. Optionally insert a doji bar (High==Low) at doji_idx."""
+    import numpy as np
+    idx = pd.date_range('2024-01-01', periods=n, freq='B')
+    closes = [price_start + i * price_step for i in range(n)]
+    opens  = [c - 0.2 for c in closes]
+    highs  = [c + 0.5 for c in closes]
+    lows   = [c - 0.5 for c in closes]
+    vols   = [vol_start + i * vol_step for i in range(n)]
+    if doji_idx is not None:
+        highs[doji_idx] = closes[doji_idx]
+        lows[doji_idx]  = closes[doji_idx]
+    return pd.DataFrame({
+        'Open': opens, 'High': highs, 'Low': lows, 'Close': closes, 'Volume': vols,
+    }, index=idx)
+
+
+class TestComputeOrderFlow:
+
+    def test_order_flow_keys(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        df = _make_ohlcv(n=30)
+        result = compute_order_flow(df, 'TEST', 30)
+        assert set(result.keys()) >= {'traces', 'layout', 'signal', 'divergence'}
+        assert set(result['divergence'].keys()) >= {'detected', 'price_slope', 'vol_slope'}
+
+    def test_no_nan_in_cumulative_delta(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        # Insert a doji bar (High==Low) at index 5 to exercise epsilon guard
+        df = _make_ohlcv(n=30, doji_idx=5)
+        result = compute_order_flow(df, 'TEST', 30)
+        # cumulative delta is traces[1]['y']
+        cum_delta = result['traces'][1]['y']
+        assert all(v is not None for v in cum_delta), "NaN found in cumulative delta series"
+
+    def test_epsilon_guard_on_zero_range(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        # Single bar where Open=Close=High=Low (zero range)
+        df = pd.DataFrame({
+            'Open': [100.0], 'High': [100.0], 'Low': [100.0],
+            'Close': [100.0], 'Volume': [1000.0],
+        }, index=pd.date_range('2024-01-01', periods=1, freq='B'))
+        result = compute_order_flow(df, 'TEST', 1)
+        assert result['signal'] in ('bullish', 'bearish', 'neutral')
+
+    def test_divergence_detected_opposite_slopes(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        import numpy as np
+        n = 15
+        idx = pd.date_range('2024-01-01', periods=n, freq='B')
+        closes = [100.0 + i * 0.5 for i in range(n)]          # rising price
+        vols   = [2000.0 - i * 100.0 for i in range(n)]       # falling volume
+        df = pd.DataFrame({
+            'Open':  [c - 0.1 for c in closes],
+            'High':  [c + 0.5 for c in closes],
+            'Low':   [c - 0.5 for c in closes],
+            'Close': closes,
+            'Volume': vols,
+        }, index=idx)
+        result = compute_order_flow(df, 'TEST', n)
+        assert result['divergence']['detected'] is True
+
+    def test_no_divergence_same_sign_slopes(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        n = 15
+        idx = pd.date_range('2024-01-01', periods=n, freq='B')
+        closes = [100.0 + i * 0.5 for i in range(n)]
+        vols   = [1000.0 + i * 50.0 for i in range(n)]        # rising volume
+        df = pd.DataFrame({
+            'Open':  [c - 0.1 for c in closes],
+            'High':  [c + 0.5 for c in closes],
+            'Low':   [c - 0.5 for c in closes],
+            'Close': closes,
+            'Volume': vols,
+        }, index=idx)
+        result = compute_order_flow(df, 'TEST', n)
+        assert result['divergence']['detected'] is False
+
+    def test_imbalance_candle_annotation(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        n = 25
+        idx = pd.date_range('2024-01-01', periods=n, freq='B')
+        # All normal bars first (body_ratio ~0.3)
+        closes = [100.0 + i * 0.1 for i in range(n)]
+        opens  = [c - 0.15 for c in closes]
+        highs  = [c + 0.35 for c in closes]
+        lows   = [c - 0.35 for c in closes]
+        vols   = [100.0] * n
+        # Override bar 24 (last): Open=100, Close=108, High=108, Low=100 -> 100% body ratio
+        # Volume=1000 vs avg_vol_20=100 -> 10x spike
+        closes[24] = 108.0
+        opens[24]  = 100.0
+        highs[24]  = 108.0
+        lows[24]   = 100.0
+        vols[24]   = 1000.0
+        df = pd.DataFrame({
+            'Open': opens, 'High': highs, 'Low': lows, 'Close': closes, 'Volume': vols,
+        }, index=idx)
+        result = compute_order_flow(df, 'TEST', n)
+        annotations = result['layout'].get('annotations', [])
+        assert len(annotations) >= 1, "Expected at least one imbalance annotation"
+        texts = [a.get('text', '') for a in annotations]
+        assert any('\u25b2' in t or '\u25bc' in t for t in texts), \
+            f"No ▲/▼ annotation found in {texts}"
+
+    def test_no_annotation_normal_candle(self):
+        from src.analytics.trading_indicators import compute_order_flow
+        n = 25
+        idx = pd.date_range('2024-01-01', periods=n, freq='B')
+        # body_ratio ~0.3, volume at 1x average everywhere
+        closes = [100.0 + i * 0.1 for i in range(n)]
+        opens  = [c - 0.15 for c in closes]
+        highs  = [c + 0.35 for c in closes]
+        lows   = [c - 0.35 for c in closes]
+        vols   = [100.0] * n
+        df = pd.DataFrame({
+            'Open': opens, 'High': highs, 'Low': lows, 'Close': closes, 'Volume': vols,
+        }, index=idx)
+        result = compute_order_flow(df, 'TEST', n)
+        annotations = result['layout'].get('annotations', [])
+        assert annotations == [], f"Expected no annotations, got {annotations}"

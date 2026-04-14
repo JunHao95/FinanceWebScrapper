@@ -178,6 +178,68 @@
               '<strong>Convergence</strong>: when price comes within 0.3% of any AVWAP line, that line acts as a high-probability inflection point \u2014 watch for a bounce or breakdown.' +
             '</div>';
         card.appendChild(avwapLegendEl);
+
+        // --- Order Flow panel (FLOW-01 / FLOW-02 / FLOW-03) ---
+        var ofDivId = 'ofChart_' + ticker;
+        var ofChartEl = document.createElement('div');
+        ofChartEl.id = ofDivId;
+        ofChartEl.style.cssText = 'width:100%;height:500px;margin-top:24px;';
+        card.appendChild(ofChartEl);
+
+        var ofBadgeId = 'ofBadge_' + ticker;
+        var ofBadgeEl = document.createElement('div');
+        ofBadgeEl.id = ofBadgeId;
+        ofBadgeEl.className = 'ti-va-badge';
+        card.appendChild(ofBadgeEl);
+
+        var of = resp.order_flow;
+        if (of && of.traces && of.layout) {
+            Plotly.newPlot(ofDivId, of.traces, of.layout, { staticPlot: true, responsive: true });
+        }
+        if (of && of.divergence !== undefined) {
+            var hasDivergence = of.divergence.detected;
+            ofBadgeEl.textContent = hasDivergence
+                ? '\u26a0 Volume Divergence \u2014 price slope: ' + of.divergence.price_slope.toFixed(4)
+                  + ', vol slope: ' + of.divergence.vol_slope.toFixed(4)
+                : '\u2714 No divergence';
+            ofBadgeEl.style.color      = hasDivergence ? '#e74c3c' : '#7f849c';
+            ofBadgeEl.style.fontWeight = 'bold';
+            ofBadgeEl.style.fontSize   = '14px';
+            ofBadgeEl.style.display    = 'block';
+        }
+
+        var ofLegendEl = document.createElement('div');
+        ofLegendEl.className = 'ti-legend';
+        ofLegendEl.innerHTML =
+            '<div class="ti-legend-title">How to read this chart</div>' +
+            '<div class="ti-legend-grid">' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:#2ecc71;height:12px;width:12px;border-radius:2px;"></span>' +
+                '<div><strong>Green bars</strong> \u2014 Buy pressure (close nearer to high)<br>' +
+                '<span class="ti-legend-desc">Computed as (Close\u2212Low)/(High\u2212Low)\u00d7Volume. Taller green bars mean more aggressive buying that session.</span></div>' +
+              '</div>' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:#e74c3c;height:12px;width:12px;border-radius:2px;"></span>' +
+                '<div><strong>Red bars</strong> \u2014 Sell pressure (close nearer to low)<br>' +
+                '<span class="ti-legend-desc">Negative delta values. Persistent red bars signal supply overpowering demand.</span></div>' +
+              '</div>' +
+              '<div class="ti-legend-item">' +
+                '<span class="ti-swatch" style="background:#cdd6f4;height:3px;"></span>' +
+                '<div><strong>White line</strong> \u2014 Cumulative delta (right axis)<br>' +
+                '<span class="ti-legend-desc">Running sum of all delta bars. A rising line means buyers are accumulating; a falling line signals sustained selling pressure.</span></div>' +
+              '</div>' +
+              '<div class="ti-legend-item">' +
+                '<span style="font-size:14px;color:#2ecc71;margin-right:6px;">\u25b2</span>' +
+                '<span style="font-size:14px;color:#e74c3c;margin-right:10px;">\u25bc</span>' +
+                '<div><strong>Imbalance candles</strong> \u2014 body &gt;70% of range AND volume &gt;1.2\u00d7 20-day avg<br>' +
+                '<span class="ti-legend-desc">High-conviction directional bars. \u25b2 (bullish) appears above the bar; \u25bc (bearish) below. These often mark short-term exhaustion or continuation points.</span></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="ti-signal-guide">' +
+              '<strong>Volume Divergence</strong>: fires when price slope and volume slope have opposite signs over the last 10 bars \u2014 ' +
+              'price rising on falling volume signals weakening momentum; price falling on rising volume signals distribution.' +
+            '</div>';
+        card.appendChild(ofLegendEl);
     }
 
     window.TradingIndicators = { fetchForTicker: fetchForTicker, clearSession: clearSession };

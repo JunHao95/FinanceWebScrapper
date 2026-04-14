@@ -96,6 +96,11 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Convergence badge**: Warns when any AVWAP line is within 0.3% of current price; shows a muted confirmation when no lines converge.
 - **Earnings-unavailable note**: For ETFs (GLD, TLT) and tickers with no past earnings, a grey note replaces the earnings AVWAP line and explains the omission.
 
+### Trading Indicators (Phase 21 — Order Flow)
+- **Order Flow panel**: Rendered below the AVWAP panel per ticker. Displays green/red delta bars (buy vs sell pressure per bar, computed as `(Close−Low)/(High−Low)×Volume`) with a cumulative delta line overlay on the right axis.
+- **Volume Divergence badge**: Always visible below the chart — shows "⚠ Volume Divergence" with price and volume slope values when price and volume trends diverge over the last 10 bars, or a muted "✔ No divergence" when aligned.
+- **Imbalance candle annotations**: ▲/▼ markers appear on bars where the body exceeds 70% of the high-low range AND volume exceeds 1.2× the 20-day average, flagging high-conviction directional moves.
+
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
 - **Sector-Scoped Cache**: 30-minute TTL cache keyed by sector — tickers in the same sector share one fetch, avoiding redundant Finviz requests.
@@ -638,6 +643,9 @@ This project is for educational purposes. Web scraping may violate terms of serv
 ---
 
 ## 📝 Changelog
+
+### Phase 21 Hotfix (April 2026)
+- 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.
 
 ### Milestone v2.1 — Deeper Stock Analysis (March 2026)
 - 🆕 **Financial Health Score** (Phase 13): Client-side letter-grade (A–F) scoring using current ratio, quick ratio, debt-to-equity, and interest coverage; collapsible deep-analysis panel with state preserved across re-scrapes
