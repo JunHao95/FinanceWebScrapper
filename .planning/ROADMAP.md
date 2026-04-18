@@ -12,11 +12,12 @@ Phases are ordered by implementation risk, not alphabetically. Volume Profile is
 
 ## Phases
 
-- [ ] **Phase 18: Backend Scaffold** - Canonical OHLCV fetch function, stub Flask route returning hardcoded JSON, stub JS module confirming browser-to-API round-trip
+- [x] **Phase 18: Backend Scaffold** - Canonical OHLCV fetch function, stub Flask route returning hardcoded JSON, stub JS module confirming browser-to-API round-trip
 - [ ] **Phase 19: Volume Profile** - POC/VAH/VAL horizontal histogram with shaded value area, price-in-value-area badge, adaptive bin count (VPROF-01, VPROF-02, VPROF-03)
 - [ ] **Phase 20: Anchored VWAP** - Three AVWAP lines (52-wk high, 52-wk low, earnings) with right-edge labels, convergence warning, earnings fallback (AVWAP-01, AVWAP-02, AVWAP-03)
 - [ ] **Phase 21: Order Flow** - Delta bar chart with cumulative overlay, volume divergence flag with slope values, imbalance candle annotations (FLOW-01, FLOW-02, FLOW-03)
 - [ ] **Phase 22: Liquidity Sweep + Composite Bias + Tab Wiring** - Sweep detection with adaptive n and chart markers, composite bias badge with dissenter identification, fourth tab + lookback dropdown fully wired (SWEEP-01, SWEEP-02, SWEEP-03, BIAS-01, BIAS-02, BIAS-03, TIND-01, TIND-02, TIND-03)
+- [ ] **Phase 23: End-to-End Test Suite Design** - Identify critical user flows, set up pytest + Selenium testing framework, implement unit tests for analytics modules, integration tests for API routes, regression tests for indicator correctness, and E2E tests for the data scraping and simulation pipeline (TEST-01, TEST-02, TEST-03, TEST-04, TEST-05)
 
 ---
 
@@ -33,8 +34,8 @@ Phases are ordered by implementation risk, not alphabetically. Volume Profile is
   4. A browser developer-tools network trace confirms the JS module calls the route and receives the stub JSON without any console error.
 **Plans**: 2 plans
 Plans:
-- [ ] 18-01-PLAN.md — Python backend: fetch_ohlcv function, stub trading_indicators module, Flask GET route (wave 1)
-- [ ] 18-02-PLAN.md — Browser scaffold: tradingIndicators.js IIFE, tab button + content div in index.html, clearSession wiring, tabs.js update, DevTools checkpoint (wave 2)
+- [x] 18-01-PLAN.md — Python backend: fetch_ohlcv function, stub trading_indicators module, Flask GET route (wave 1)
+- [x] 18-02-PLAN.md — Browser scaffold: tradingIndicators.js IIFE, tab button + content div in index.html, clearSession wiring, tabs.js update, DevTools checkpoint (wave 2)
 
 ### Phase 19: Volume Profile
 **Goal**: Each ticker's Trading Indicators panel shows a horizontal volume histogram with clearly visible POC, VAH, and VAL levels, a shaded 70% value area zone, a price-in-value-area badge, and adaptive bin sizing — establishing the Plotly `{traces, layout, signal}` payload shape that all subsequent indicators must follow.
@@ -90,12 +91,25 @@ Plans:
   5. A lookback dropdown (30 / 90 / 180 / 365 days) is visible in the tab; changing the selection clears the session cache and re-fetches all tickers; all charts render with `staticPlot: true`.
 **Plans**: TBD
 
+### Phase 23: End-to-End Test Suite Design
+**Goal**: A comprehensive test suite covering unit, integration, regression, and end-to-end tests is in place — critical user flows are identified and documented, a testing framework (pytest for backend, Selenium/Playwright for browser E2E) is configured, all analytics modules have unit test coverage, all API routes have integration tests, indicator correctness has regression tests with pinned expected values, and the full scrape-to-display pipeline is validated by E2E tests that exercise the browser UI.
+**Depends on**: Phase 22 (all v2.2 indicator features complete)
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+**Success Criteria** (what must be TRUE):
+  1. Critical user flows are documented in a test plan covering: stock scraping pipeline, stochastic model computation, trading indicator generation, chatbot interaction, and portfolio health scoring.
+  2. A testing framework is configured with pytest (backend), pytest-flask (integration), and a browser automation tool (Selenium or Playwright) with a `make test` or `pytest` entry point that runs all test tiers.
+  3. **Unit tests** exist for all analytics modules (`src/analytics/trading_indicators.py`, `src/analytics/options_pricer.py`, `src/analytics/markov_chain.py`, `src/analytics/interest_rate_models.py`, `src/analytics/ml_models.py`) — each function has at least one happy-path and one edge-case test, with deterministic inputs (no live network calls).
+  4. **Integration tests** exist for all Flask API routes (`/api/scrape`, `/api/trading_indicators`, `/api/heston_price`, `/api/markov_chain`, `/api/interest_rate_model`, `/api/chat`, `/api/portfolio_sharpe`) — each test verifies the correct HTTP status, response schema, and error handling for invalid inputs.
+  5. **Regression tests** pin expected outputs for key computations: Volume Profile POC/VAH/VAL on a frozen OHLCV fixture, Order Flow cumulative delta on a known dataset, Heston calibration convergence on fixed parameters, and HMM regime detection on a synthetic series — any drift triggers a test failure.
+  6. **E2E tests** automate the browser flow: enter a ticker → click Run Analysis → wait for results → verify that the Stocks tab, Analytics tab, Stochastic Models tab, and Trading Indicators tab all render populated content without console errors.
+**Plans**: TBD
+
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 18 → 19 → 20 → 21 → 22
+Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -104,6 +118,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22
 | 20. Anchored VWAP | 0/2 | Not started | - |
 | 21. Order Flow | 0/2 | Not started | - |
 | 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/? | Not started | - |
+| 23. End-to-End Test Suite Design | 0/? | Not started | - |
 
 ---
 
@@ -132,7 +147,13 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22
 | TIND-02 | Phase 22 |
 | TIND-03 | Phase 22 |
 
-**Coverage:** 18/18 v2.2 requirements mapped. No orphans.
+| TEST-01 | Phase 23 |
+| TEST-02 | Phase 23 |
+| TEST-03 | Phase 23 |
+| TEST-04 | Phase 23 |
+| TEST-05 | Phase 23 |
+
+**Coverage:** 23/23 v2.2 requirements mapped. No orphans.
 
 ---
 
