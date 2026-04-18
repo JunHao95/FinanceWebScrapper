@@ -534,9 +534,186 @@ def compute_order_flow(df: pd.DataFrame, ticker: str = '', lookback: int = 0) ->
     }
 
 
-def compute_liquidity_sweep(df: pd.DataFrame) -> dict:
-    return {'status': 'stub'}
+def _adaptive_n(lookback: int) -> int:
+    if lookback <= 30:
+        return 2
+    elif lookback <= 90:
+        return 3
+    return 5
+
+
+def compute_liquidity_sweep(df: pd.DataFrame, lookback: int = 90) -> dict:
+    n = _adaptive_n(lookback)
+    min_bars = 2 * n + 1
+    if len(df) < min_bars:
+        return {'status': 'no_swings', 'n': n, 'signal': 'no_swings', 'swept_price': None, 'sweep_count': 0,
+                'traces': [], 'layout': {}}
+
+    highs  = df['High'].values
+    lows   = df['Low'].values
+    closes = df['Close'].values
+    dates  = list(df.index.astype(str))
+
+    swing_high_indices = []
+    swing_low_indices  = []
+
+    # range(n, len-n) prevents look-ahead bias (SWEEP-02)
+    for i in range(n, len(highs) - n):
+        if all(highs[i] > highs[i - j] for j in range(1, n + 1)) and \
+           all(highs[i] > highs[i + j] for j in range(1, n + 1)):
+            swing_high_indices.append(i)
+        if all(lows[i] < lows[i - j] for j in range(1, n + 1)) and \
+           all(lows[i] < lows[i + j] for j in range(1, n + 1)):
+            swing_low_indices.append(i)
+
+    if not swing_high_indices and not swing_low_indices:
+        fig = go.Figure()
+        fig.add_trace(go.Candlestick(
+            x=dates, open=df['Open'].tolist(), high=df['High'].tolist(),
+            low=df['Low'].tolist(), close=df['Close'].tolist(),
+            increasing_line_color='#2ecc71', decreasing_line_color='#e74c3c', name='Price',
+        ))
+        fig.update_layout(
+            paper_bgcolor='#1e1e2e', plot_bgcolor='#1e1e2e',
+            font=dict(color='#cdd6f4'), xaxis_rangeslider_visible=False,
+            title=dict(text=f'Liquidity Sweep — No confirmed swings (n={n})', font=dict(size=14)),
+            margin=dict(l=40, r=40, t=50, b=30),
+        )
+        d = fig.to_dict()
+        return {
+            'traces': d['data'], 'layout': d['layout'],
+            'signal': 'no_swings', 'n': n, 'swept_price': None, 'sweep_count': 0,
+        }
+
+    sweep_events = []
+    annotations  = []
+    shapes       = []
+
+    last_swing_high = highs[swing_high_indices[-1]] if swing_high_indices else None
+    last_swing_low  = lows[swing_low_indices[-1]]   if swing_low_indices  else None
+
+    if last_swing_high is not None:
+        ref_idx = swing_high_indices[-1]
+        for i in range(ref_idx + 1, len(closes)):
+            if closes[i] > last_swing_high:
+                sweep_events.append((i, 'bullish', last_swing_high))
+                annotations.append(dict(
+                    x=dates[i], y=highs[i] * 1.002,
+                    text='▲', showarrow=False,
+                    font=dict(size=14, color='#2ecc71'),
+                    xanchor='center', yanchor='bottom',
+                ))
+                shapes.append(dict(
+                    type='line', xref='paper', yref='y',
+                    x0=0, x1=1, y0=last_swing_high, y1=last_swing_high,
+                    line=dict(dash='dash', color='#2ecc71', width=1),
+                ))
+
+    if last_swing_low is not None:
+        ref_idx = swing_low_indices[-1]
+        for i in range(ref_idx + 1, len(closes)):
+            if closes[i] < last_swing_low:
+                sweep_events.append((i, 'bearish', last_swing_low))
+                annotations.append(dict(
+                    x=dates[i], y=lows[i] * 0.998,
+                    text='▼', showarrow=False,
+                    font=dict(size=14, color='#e74c3c'),
+                    xanchor='center', yanchor='top',
+                ))
+                shapes.append(dict(
+                    type='line', xref='paper', yref='y',
+                    x0=0, x1=1, y0=last_swing_low, y1=last_swing_low,
+                    line=dict(dash='dash', color='#e74c3c', width=1),
+                ))
+
+    if sweep_events:
+        sweep_events.sort(key=lambda e: e[0])
+        last_event  = sweep_events[-1]
+        signal      = last_event[1]
+        swept_price = float(last_event[2])
+    else:
+        signal      = 'none'
+        swept_price = None
+
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=dates, open=df['Open'].tolist(), high=df['High'].tolist(),
+        low=df['Low'].tolist(), close=df['Close'].tolist(),
+        increasing_line_color='#2ecc71', decreasing_line_color='#e74c3c', name='Price',
+    ))
+    fig.update_layout(
+        paper_bgcolor='#1e1e2e', plot_bgcolor='#1e1e2e',
+        font=dict(color='#cdd6f4'), xaxis_rangeslider_visible=False,
+        title=dict(text=f'Liquidity Sweep (n={n})', font=dict(size=14)),
+        margin=dict(l=40, r=40, t=50, b=30),
+        annotations=annotations,
+        shapes=shapes,
+    )
+    d = fig.to_dict()
+    return {
+        'traces':      d['data'],
+        'layout':      d['layout'],
+        'signal':      signal,
+        'n':           n,
+        'swept_price': swept_price,
+        'sweep_count': len(sweep_events),
+    }
 
 
 def compute_composite_bias(results: dict) -> dict:
-    return {'status': 'stub'}
+    sub_map = {
+        'volume_profile':  results.get('volume_profile',  {}),
+        'anchored_vwap':   results.get('anchored_vwap',   {}),
+        'order_flow':      results.get('order_flow',      {}),
+        'liquidity_sweep': results.get('liquidity_sweep', {}),
+    }
+    labels = {
+        'volume_profile':  'Volume Profile',
+        'anchored_vwap':   'AVWAP',
+        'order_flow':      'Order Flow',
+        'liquidity_sweep': 'Sweep',
+    }
+    _to_direction = {
+        'bullish': 'bullish', 'bearish': 'bearish', 'neutral': 'neutral',
+        'inside':  'bullish', 'outside': 'bearish',
+        'above':   'bullish', 'below':   'bearish', 'between': 'neutral',
+    }
+
+    available   = {}
+    unavailable = []
+
+    for key, sub in sub_map.items():
+        raw_signal = sub.get('signal') if isinstance(sub, dict) else None
+        is_stub    = isinstance(sub, dict) and sub.get('status') in ('stub', 'error', 'no_swings')
+        if is_stub or not raw_signal or raw_signal not in _to_direction:
+            unavailable.append(labels[key])
+        else:
+            available[labels[key]] = _to_direction[raw_signal]
+
+    n_total   = len(available)
+    n_bullish = sum(1 for v in available.values() if v == 'bullish')
+    n_bearish = sum(1 for v in available.values() if v == 'bearish')
+
+    if n_total == 0:
+        direction  = 'neutral'
+        score_str  = '0/0'
+        dissenters = []
+    elif n_bullish > n_total / 2:
+        direction  = 'bullish'
+        score_str  = f'{n_bullish}/{n_total}'
+        dissenters = [k for k, v in available.items() if v != 'bullish']
+    elif n_bearish > n_total / 2:
+        direction  = 'bearish'
+        score_str  = f'{n_bearish}/{n_total}'
+        dissenters = [k for k, v in available.items() if v != 'bearish']
+    else:
+        direction  = 'neutral'
+        score_str  = f'{max(n_bullish, n_bearish)}/{n_total}'
+        dissenters = []
+
+    return {
+        'direction':   direction,
+        'score':       score_str,
+        'dissenters':  dissenters,
+        'unavailable': unavailable,
+    }

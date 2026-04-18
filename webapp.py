@@ -2158,18 +2158,20 @@ def get_trading_indicators():
     if not ticker:
         return jsonify({'error': 'ticker parameter required'})
     try:
-        from src.analytics.trading_indicators import fetch_ohlcv, compute_volume_profile, compute_anchored_vwap, compute_order_flow
+        from src.analytics.trading_indicators import (
+            fetch_ohlcv, compute_volume_profile, compute_anchored_vwap,
+            compute_order_flow, compute_liquidity_sweep, compute_composite_bias
+        )
         df = fetch_ohlcv(ticker, lookback)
         df_365 = fetch_ohlcv(ticker, 365)
-        return jsonify({
-            'ticker': ticker,
-            'lookback': lookback,
-            'volume_profile': compute_volume_profile(df, ticker, lookback),
-            'anchored_vwap':  compute_anchored_vwap(df_365, ticker, lookback),
-            'order_flow':     compute_order_flow(df, ticker, lookback),
-            'liquidity_sweep': {'status': 'stub'},
-            'composite_bias': {'status': 'stub'},
-        })
+        results = {
+            'volume_profile':  compute_volume_profile(df, ticker, lookback),
+            'anchored_vwap':   compute_anchored_vwap(df_365, ticker, lookback),
+            'order_flow':      compute_order_flow(df, ticker, lookback),
+            'liquidity_sweep': compute_liquidity_sweep(df, lookback),
+        }
+        results['composite_bias'] = compute_composite_bias(results)
+        return jsonify({'ticker': ticker, 'lookback': lookback, **results})
     except Exception as e:
         logger.error(f"Error in get_trading_indicators for {ticker}: {e}")
         return jsonify({'error': str(e)}), 500

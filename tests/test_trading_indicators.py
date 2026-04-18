@@ -390,3 +390,139 @@ class TestComputeOrderFlow:
         result = compute_order_flow(df, 'TEST', n)
         annotations = result['layout'].get('annotations', [])
         assert annotations == [], f"Expected no annotations, got {annotations}"
+
+
+class TestComputeLiquiditySweep:
+
+    def _sweep_ohlcv(self, n=90):
+        import numpy as np
+        idx = pd.date_range('2024-01-01', periods=n, freq='B')
+        t = np.linspace(0, 4 * np.pi, n)
+        closes = 100.0 + 10 * np.sin(t)
+        df = pd.DataFrame({
+            'Open':   closes - 0.2,
+            'High':   closes + 1.0,
+            'Low':    closes - 1.0,
+            'Close':  closes,
+            'Volume': 1_000_000.0,
+        }, index=idx)
+        return df
+
+    def test_sweep_keys(self):
+        from src.analytics.trading_indicators import compute_liquidity_sweep
+        df = self._sweep_ohlcv(90)
+        result = compute_liquidity_sweep(df, 90)
+        for key in ('signal', 'n', 'swept_price', 'sweep_count'):
+            assert key in result, f"Missing key: {key}"
+
+    def test_signal_valid_values(self):
+        from src.analytics.trading_indicators import compute_liquidity_sweep
+        df = self._sweep_ohlcv(90)
+        result = compute_liquidity_sweep(df, 90)
+        assert result['signal'] in ('bullish', 'bearish', 'none', 'no_swings')
+
+    def test_adaptive_n_30d(self):
+        from src.analytics.trading_indicators import _adaptive_n
+        assert _adaptive_n(30) == 2
+
+    def test_adaptive_n_90d(self):
+        from src.analytics.trading_indicators import _adaptive_n
+        assert _adaptive_n(90) == 3
+
+    def test_adaptive_n_180d(self):
+        from src.analytics.trading_indicators import _adaptive_n
+        assert _adaptive_n(180) == 5
+
+    def test_no_swings_when_too_few_bars(self):
+        from src.analytics.trading_indicators import compute_liquidity_sweep
+        idx = pd.date_range('2024-01-01', periods=5, freq='B')
+        df = pd.DataFrame({
+            'Open': 100.0, 'High': 101.0, 'Low': 99.0, 'Close': 100.0, 'Volume': 1000.0,
+        }, index=idx)
+        result = compute_liquidity_sweep(df, 90)
+        assert result['signal'] == 'no_swings'
+
+    def test_look_ahead_regression(self):
+        from src.analytics.trading_indicators import compute_liquidity_sweep
+        df_90 = self._sweep_ohlcv(90)
+        extra = df_90.iloc[[-1]].copy()
+        extra.index = [df_90.index[-1] + pd.Timedelta(days=1)]
+        df_91 = pd.concat([df_90, extra])
+        r90 = compute_liquidity_sweep(df_90, 90)
+        r91 = compute_liquidity_sweep(df_91, 90)
+        assert r90['sweep_count'] == r91['sweep_count'], (
+            f"Look-ahead detected: 90-bar sweep_count={r90['sweep_count']} "
+            f"differs from 91-bar sweep_count={r91['sweep_count']}"
+        )
+
+    def test_candlestick_trace_present(self):
+        from src.analytics.trading_indicators import compute_liquidity_sweep
+        df = self._sweep_ohlcv(90)
+        result = compute_liquidity_sweep(df, 90)
+        assert 'traces' in result
+        types = [t.get('type') for t in result.get('traces', [])]
+        assert 'candlestick' in types, f"No candlestick trace found: {types}"
+
+
+class TestComputeCompositeBias:
+
+    def _results(self, vp='inside', avwap='above', of='bullish', sweep='bullish'):
+        return {
+            'volume_profile':  {'signal': vp},
+            'anchored_vwap':   {'signal': avwap},
+            'order_flow':      {'signal': of},
+            'liquidity_sweep': {'signal': sweep},
+        }
+
+    def test_majority_bullish(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(sweep='bearish'))
+        assert r['direction'] == 'bullish'
+        assert r['score'] == '3/4'
+        assert len(r['dissenters']) == 1
+
+    def test_majority_bearish(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(vp='outside', avwap='below', of='bearish', sweep='bullish'))
+        assert r['direction'] == 'bearish'
+        assert r['score'] == '3/4'
+
+    def test_tie_is_neutral(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(of='bearish', sweep='bearish'))
+        assert r['direction'] == 'neutral'
+
+    def test_unavailable_excluded_from_denominator(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        results = self._results()
+        results['liquidity_sweep'] = {'status': 'stub'}
+        r = compute_composite_bias(results)
+        assert r['score'] == '3/3'
+        assert 'Sweep' in r['unavailable']
+
+    def test_vp_inside_maps_to_bullish(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(vp='inside'))
+        assert r['direction'] in ('bullish', 'neutral', 'bearish')
+
+    def test_avwap_above_maps_to_bullish(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(vp='inside', avwap='above', of='bullish', sweep='bullish'))
+        assert r['direction'] == 'bullish'
+
+    def test_avwap_between_maps_to_neutral(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        results = {
+            'volume_profile':  {'signal': 'inside'},
+            'anchored_vwap':   {'signal': 'between'},
+            'order_flow':      {'signal': 'bullish'},
+            'liquidity_sweep': {'signal': 'bullish'},
+        }
+        r = compute_composite_bias(results)
+        assert r['direction'] == 'bullish'
+
+    def test_keys_present(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results())
+        for k in ('direction', 'score', 'dissenters', 'unavailable'):
+            assert k in r, f"Missing key: {k}"
