@@ -1480,3 +1480,59 @@ body.results-loaded .skeleton-preview {
     line-height: 1.6;
     color: #a6adc8;
 }
+
+/* Phase 22 — 2×2 grid layout */
+.ti-2x2-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+}
+.ti-grid-cell {
+    min-width: 0;
+}
+.ti-unavailable-placeholder {
+    width: 100%;
+    height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: #7f849c;
+    font-size: 14px;
+}
+.ti-composite-badge {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 8px 0 4px 0;
+    display: block;
+}
+.ti-composite-caveat {
+    color: #7f849c;
+    font-size: 12px;
+    margin: 2px 0 10px 0;
+    display: block;
+}
+.ti-lookback-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ti-lookback-label {
+    font-size: 13px;
+    color: #a6adc8;
+}
+.ti-lookback-select {
+    background: #313244;
+    color: #cdd6f4;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 13px;
+    cursor: pointer;
+}

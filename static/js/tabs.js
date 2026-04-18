@@ -58,8 +58,11 @@ const TabManager = {
                     tiContent.classList.add('active');
                     if (typeof TradingIndicators !== 'undefined' &&
                         window.pageContext && window.pageContext.tickers) {
+                        var sel = document.getElementById('tiLookbackSelect');
+                        var lookback = (sel && parseInt(sel.value, 10)) || 90;
+                        TradingIndicators.initLookbackDropdown(window.pageContext.tickers);
                         window.pageContext.tickers.forEach(function (ticker) {
-                            TradingIndicators.fetchForTicker(ticker, 90);
+                            TradingIndicators.fetchForTicker(ticker, lookback);
                         });
                     }
                 }

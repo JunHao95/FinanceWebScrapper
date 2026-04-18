@@ -230,7 +230,15 @@
 
                 <!-- Tab 4: Trading Indicators -->
                 <div class="tab-content" id="tradingIndicatorsTabContent">
-                    <!-- Phase 19–22 populate this with 2x2 Plotly grid per ticker -->
+                    <div class="ti-lookback-bar" id="tiLookbackBar" style="display:none">
+                        <span class="ti-lookback-label">Trading Indicators</span>
+                        <select class="ti-lookback-select" id="tiLookbackSelect">
+                            <option value="30">30d</option>
+                            <option value="90" selected>90d</option>
+                            <option value="180">180d</option>
+                            <option value="365">365d</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
