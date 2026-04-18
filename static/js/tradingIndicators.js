@@ -106,7 +106,7 @@
         // --- Volume Profile panel ---
         var vp = resp.volume_profile;
         if (vp && vp.traces && vp.layout) {
-            Plotly.newPlot('vpChart_' + ticker, vp.traces, vp.layout, { staticPlot: true, responsive: true });
+            Plotly.newPlot('vpChart_' + ticker, vp.traces, vp.layout, { responsive: true, displayModeBar: true, scrollZoom: true });
             var vpBadgeEl = document.getElementById('vpBadge_' + ticker);
             if (vpBadgeEl) {
                 var inside = vp.signal === 'inside';
@@ -130,7 +130,7 @@
         // --- Anchored VWAP panel ---
         var av = resp.anchored_vwap;
         if (av && av.traces && av.layout) {
-            Plotly.newPlot('avwapChart_' + ticker, av.traces, av.layout, { staticPlot: true, responsive: true });
+            Plotly.newPlot('avwapChart_' + ticker, av.traces, av.layout, { responsive: true, displayModeBar: true, scrollZoom: true });
         } else {
             var avEl = document.getElementById('avwapChart_' + ticker);
             if (avEl) {
@@ -197,7 +197,7 @@
         // --- Order Flow panel ---
         var of = resp.order_flow;
         if (of && of.traces && of.layout) {
-            Plotly.newPlot('ofChart_' + ticker, of.traces, of.layout, { staticPlot: true, responsive: true });
+            Plotly.newPlot('ofChart_' + ticker, of.traces, of.layout, { responsive: true, displayModeBar: true, scrollZoom: true });
         } else {
             var ofEl = document.getElementById('ofChart_' + ticker);
             if (ofEl) {
@@ -257,7 +257,7 @@
         // --- Liquidity Sweep panel ---
         var sw = resp.liquidity_sweep;
         if (sw && sw.traces && sw.layout) {
-            Plotly.newPlot('sweepChart_' + ticker, sw.traces, sw.layout, { staticPlot: true, responsive: true });
+            Plotly.newPlot('sweepChart_' + ticker, sw.traces, sw.layout, { responsive: true, displayModeBar: true, scrollZoom: true });
         } else {
             var sweepEl = document.getElementById('sweepChart_' + ticker);
             if (sweepEl) {
