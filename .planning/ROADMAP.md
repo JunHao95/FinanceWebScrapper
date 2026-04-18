@@ -89,7 +89,11 @@ Plans:
   3. Each ticker card in the Trading Indicators tab shows a Bullish, Bearish, or Neutral composite bias badge with a one-line rationale that names the dissenting sub-indicator; failed sub-indicators appear as grey "unavailable" and the badge denominator reflects only successfully computed modules (e.g., "3/4 indicators").
   4. A "Trading Indicators" tab button is visible in the results tab bar; activating it lazy-loads the 2×2 Plotly grid for all scraped tickers without requiring a re-scrape.
   5. A lookback dropdown (30 / 90 / 180 / 365 days) is visible in the tab; changing the selection clears the session cache and re-fetches all tickers; all charts render with `staticPlot: true`.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 22-01-PLAN.md — Python TDD: _adaptive_n, compute_liquidity_sweep, compute_composite_bias + webapp.py route update (wave 1)
+- [ ] 22-02-PLAN.md — Frontend: 2x2 CSS grid, Sweep panel, composite badge, lookback dropdown wiring (wave 2)
+- [ ] 22-03-PLAN.md — Visual + automated checkpoint: full tab verified in live browser (wave 3)
 
 ### Phase 23: End-to-End Test Suite Design
 **Goal**: A comprehensive test suite covering unit, integration, regression, and end-to-end tests is in place — critical user flows are identified and documented, a testing framework (pytest for backend, Selenium/Playwright for browser E2E) is configured, all analytics modules have unit test coverage, all API routes have integration tests, indicator correctness has regression tests with pinned expected values, and the full scrape-to-display pipeline is validated by E2E tests that exercise the browser UI.
@@ -117,7 +121,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 19. Volume Profile | 0/2 | Not started | - |
 | 20. Anchored VWAP | 0/2 | Not started | - |
 | 21. Order Flow | 0/2 | Not started | - |
-| 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/? | Not started | - |
+| 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/3 | Not started | - |
 | 23. End-to-End Test Suite Design | 0/? | Not started | - |
 
 ---
