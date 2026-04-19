@@ -559,7 +559,19 @@ stock_scraper/
 ├── output/                           # Output files
 ├── logs/                             # Log files
 └── tests/                            # Test modules
+    ├── conftest.py                   # Shared fixtures, Flask test client, marker registration
+    └── test_*.py                     # 19 test files across unit and integration tiers
 ```
+
+### Running Tests
+
+```bash
+make test-unit        # Fast unit tests only (88 tests, no network calls)
+make test-integration # Flask route integration tests (31 tests)
+make test             # All tiers sequentially
+```
+
+Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). All 19 existing test files are annotated so CI can run fast and slow tiers independently.
 
 ---
 

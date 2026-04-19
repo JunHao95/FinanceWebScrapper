@@ -8,7 +8,10 @@ import os
 import inspect
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+import pytest
 from src.derivatives.model_calibration import HestonCalibrator
+
+pytestmark = pytest.mark.unit
 
 
 def test_relative_mse_in_source():

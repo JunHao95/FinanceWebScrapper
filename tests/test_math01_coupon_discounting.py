@@ -14,6 +14,8 @@ sys.path.insert(0, '/Users/junhaotee/Desktop/Side_projects/FinanceWebScrapper')
 import numpy as np
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def _zero_default_matrix():
     """Identity matrix: every rating stays put, no defaults, no migrations."""

@@ -26,11 +26,13 @@ def client():
 # Unit tests — pure functions
 # ---------------------------------------------------------------------------
 
+@pytest.mark.unit
 def test_vasicek_bond_price_at_zero():
     """T=0 boundary: bond price must equal exactly 1.0."""
     assert vasicek_bond_price(0.05, 0.0, 0.5, 0.06, 0.02) == 1.0
 
 
+@pytest.mark.unit
 def test_vasicek_yield_curve_shape():
     """vasicek_yield_curve returns correct structure: list of dicts with expected keys."""
     curve = vasicek_yield_curve(0.05, [0.25, 1, 5, 10], 0.5, 0.06, 0.02)
@@ -46,6 +48,7 @@ def test_vasicek_yield_curve_shape():
 # Route integration tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.integration
 def test_vasicek_route(client):
     """POST /api/interest_rate_model with model=vasicek returns 200 with correct fields."""
     response = client.post('/api/interest_rate_model', json={'model': 'vasicek'})
@@ -59,6 +62,7 @@ def test_vasicek_route(client):
     assert result['feller_ratio'] is None
 
 
+@pytest.mark.integration
 def test_cir_route_has_feller_ratio(client):
     """POST /api/interest_rate_model with no model field returns feller_ratio as a positive float."""
     response = client.post('/api/interest_rate_model', json={})
@@ -71,6 +75,7 @@ def test_cir_route_has_feller_ratio(client):
     assert result['feller_ratio'] > 0
 
 
+@pytest.mark.integration
 def test_existing_cir_keys_preserved(client):
     """POST /api/interest_rate_model still returns all original CIR keys (backward compat)."""
     response = client.post('/api/interest_rate_model', json={})

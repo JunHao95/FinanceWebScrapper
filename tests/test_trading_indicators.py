@@ -32,6 +32,7 @@ def _stub_ohlcv():
     return df
 
 
+@pytest.mark.integration
 class TestTradingIndicatorsRoute:
     """Happy path: route returns 200 with all placeholder keys."""
 
@@ -55,6 +56,7 @@ class TestTradingIndicatorsRoute:
         assert 'error' in data
 
 
+@pytest.mark.unit
 class TestFetchOhlcv:
     """Unit tests for fetch_ohlcv() — validates yfinance pattern and column slice."""
 
@@ -101,6 +103,7 @@ def _synthetic_ohlcv():
 class TestComputeVolumeProfile:
     """Phase 19 unit tests for compute_volume_profile."""
 
+    @pytest.mark.unit
     def test_volume_profile_keys(self):
         from src.analytics.trading_indicators import compute_volume_profile
         df = _synthetic_ohlcv()
@@ -108,12 +111,14 @@ class TestComputeVolumeProfile:
         for key in ('traces', 'layout', 'signal', 'bin_width_usd', 'poc', 'vah', 'val'):
             assert key in result, f"Missing key: {key}"
 
+    @pytest.mark.unit
     def test_poc_inside_price_range(self):
         from src.analytics.trading_indicators import compute_volume_profile
         df = _synthetic_ohlcv()
         result = compute_volume_profile(df, 'AAPL', 90)
         assert df['Low'].min() <= result['poc'] <= df['High'].max()
 
+    @pytest.mark.unit
     def test_value_area_coverage(self):
         from src.analytics.trading_indicators import compute_volume_profile
         df = _synthetic_ohlcv()
@@ -121,6 +126,7 @@ class TestComputeVolumeProfile:
         assert result['signal'] in ('inside', 'outside')
         assert result['val'] <= result['vah']
 
+    @pytest.mark.unit
     def test_bin_width_usd(self):
         from src.analytics.trading_indicators import compute_volume_profile
         df = _synthetic_ohlcv()
@@ -128,6 +134,7 @@ class TestComputeVolumeProfile:
         assert result['bin_width_usd'] > 0
         assert isinstance(result['bin_width_usd'], float)
 
+    @pytest.mark.integration
     def test_route_includes_volume_profile_traces(self, client):
         stub_vp = {
             'traces': [], 'layout': {}, 'signal': 'inside',
@@ -173,6 +180,7 @@ def _make_mock_ticker_with_earnings(past_date):
     return mock
 
 
+@pytest.mark.unit
 class TestComputeAnchoredVwap:
     """Phase 20 unit tests for compute_anchored_vwap."""
 
@@ -286,6 +294,7 @@ def _make_ohlcv(n=30, price_start=100.0, price_step=0.5, vol_start=1000.0, vol_s
     }, index=idx)
 
 
+@pytest.mark.unit
 class TestComputeOrderFlow:
 
     def test_order_flow_keys(self):
@@ -392,6 +401,7 @@ class TestComputeOrderFlow:
         assert annotations == [], f"Expected no annotations, got {annotations}"
 
 
+@pytest.mark.unit
 class TestComputeLiquiditySweep:
 
     def _sweep_ohlcv(self, n=90):
@@ -464,6 +474,7 @@ class TestComputeLiquiditySweep:
         assert 'candlestick' in types, f"No candlestick trace found: {types}"
 
 
+@pytest.mark.unit
 class TestComputeCompositeBias:
 
     def _results(self, vp='inside', avwap='above', of='bullish', sweep='bullish'):

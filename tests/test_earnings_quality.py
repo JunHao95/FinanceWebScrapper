@@ -9,6 +9,8 @@ JS-side tests (QUAL-01, QUAL-04) are manual browser checks (see 14-VALIDATION.md
 """
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 MOCK_FULL_PAYLOAD = {
     "Operating Cash Flow (Yahoo)": "135,471,996,928",

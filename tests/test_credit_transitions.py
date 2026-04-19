@@ -12,6 +12,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.analytics.credit_transitions import expected_bond_value, RATINGS
 
+pytestmark = pytest.mark.unit
+
 
 def test_par_bond_aaa_1yr(zero_default_matrix):
     """Par bond: AAA, horizon=1, coupon=5%, face=1000 -> expected_value within 0.01 of 1000."""

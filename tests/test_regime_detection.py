@@ -12,6 +12,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.analytics.regime_detection import RegimeDetector, _assign_labels
 
+pytestmark = pytest.mark.unit
+
 
 def test_assign_labels_both_agree():
     """When sigma and mu both agree on calm state, confidence is HIGH."""

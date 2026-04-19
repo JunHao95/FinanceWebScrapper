@@ -15,6 +15,8 @@ import numpy as np
 import inspect
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_assign_labels_function_exists():
     """_assign_labels must be importable as a module-level function."""

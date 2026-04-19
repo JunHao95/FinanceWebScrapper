@@ -21,6 +21,8 @@ from src.analytics.markov_chains import (
 )
 from src.analytics.credit_transitions import SP_TRANSITION_MATRIX, n_year_transition
 
+pytestmark = pytest.mark.unit
+
 
 # ---------------------------------------------------------------------------
 # steady_state_distribution
