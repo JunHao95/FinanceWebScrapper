@@ -567,7 +567,7 @@ stock_scraper/
 
 ```bash
 make test-unit        # Fast unit tests only (88 tests, no network calls)
-make test-integration # Flask route integration tests (31 tests)
+make test-integration # Flask route integration tests (82 tests)
 make test             # All tiers sequentially
 ```
 
