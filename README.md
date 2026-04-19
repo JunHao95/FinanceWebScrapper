@@ -560,18 +560,20 @@ stock_scraper/
 ├── logs/                             # Log files
 └── tests/                            # Test modules
     ├── conftest.py                   # Shared fixtures, Flask test client, marker registration
-    └── test_*.py                     # 19 test files across unit and integration tiers
+    ├── fixtures/                     # Frozen data: OHLCV CSVs, SPY .npy, Heston JSON
+    └── test_*.py                     # 25 test files across unit, integration, and regression tiers
 ```
 
 ### Running Tests
 
 ```bash
-make test-unit        # Fast unit tests only (88 tests, no network calls)
-make test-integration # Flask route integration tests (82 tests)
+make test-unit        # Fast unit tests only (no network calls)
+make test-integration # Flask route integration tests
+make test-regression  # Regression tests — pin Volume Profile, Order Flow, Heston RMSE, HMM regimes
 make test             # All tiers sequentially
 ```
 
-Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). All 19 existing test files are annotated so CI can run fast and slow tiers independently.
+Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). Phase 23 added unit tests for `options_pricer`, `rl_models`, `financial_analytics`, and `ml_models` (TEST-03), plus regression tests that pin expected outputs for Volume Profile, Order Flow, Heston calibration, and HMM regime detection against frozen fixture data.
 
 ---
 

@@ -91,7 +91,7 @@ def spy_returns():
     dates_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'spy_2017_2021_dates.npy')
 
     if os.path.exists(fixture_path):
-        returns = np.load(fixture_path)
+        returns = np.load(fixture_path).ravel()  # ensure 1-D (fixture may be stored as (N,1))
         dates = np.load(dates_path, allow_pickle=True) if os.path.exists(dates_path) else None
         return returns, dates
 
