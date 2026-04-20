@@ -101,6 +101,11 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Volume Divergence badge**: Always visible below the chart — shows "⚠ Volume Divergence" with price and volume slope values when price and volume trends diverge over the last 10 bars, or a muted "✔ No divergence" when aligned.
 - **Imbalance candle annotations**: ▲/▼ markers appear on bars where the body exceeds 70% of the high-low range AND volume exceeds 1.2× the 20-day average, flagging high-conviction directional moves.
 
+### End-to-End Test Suite (Phase 23)
+- **Three-tier test architecture**: Unit (pytest markers), Integration (Flask test client, 25 routes covered), and Regression (frozen fixture snapshots) tiers managed via `Makefile` targets (`make test-unit`, `make test-integration`, `make test-regression`).
+- **Frozen fixture regression**: Analytics modules (correlation, Monte Carlo VaR, DCF, credit transitions) snapshot their outputs; any numerical drift breaks the regression tier immediately.
+- **conftest.py fixtures**: Shared app factory, sample ticker data, and mock helpers eliminate boilerplate across all test files.
+
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
 - **Sector-Scoped Cache**: 30-minute TTL cache keyed by sector — tickers in the same sector share one fetch, avoiding redundant Finviz requests.
