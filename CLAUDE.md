@@ -14,6 +14,15 @@
   - After merging to local `main`, stop and ask: "Merged into local `main` — please confirm you're ready to push to `origin/main`."
   - Only run `git push origin main` after the user confirms.
 
+## Test Requirements
+
+- **Every new feature or bug fix must include corresponding tests committed in the same PR/branch.**
+  - For new analytics functions: add unit tests in `tests/test_unit_<module>.py` covering at least one happy-path and one edge-case with deterministic (non-network) inputs.
+  - For new Flask routes: add integration tests in `tests/test_integration_routes.py` verifying HTTP status, response schema, and error handling for invalid inputs.
+  - For indicator logic changes: add or update regression tests in `tests/test_regression_indicators.py` or `tests/test_regression_stochastic.py` with pinned expected values.
+  - Run `pytest` (or `make test`) before committing and confirm all tests pass.
+- Do NOT commit feature/fix code without the accompanying tests staged alongside it.
+
 ## README Updates
 
 - **Before every commit that introduces a new feature or bug fix, update `README.md`** to reflect the change.

@@ -16,8 +16,10 @@ A high-performance Python application for scraping and analyzing financial metri
 - **🌐 Web Interface**: Interactive browser-based analysis with tabbed interface
 
 ### Tabbed Web Interface
-- **Tab 1 - Stock Details**: Individual stock metrics, technical indicators, CNN Fear & Greed Index
+- **Tab 1 - Stock Details**: Individual stock metrics, technical indicators, CNN Fear & Greed Index; collapsible ticker cards with smooth animations
 - **Tab 2 - Advanced Analytics**: Portfolio-level analytics with visual indicators showing when data is ready
+- **Tab 3 - Stochastic Models**: Heston calibration (with SSE streaming), Markov chain credit transitions, interest rate models (CIR/Vasicek), ML/RL finance modules — all interactive with auto-run on scrape completion
+- **Tab 4 - Trading Indicators**: Lazy-loaded 2×2 Plotly grid per ticker (Volume Profile, Anchored VWAP, Order Flow, Liquidity Sweep) with a composite Bullish/Bearish/Neutral bias badge and lookback dropdown
 - **Smart Organization**: Clean separation of individual stock data vs. portfolio analysis
 - **Stock Count Badge**: Shows number of analyzed stocks at a glance
 
@@ -44,6 +46,23 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Investment Outlook**: 0-10 scale with 6 ratings: Strong Buy (≥8.0), Buy (≥7.0), Moderate Buy (≥6.0), Hold (≥5.0), Moderate Sell (≥4.0), Sell (<4.0)
 - **Smart Parsing**: Handles financial notation (125.82B, 99.58M) and flexible metric extraction
 - **Actionable Insights**: Automated strengths/concerns identification and investment summary
+
+### AI Chatbot Assistant (Phase 10 / 10.1 / 12)
+- **Floating chat widget**: Fixed bottom-right overlay with open/close toggle, accessible from any tab without interrupting analysis workflow.
+- **Dual-agent personas**: Toggle between **QuantAssistant** (quant finance — derivatives, stochastic models, VaR, regime detection) and **FinancialAnalyst** (sell-side — fundamentals, P/E, EPS, revenue trends); unknown agent keys fall back to QuantAssistant for backward compatibility.
+- **Scraped-data context**: Chat widget injects the current page's scraped ticker data (metrics, analytics, model outputs) into the system prompt so responses are grounded in the user's actual portfolio, not generic examples.
+- **`/api/chat` route**: Accepts `{ message, agent, context }` JSON; dispatches to the appropriate system prompt; Groq API used when `GROQ_API_KEY` is set, stub response otherwise.
+
+### Portfolio Health Summary Card (Phase 8 / 9)
+- **Portfolio-level health score**: Composite card rendered above the Analytics tab showing weighted Sharpe ratio, regime distribution, and aggregate VaR across all scraped tickers.
+- **Auto-run integration**: Health card initialises synchronously before AutoRun triggers so users see a live card updating in real time as regime badges resolve — no manual refresh needed.
+- **Deep links**: Each metric in the health card links directly to the relevant section in the Analytics tab (e.g., clicking VaR jumps to the Monte Carlo panel for that ticker).
+- **`/api/portfolio_sharpe`**: Returns annualised Sharpe, daily VaR, and expected shortfall computed from yfinance returns; uses `yf.Ticker().history()` to avoid multi-ticker DataFrame shape issues.
+
+### Auto-Run Extended Analysis (Phase 7)
+- **Zero-click analytics**: After each scrape completes, `autoRun.js` automatically fires regime detection (HMM) for every scraped ticker in parallel using `Promise.allSettled` — results populate the Analytics tab without user intervention.
+- **MDP portfolio analysis**: When 2+ tickers are scraped, a Markov Decision Process run is triggered automatically and results injected into a dedicated auto-MDP panel; single-ticker scrapes silently skip MDP.
+- **Isolated error handling**: Each per-ticker auto-run is wrapped independently — a failure on one ticker does not block others; failed tickers show a dash in their regime badge.
 
 ### Deep Analysis Modules (Milestone v2.1)
 - **Financial Health Score** (Phase 13): Letter-grade scoring (A–F) based on current ratio, quick ratio, debt-to-equity, and interest coverage; expandable deep-analysis panel per ticker with expand-state preserved across re-scrapes
@@ -100,6 +119,13 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Order Flow panel**: Rendered below the AVWAP panel per ticker. Displays green/red delta bars (buy vs sell pressure per bar, computed as `(Close−Low)/(High−Low)×Volume`) with a cumulative delta line overlay on the right axis.
 - **Volume Divergence badge**: Always visible below the chart — shows "⚠ Volume Divergence" with price and volume slope values when price and volume trends diverge over the last 10 bars, or a muted "✔ No divergence" when aligned.
 - **Imbalance candle annotations**: ▲/▼ markers appear on bars where the body exceeds 70% of the high-low range AND volume exceeds 1.2× the 20-day average, flagging high-conviction directional moves.
+
+### Trading Indicators (Phase 22 — Liquidity Sweep, Composite Bias & Tab Wiring)
+- **Liquidity Sweep panel**: 4th cell of the 2×2 grid. Detects bullish/bearish sweep events using adaptive n (≥5% of bar count) with a look-ahead-safe loop bound `range(n, len−n)`. Displays sweep markers and dashed horizontal lines at swept price levels; shows "No confirmed swings in selected window (n=X)" when no swings are detected.
+- **Composite bias badge**: Appears above the 2×2 grid for each ticker. Aggregates signals from all four sub-indicators into a single Bullish / Bearish / Neutral verdict with a one-line rationale naming the dissenting sub-indicator. Denominator counts only successfully computed modules (e.g., "3/4 indicators"); failed sub-indicators render as grey "unavailable" cells.
+- **2×2 interactive grid**: Volume Profile (top-left), Anchored VWAP (top-right), Order Flow (bottom-left), Liquidity Sweep (bottom-right) — all charts use `responsive: true, displayModeBar: true, scrollZoom: true` for full interactivity.
+- **Lookback dropdown**: 30 / 90 / 180 / 365 day selector in the tab header; changing selection clears the per-ticker session cache and re-fetches all charts automatically without requiring a re-scrape.
+- **Lazy-load on tab activate**: Trading Indicators tab fetches data only when first activated; `TradingIndicators.clearSession()` called from `stockScraper.js` on each new scrape to prevent stale renders.
 
 ### End-to-End Test Suite (Phase 23)
 - **Three-tier test architecture**: Unit (pytest markers), Integration (Flask test client, 25 routes covered), and Regression (frozen fixture snapshots) tiers managed via `Makefile` targets (`make test-unit`, `make test-integration`, `make test-regression`).
@@ -662,6 +688,12 @@ This project is for educational purposes. Web scraping may violate terms of serv
 ---
 
 ## 📝 Changelog
+
+### Milestone v2.2 — Trading Indicators Complete (April 2026)
+- 🆕 **Liquidity Sweep** (Phase 22): Adaptive-n swing detection with look-ahead-safe loop bounds; sweep markers and dashed price levels on chart; "No confirmed swings" fallback
+- 🆕 **Composite Bias Badge** (Phase 22): Aggregates VP + AVWAP + Order Flow + Sweep into a single Bullish/Bearish/Neutral verdict with dissenter identification; denominator reflects only computed modules
+- 🆕 **Full 2×2 Trading Indicators Tab** (Phase 22): Interactive Plotly grid per ticker; lookback dropdown (30/90/180/365d) clears cache and re-fetches on change; lazy-loaded on tab activation
+- 🐛 **Phase 22 interactive charts**: Reverted `staticPlot: true` — all four indicator charts are fully interactive with scroll-zoom and modebar
 
 ### Phase 21 Hotfix (April 2026)
 - 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.
