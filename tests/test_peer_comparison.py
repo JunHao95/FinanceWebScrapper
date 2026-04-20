@@ -8,6 +8,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from webapp import app as flask_app
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def client():

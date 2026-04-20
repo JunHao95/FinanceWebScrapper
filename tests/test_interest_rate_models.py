@@ -11,6 +11,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.analytics.interest_rate_models import CIRCalibrator
 
+pytestmark = pytest.mark.unit
+
 
 def test_calibration_satisfies_feller(market_yields_normal):
     """

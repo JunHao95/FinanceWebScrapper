@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from src.derivatives.fourier_pricer import heston_price
 from src.derivatives.options_pricer import black_scholes
 
+pytestmark = pytest.mark.unit
+
 
 def test_heston_converges_to_bs_atm(standard_heston_params):
     """

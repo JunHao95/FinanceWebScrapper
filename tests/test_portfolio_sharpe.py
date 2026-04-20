@@ -7,6 +7,8 @@ to yfinance. Skip them in fast CI runs with: pytest -m "not slow"
 import pytest
 from webapp import app as flask_app
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def client():

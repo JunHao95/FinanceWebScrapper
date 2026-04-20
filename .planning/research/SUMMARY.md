@@ -1,17 +1,19 @@
-# Project Research Summary
+# Project Research Summary — v2.2 Trading Indicators
 
-**Project:** MFE Showcase Web App — Stochastic Models + ML-in-Finance Additions
-**Domain:** Quantitative Finance / Academic Portfolio Showcase
-**Researched:** 2026-03-03
+**Project:** MFE Showcase Web App — v2.2 Trading Indicators Sub-Tab
+**Domain:** Quantitative Finance Showcase — SMC/ICT-Style Technical Indicators on Daily OHLCV
+**Researched:** 2026-04-07
 **Confidence:** HIGH
+
+---
 
 ## Executive Summary
 
-This project is an MFE-level quantitative finance showcase app built on Flask + Vanilla JS, targeting quant recruiters and MFE peers. The existing codebase already contains a complete numerical stack (numpy, scipy, pandas, scikit-learn) and six nearly-complete stochastic model backend files (CIR, credit transitions, regime detection, Fourier/Heston pricer, Merton pricer, and calibration). The recommended approach is to complete the current stochastic models milestone before beginning the ML-in-finance module — the backends are largely done, and the primary remaining work is frontend wiring, Plotly chart integration, and a targeted validation pass to eliminate model correctness errors that would embarrass the app in front of a recruiter.
+The v2.2 milestone adds a Trading Indicators sub-tab to the existing Flask + Vanilla JS MFE showcase. The tab renders a 2×2 grid of four indicator panels per ticker — Liquidity Sweep, Order Flow, Anchored VWAP, and Volume Profile — plus a composite Bullish/Bearish/Neutral bias signal with a one-line rationale. All four indicators are implementable using only numpy and pandas, both already installed. No new backend dependencies are required. The recommended build approach is a single canonical yfinance OHLCV fetch function, a separate backend module (`src/analytics/trading_indicators.py`), a new lazy-loaded GET endpoint (`/api/trading_indicators`), and a new Vanilla JS module (`tradingIndicators.js`) that mirrors the existing `peerComparison.js` per-ticker session-cache pattern. The new tab wires into `tabs.js` `validTabs` and `switchTab()` without touching the deep-analysis-group architecture from Phases 13–16.
 
-The greatest risks are not architectural but mathematical: seven specific pitfalls can cause catastrophically wrong outputs that a quantitative recruiter will catch in under 30 seconds (non-monotone survival curves, Heston prices below intrinsic value, wrong regime labels during known stress periods, Feller condition violations, flat IV smile post-calibration). These must be fixed before any UI wiring is considered complete. The secondary risk is UX latency: Heston calibration takes 60-120 seconds and the current frontend gives no progress feedback, which causes demo abandonment at the most technically impressive feature.
+The dominant risks are precision and correctness, not infrastructure. Three categories of error can silently produce wrong outputs: (1) look-ahead bias in swing detection if the loop boundary is `range(n, len(data))` instead of `range(n, len(data) - n)`; (2) VWAP anchor truncation if the OHLCV fetch uses the display lookback instead of always fetching 365 days for anchor resolution; (3) NaN propagation in cumulative order flow delta from zero-range doji candles. A fourth non-obvious failure is the Plotly horizontal histogram for Volume Profile — the naive approach renders a vertical bar chart; it requires `make_subplots(cols=2, shared_yaxes=True)`. All other pitfalls are moderate and preventable with named constants and per-anchor try/except blocks.
 
-The stack requires no new dependencies for the stochastic models milestone. For the ML-in-finance module (next semester), add statsmodels and xgboost to requirements.txt — all other ML infrastructure is already installed. Do not add QuantLib, hmmlearn, ta-lib, or any deep-learning-specific libraries in this milestone; they either conflict with the showcase purpose (replacing hand-rolled course code with black-box libraries) or create deployment problems on Render.
+The build order dictated by FEATURES.md and confirmed by ARCHITECTURE.md is: Volume Profile first (simplest, no external dependencies, establishes the Plotly payload shape), then Anchored VWAP (validates the earnings date fetch pattern), then Order Flow (three sub-components sharing one panel, simpler precision work than swing detection), and Liquidity Sweep last (most complex, off-by-one boundary errors are the primary risk). Composite bias and tab wiring complete the final phase after all four panels are stable.
 
 ---
 
@@ -19,192 +21,149 @@ The stack requires no new dependencies for the stochastic models milestone. For 
 
 ### Recommended Stack
 
-The existing numpy/scipy/pandas/scikit-learn stack satisfies all computational requirements for the stochastic models milestone without modification. All six WIP backend files confirm pure numpy/scipy implementations — this is intentional and correct, as the app showcases MFE coursework code rather than wrapping third-party quant libraries. For the ML module, two libraries should be added when that semester begins: statsmodels (for econometric regression tables with p-values, not available in sklearn) and xgboost (gradient boosting for return prediction). PyTorch is already installed via the sentiment module and can be reused for any LSTM work in the ML module.
-
-Frontend visualization uses Plotly.js via CDN, consistent throughout all existing tabs. The current stochastic models JS renders results as HTML tables only — the key upgrade is adding Plotly charts (yield curves, survival curves, regime probability time series) to match the quality benchmark set by the Volatility Surface tab.
+**Zero new backend dependencies.** All four indicators require only numpy and pandas. `pandas_ta` is rejected because its VWAP is session-reset only (not anchored), it lacks Volume Profile and Liquidity Sweep pattern detection, and adds pandas version-conflict risk. `ta-lib` is rejected because it requires a compiled C binary that breaks on Render. `scipy.signal.argrelextrema` could simplify swing detection but is intentionally avoided to keep the showcase code transparent.
 
 **Core technologies:**
-- numpy + scipy: All stochastic model math (matrix operations, optimization, Fourier integration) — already installed, no changes needed
-- pandas + yfinance: Time series handling and market data fetching — already installed
-- scikit-learn: Existing ML infrastructure; LinearRegression and PCA already used in financial_analytics.py
-- Flask + gunicorn: Web layer — keep as-is; do not switch to async frameworks
-- Plotly.js 2.x (CDN): All charts including 3D surfaces and heatmaps — already embedded in app
-- statsmodels (add for ML module): OLS with diagnostics, ARIMA, ADF tests — not currently installed
-- xgboost (add for ML module): Gradient boosting for return prediction — not currently installed
+- numpy + pandas: All four indicator computations — already installed, zero changes to requirements.txt
+- yfinance: OHLCV via `Ticker.history()` and earnings dates via `Ticker.earnings_dates` — already installed; one canonical fetch function required
+- Plotly.js (CDN): 2×2 chart grid, horizontal histogram, candlestick overlays — already loaded
+- Flask: One new GET route `/api/trading_indicators?ticker=X&lookback=90` — ~20 lines in webapp.py following the `/api/peers` pattern
 
 ### Expected Features
 
-From a recruiter's perspective, the showcase succeeds if it covers all table-stakes features with correct model outputs. The differentiators (cross-model comparison, live calibration, regime-conditioned interpretation) are what separate this app from a typical MFE student project.
-
-**Must have (table stakes — stochastic models):**
-- Markov chain transition matrix display with row-stochastic validation — foundational MFE topic
-- n-year matrix power (P^n) with cumulative default term structure chart — standard credit risk deliverable
-- Monte Carlo survival curve — demonstrates MC fluency alongside analytical result
-- CIR yield curve with Feller condition badge — interest rate model core deliverable
-- HMM regime detection with filtered probability chart — modern staple; real ticker required
-- Heston pricing with parameter inputs and Black-Scholes comparison — most famous SV model
-- Heston calibration with RMSE display and calibrated parameter interpretation
-- Interactive parameter inputs for all models (not static output)
+**Must have (table stakes):**
+- Swing high/low detection with Bullish/Bearish/No-Sweep signal label and chart markers
+- Buy/sell pressure delta bar chart (green/red) with cumulative delta line overlay
+- 52-week-high and 52-week-low AVWAP lines overlaid on price
+- POC displayed numerically as a visible horizontal level (not a hairline)
+- VAH/VAL shaded zone on Volume Profile
+- Composite bias signal with identification of the dissenting indicator
+- Lookback selector (30/90/180/365 days)
+- 2×2 grid layout per ticker in a dedicated fourth tab
 
 **Should have (differentiators):**
-- Side-by-side Heston / Merton / BCC price comparison for same contract — rare in student demos
-- CIR calibration to live US Treasury yields with RMSE — practitioner-level feature
-- BCC pricing with CIR discount factor toggle — demonstrates cross-module integration
-- Regime-conditioned annualized return and vol display — economic interpretation of HMM states
-- Visual credit migration heatmap (colored grid, not table)
-- Relative RMSE percentage display with qualitative fit label (Good/Acceptable/Poor)
-- Calibration progress indicator ("Stage 1 grid search: 40%...")
+- Three simultaneous AVWAP lines including earnings anchor with graceful fallback
+- Price-in-value-area badge on Volume Profile
+- Volume divergence flag with displayed slope values
+- Composite rationale text naming the dissenting indicator
+- Right-edge AVWAP labels showing current distance-from-VWAP as a percentage
+- Imbalance candle annotations on the Order Flow chart
 
-**Defer (ML module — next semester):**
-- LASSO/Ridge regression for factor selection
-- Backtesting framework for ML signals
-- GARCH vs. HMM volatility comparison
-- SHAP values with XGBoost
-- Rolling time-series cross-validation framework
-- MDP portfolio rebalancing demo (requires new backend; high complexity)
+**Defer to post-v2.2:**
+- Custom AVWAP anchor date picker
+- Walk-forward backtest of sweep signals
+- Intraday VWAP / Market Profile TPO charts (require intraday data)
+- Real-time order book / footprint charts (require tick data — anti-feature)
 
 ### Architecture Approach
 
-The existing three-layer architecture (Model Layer → Flask API → Vanilla JS frontend) is clean and must be replicated exactly for all new modules. Model files in `src/` are pure Python with no Flask imports; routes in `webapp.py` parse JSON, call model functions, run `convert_numpy_types()`, and return `jsonify()`; JS files read form inputs, POST to API, and render HTML results or Plotly charts. Lazy imports inside route functions (not at module level) are critical for startup performance and are already established in all existing routes.
+The module follows the `peerComparison.js` pattern exactly: lazy-loaded on tab activation, per-ticker GET calls, session cache keyed by `ticker + '-' + lookback`, progressive rendering, `clearSession()` in `stockScraper.js displayResults()`. It renders into `div#tradingIndicatorsTabContent`, not into `deep-analysis-content-{TICKER}`.
+
+The backend follows Pattern 2 (Fetch-Then-Compute): `compute_indicators(ticker, lookback)` in `src/analytics/trading_indicators.py` fetches OHLCV once, computes all four indicators, and returns a dict where each indicator includes Plotly-ready `{traces, layout, signal}`. The JS module calls `Plotly.newPlot(divId, payload.traces, payload.layout)` — it constructs zero Plotly layout objects in JavaScript.
 
 **Major components:**
-1. Model Layer (`src/analytics/`, `src/derivatives/`) — pure quant math, returns Python dicts, no HTTP awareness
-2. Flask API Layer (`webapp.py`) — input parsing, model dispatch, numpy type conversion, JSON serialization
-3. JS Frontend (`static/js/*.js`, `templates/index.html`) — form collection, API calls, HTML + Plotly rendering
-4. Tab Router (`tabs.js`, `switchStochasticTab()`) — two-level tab structure (main tabs + stochastic sub-tabs)
 
-Four established data-flow patterns cover all model types: Pure-Parameter (no data fetch, sub-second response), Fetch-Then-Compute (yfinance dependency, 10-120s, requires loading state), Multi-Step Pipeline (calibration then pricing, JS state variables), and Benchmark Comparison (primary model + reference model in same route response).
+| Component | Status | Files |
+|-----------|--------|-------|
+| `src/analytics/trading_indicators.py` | NEW | Canonical OHLCV fetch, four indicator functions, composite bias, Plotly payload builders |
+| `/api/trading_indicators` GET route | NEW (add to webapp.py) | ~20 lines: parse ticker + lookback, lazy import, convert_numpy_types, jsonify |
+| `static/js/tradingIndicators.js` | NEW | Session cache, tab activation handler, per-ticker DOM shell, Plotly render loop |
+| `templates/index.html` | MODIFIED | 4th tab button, content div, lookback selector, script tag |
+| `static/js/tabs.js` | MODIFIED | `'tradingindicators'` in validTabs, switchTab case with lazy-load trigger |
+| `static/js/stockScraper.js` | MODIFIED | `TradingIndicators.clearSession()` in `displayResults()` |
+| `static/js/displayManager.js` | UNCHANGED | No changes needed |
 
 ### Critical Pitfalls
 
-Research identified 7 critical pitfalls (causing recruiter-visible model failures) and 11 moderate/minor pitfalls. The top 5 to address before any demo:
+1. **Look-ahead bias in swing detection** — Loop bound must be `range(n, len(highs) - n)`, not `range(n, len(highs))`. Add regression test: swing indices on 90-day data must not shift when re-run on 91 days.
 
-1. **Non-monotone survival curves** — `credit_risk_analysis()` passes custom matrices without row normalization. Add `_validate_transition_matrix()` that enforces row sums to 1.0 ±1e-6 before any matrix is used in computation.
+2. **VWAP anchor truncation** — Data fetch for VWAP computation must always cover 365 days regardless of display lookback. If the anchor date predates the fetched data, surface an explicit warning rather than silently computing from the first available bar.
 
-2. **Heston price below intrinsic value** — Fourier integration truncated at 500 for all maturities; insufficient for T > 2 years. Add adaptive integration limits (1000 for T > 1yr, 2000 for T > 5yr) and add post-price put-call parity assertion.
+3. **NaN propagation in order flow delta** — Guard doji candles with epsilon: `(close - low) / (high - low + 1e-10)`. Assert `not np.isnan(delta).any()` before any cumulative sum.
 
-3. **Flat IV smile after Heston calibration** — Raw dollar MSE causes deep ITM options to dominate calibration, effectively ignoring the OTM options that carry smile information. Switch to relative MSE `((model - market) / market)^2` or vega-weighted calibration.
+4. **Volume Profile horizontal histogram requires `make_subplots` with `shared_yaxes=True`** — `make_subplots(rows=1, cols=2, column_widths=[0.75, 0.25], shared_yaxes=True)` is mandatory. Without it the histogram renders as a vertical bar chart and the POC level will not align between the two axes.
 
-4. **HMM regime mislabeling during COVID March 2020** — Label switching produces wrong RISK_ON/RISK_OFF assignment when `sigma[0] ≈ sigma[1]`. Add confidence threshold: if `abs(sigma[calm] - sigma[stressed]) / sigma[stressed] < 0.2`, label result "ambiguous." Validate on SPY 2020-03.
+5. **Composite bias overconfidence + silent failure masking** — Label as "Trend-following bias." Composite denominator must count only `ok == true` sub-indicators so a failed module shows as grey "unavailable" rather than distorting the ratio.
 
-5. **Calibration demo abandonment** — 60-120s Heston calibration with no progress feedback causes users to assume the app crashed. Add expected time display upfront and progress streaming, or pre-cache results for default demo tickers.
-
-Additional critical issues:
-- `expected_bond_value()` uses undiscounted coupon sum — must add proper annuity discounting before connecting to frontend
-- CIR Feller condition violation not blocked — add UI warning banner when Feller is violated; add hard enforcement option in calibration
+6. **Sweep detection close-back-below condition** — A sweep requires `high > prior_swing_high AND close < prior_swing_high` (bearish sweep) or `low < prior_swing_low AND close > prior_swing_low` (bullish sweep). Omitting the close condition flags every momentum breakout as a sweep.
 
 ---
 
 ## Implications for Roadmap
 
-Based on combined research, a four-phase structure is recommended. Phases 1-3 cover the current stochastic models milestone; Phase 4 is the ML-in-finance module for next semester.
+### Phase 1: Data Foundation and Backend Scaffold
 
-### Phase 1: Backend Validation and Math Correctness
+**Rationale:** All four indicators share one canonical OHLCV fetch. Establishing it first, along with a stub Flask route returning hardcoded JSON, unblocks both backend math and JS development in parallel.
 
-**Rationale:** All critical pitfalls are backend math errors that must be fixed before any frontend work. Wiring a UI to a backend that returns non-monotone survival curves or flat IV smiles wastes all subsequent UI work. Validation first ensures the demo is safe to show.
+**Delivers:** `fetch_ohlcv(ticker, days, auto_adjust=True)` canonical function; `GET /api/trading_indicators` stub route; verified browser-to-JSON round-trip.
 
-**Delivers:** All six stochastic model backends with verified correct outputs and no recruiter-visible errors.
+**Avoids:** Pitfall 13 (adjusted/unadjusted price mismatch); Pitfall 14 (stale anchor dates — `display_lookback` separated from `data_fetch_period` at API design level).
 
-**Addresses:** Table-stakes features that are already implemented but mathematically flawed (credit transitions, CIR, Heston pricing, calibration).
+**Research flag:** Standard pattern — mirrors `/api/peers` exactly. No research needed.
 
-**Avoids:**
-- Pitfall 1: Add row normalization validator for transition matrices
-- Pitfall 2: Fix Fourier integration limits with adaptive strategy; add put-call parity assertion
-- Pitfall 3: Switch calibration to relative MSE
-- Pitfall 4: Fix bond value discounting in `expected_bond_value()`
-- Pitfall 5: Add HMM label confidence check and SPY 2020-03 validation
-- Pitfall 6: Add Feller hard enforcement in CIR calibration
-- Pitfall 17: Add input validation with bounds in all API routes
+---
 
-**Research flag:** Standard patterns — no additional research needed. All pitfalls are directly identified from code review.
+### Phase 2: Volume Profile
 
-### Phase 2: Complete Missing Backend Pieces
+**Rationale:** Simplest correct algorithm, no external data dependencies, highest visual impact. Establishes the Plotly `{traces, layout, signal}` payload shape all subsequent indicators must follow.
 
-**Rationale:** Several backend gaps block table-stakes features entirely. The Markov chain standalone backend does not exist, BCC calibration has no Flask route, and the regime detector does not return the full filtered probability time series needed for a chart. These gaps must be closed before frontend wiring.
+**Delivers:** POC/VAH/VAL with 50-bin histogram; horizontal bar chart with `shared_yaxes=True`; visible POC level (filled rectangle or annotated hline); VAH/VAL shaded zone; price-in-value-area badge.
 
-**Delivers:** Complete backend coverage for all planned stochastic model features; no UI-visible gaps.
+**Avoids:** Pitfall 7 (bin count sensitivity — fixed 50 bins with `bin_width_usd` in metadata); Pitfall 8 (invisible hairline levels); Pitfall 9 (vertical vs. horizontal histogram — `make_subplots` established here); Pitfall 17 (volume attributed to close only — use range-spread approach).
 
-**Addresses:**
-- Markov chain / MDP backend module (`src/analytics/markov_chain.py`) with generic transition matrix, stationary distribution, n-step distribution
-- `/api/markov_chain` and (deferred) `/api/mdp` Flask routes
-- `/api/calibrate_bcc` Flask route wiring the existing `BCCCalibrator`
-- Regime detection response extended to return full `filtered_probs` time series (not just final signal)
-- BCC sub-tab in `index.html` and `stochasticModels.js`
+**Research flag:** Standard pattern. No research needed.
 
-**Avoids:**
-- Pitfall 10: MDP should have well-defined reward function and baseline comparison or be explicitly deferred
-- Pitfall 9: Ensure smoothed probabilities are never used for signal generation; label them clearly
+---
 
-**Research flag:** MDP design may benefit from phase-specific research if implemented in this milestone. If deferred, no research needed.
+### Phase 3: Anchored VWAP
 
-### Phase 3: Frontend Wiring and Visualization Upgrade
+**Rationale:** Second simplest indicator (one `cumsum` expression per anchor); validates the earnings date yfinance call and the anchor-resolution separation from display lookback before swing detection complexity begins.
 
-**Rationale:** With all backends validated and complete, frontend wiring is safe and efficient. The primary upgrade beyond form wiring is replacing table-only outputs with Plotly charts — this is what moves the UI from homework-grade to analysis-grade.
+**Delivers:** 52-wk-high, 52-wk-low, and earnings AVWAP lines with distinct styles; right-edge distance labels; convergence warning when lines are within 0.3%; `current_price_vs_avwap` sub-signals for composite.
 
-**Delivers:** Fully interactive stochastic models tab with Plotly visualizations matching the Volatility Surface tab quality benchmark.
+**Avoids:** Pitfall 5 (anchor truncation); Pitfall 6 (converging lines look broken); Pitfall 14 (stale anchor on lookback change); Pitfall 19 (earnings KeyError crashes all VWAP — per-anchor try/except, null anchor with reason field).
 
-**Addresses:**
-- All table-stakes interactive parameter inputs
-- Plotly yield curve chart for CIR (line: maturity vs. rate)
-- Plotly survival curve chart for credit transitions (line: horizon vs. survival probability)
-- Plotly regime probability chart (time series colored by calm/stressed state)
-- Plotly credit transition heatmap (n×n matrix colored by probability magnitude)
-- Heston vs. Black-Scholes side-by-side price display
-- Differentiator: Heston / Merton / BCC side-by-side comparison tab
-- Differentiator: Calibration progress indicator or cached demo results for default tickers
-- Relative RMSE percentage with qualitative label for all calibration outputs
-- Feller condition badge and ratio display for CIR and Heston
-- Data source date range display for all yfinance-dependent outputs
+**Research flag:** Verify `yf.Ticker('AAPL').earnings_dates` column names against installed yfinance version before implementing earnings anchor (MEDIUM confidence — 5-minute check, not a full research phase).
 
-**Avoids:**
-- Pitfall 7: Add expected computation time and progress feedback for calibration
-- Pitfall 8: Filter options chain by minimum open interest and max bid-ask spread
-- Pitfall 11: Standardize all volatility outputs to annualized standard deviation
-- Pitfall 12: Assert minimum observation count for yfinance fetches; display data range in UI
-- Pitfall 14: Add relative RMSE % with Good/Acceptable/Poor label
-- Pitfall 15: Add Monte Carlo standard error and 95% CI display
-- Pitfall 16: Remove or document unused `sigma_gbm` parameter in BCC
-- Pitfall 18: Display S&P matrix source and vintage in credit transitions UI
+---
 
-**Research flag:** Plotly chart types are well-documented — no research phase needed. Calibration progress streaming (SSE) may need brief implementation research if chosen over pre-caching.
+### Phase 4: Order Flow
 
-### Phase 4: ML-in-Finance Module (Next Semester)
+**Rationale:** Three sub-components all use the same OHLCV data and can be built together. Numerically simpler than swing detection — getting the NaN guards and divergence definition right here reduces risk before the composite signal is wired.
 
-**Rationale:** Deferred until stochastic models milestone is complete and publishable. Starting ML before stochastic models are validated creates competing priorities and a fragmented demo.
+**Delivers:** Delta bar chart (green/red) with cumulative delta overlay; volume divergence flag with slope values; imbalance candle detection with named constants (`IMBALANCE_BODY_RATIO = 0.70`, `IMBALANCE_VOLUME_MULTIPLIER = 1.2`); `delta_signal`, `divergence_flag`, `imbalance_signal` sub-signals.
 
-**Delivers:** New main tab with sub-tabs for supervised learning (OLS, LASSO/Ridge), unsupervised learning (PCA, clustering), and backtesting.
+**Avoids:** Pitfall 3 (NaN from doji — epsilon guard + assert); Pitfall 4 (divergence fires on every red bar — rolling-window definition, frequency cap, UI tooltip documents the definition); Pitfall 15 (imbalance threshold undefined — named constants + UI tooltip).
 
-**Uses:**
-- scikit-learn (already installed): TimeSeriesSplit, regularized regression, classification
-- statsmodels (add to requirements.txt): OLS with diagnostics, GARCH
-- xgboost (add to requirements.txt): Gradient boosting with SHAP values
-- PyTorch (already installed): LSTM if included
+**Research flag:** Standard pattern. No research needed.
 
-**Architecture:** Same pattern as Stochastic Models — new main tab button, `mlFinanceTab` div, `mlFinance.js`, `src/ml/` package with lazy imports in new Flask routes.
+---
 
-**Avoids:**
-- Pitfall 13: Compute features within TimeSeriesSplit to prevent data leakage — enforce before any model training
-- ML overfitting: Show OOS Sharpe explicitly; compare to buy-and-hold baseline
+### Phase 5: Liquidity Sweep + Composite Bias + Tab Wiring
 
-**Research flag:** Needs phase-specific research for GARCH implementation (statsmodels API), SHAP integration with XGBoost, and backtesting framework design. These are well-documented individually but the integration pattern for this specific app needs thought.
+**Rationale:** Liquidity Sweep is the most complex indicator (two-pass algorithm: swing detection then sweep matching). Built last when the Flask-to-Plotly pipeline is known to work. Composite bias depends on all four modules. Tab wiring touches the most existing files and belongs at the end when failure impact is lowest.
+
+**Delivers:** `_compute_liquidity_sweep()` with adaptive n (`max(2, min(5, lookback_days // 30))`), look-ahead-safe loop bounds, close-back-below sweep condition; `_compute_composite_bias()` with `ok` flag per sub-indicator and dissenting-indicator identification in rationale text; 4th tab button, `tradingIndicatorsTabContent` div, lookback dropdown, `tradingIndicators.js`, `tabs.js` validTabs extension, `stockScraper.js` clearSession hook.
+
+**Avoids:** Pitfall 1 (look-ahead bias — `range(n, len-n)` + regression test); Pitfall 2 (breakouts flagged as sweeps — close-back-below required); Pitfall 10 (composite overconfidence — "Trend-following bias" label + caveat text); Pitfall 11 (silent failure masking — `ok` flag + grey unavailable state); Pitfall 12 (Plotly memory — `staticPlot: true` + `Plotly.react()` + IntersectionObserver + 5-ticker cap); Pitfall 16 (n too large for short lookbacks — adaptive n + "0 swings detected" message); Pitfall 18 (ambiguous grid labels — `subplot_titles` in `make_subplots`).
+
+**Research flag:** Internal validation needed — run look-ahead regression test against AAPL and SPY at all four lookback values before wiring composite. Not an external research need.
+
+---
 
 ### Phase Ordering Rationale
 
-- Backend validation must precede frontend wiring because wiring UI to incorrect math produces demos that fail under recruiter scrutiny in ways that are worse than no demo at all.
-- Missing backend pieces (Markov chain module, BCC route, filtered probability time series) must exist before frontend forms that depend on them.
-- Visualization upgrade is bundled with frontend wiring because the same JS functions that wire forms also drive the Plotly calls — separating them creates redundant work.
-- ML module is gated on stochastic models completion because: (a) the HMM regime output feeds ML features, (b) adding new tab infrastructure while existing tabs are broken creates confusion, and (c) stochastic models are the current semester's deliverable.
+- Phase 1 before everything: one canonical fetch function prevents `auto_adjust` inconsistency from propagating across all four indicators.
+- Phase 2 (Volume Profile) before Phase 3 (VWAP): no external data dependencies; establishes the Plotly payload shape contract.
+- Phase 3 before Phase 4: earnings date yfinance call validated before swing detection complexity begins.
+- Phase 4 before Phase 5: O(n) delta/divergence math is simpler than two-pass swing+sweep algorithm; NaN guards and threshold decisions are lower-stakes to get right first.
+- Phase 5 last: swing detection loop bounds are the primary source of silent correctness bugs; tab wiring is the most disruptive change to existing code.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 4 (ML module):** GARCH/statsmodels API, SHAP+XGBoost integration, backtesting framework design — these have well-documented components but the integration approach for this app's architecture needs planning research.
-- **Phase 3 (calibration progress streaming):** If server-sent events (SSE) are chosen over pre-cached results, a brief implementation research pass is warranted for Flask SSE patterns.
+Needs verification during Phase 3: `yf.Ticker('AAPL').earnings_dates` attribute and DataFrame column names against installed yfinance version.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (backend validation):** All pitfalls are directly identified from code; fixes follow standard numerical analysis patterns.
-- **Phase 2 (backend gaps):** Markov chain implementation follows established numpy.linalg.matrix_power pattern; BCC route follows existing route pattern exactly.
-- **Phase 3 (Plotly wiring):** Plotly.js documentation is comprehensive; chart types are already confirmed from volatilitySurface.js reference implementation.
+All other phases: standard patterns documented in existing codebase. No phase-specific research sessions required.
 
 ---
 
@@ -212,40 +171,45 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Derived directly from requirements.txt and import analysis of all WIP source files; no speculation |
-| Features | HIGH | Table stakes from established MFE curricula; differentiators cross-referenced against existing backend capabilities |
-| Architecture | HIGH | Based on direct inspection of webapp.py (all routes), stochasticModels.js (701 lines), index.html (tab structure), and all six model backend files |
-| Pitfalls | HIGH | All 7 critical pitfalls derived from direct code review of WIP files; not speculative; confirmed against domain theory |
+| Stack | HIGH | Direct codebase inspection confirms numpy/pandas sufficiency; all library rejections are definitive |
+| Features | HIGH (algorithms) / MEDIUM (thresholds) | Algorithm definitions are established math; imbalance multipliers and composite majority threshold are practitioner heuristics |
+| Architecture | HIGH | Every integration point verified against actual source code (tabs.js, peerComparison.js, displayManager.js, webapp.py, index.html) |
+| Pitfalls | HIGH | Critical pitfalls are deterministic implementation mistakes with exact prevention conditions; Plotly memory severity estimate is empirical |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **ML module content:** Confidence is MEDIUM for ML-in-finance features because the specific course content for next semester is not yet confirmed. The feature list is inferred from standard MFE ML curricula (Columbia IEOR, Baruch, CMU MSCF patterns). Validate against actual course syllabus when available.
-- **numpy 2.x compatibility:** The existing `>=1.23.0` pin may resolve to numpy 2.x. A test run against all WIP imports should confirm no breaking changes before Phase 1 work begins.
-- **Calibration latency measurement:** The 60-120 second estimate for Heston calibration is from architecture analysis; actual latency on Render's free tier may differ. Measure during Phase 1 to choose between SSE streaming vs. pre-caching approach.
-- **MDP scope:** Whether MDP (Markov Decision Process) belongs in Phase 2 or is deferred to a later milestone is unresolved. The backend does not exist and complexity is high. Recommend explicit scoping decision before Phase 2 begins.
+- **yfinance `earnings_dates` column names:** Verify against installed version before Phase 3 implementation (5-minute check).
+- **Imbalance candle thresholds (70%/1.5×):** Calibrate empirically after Phase 4 — target 3–8 signals per 90-day window on AAPL/SPY. Raise to 1.8× if too frequent; lower to 1.3× if too sparse.
+- **Composite bias majority threshold (2/3):** Decide before Phase 5 whether 2/3 majority or simple majority (>50%) better serves the showcase's intended behavior.
+- **Plotly memory ceiling with 5+ tickers:** `staticPlot: true` is expected to reduce memory ~10×; actual threshold is empirical. The 5-ticker cap may be unnecessary if typical use is 2–3 tickers.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Existing codebase: `requirements.txt`, `webapp.py`, `src/analytics/credit_transitions.py`, `src/analytics/interest_rate_models.py`, `src/analytics/regime_detection.py`, `src/derivatives/fourier_pricer.py`, `src/derivatives/model_calibration.py`, `static/js/stochasticModels.js`, `templates/index.html`
-- Albrecher, H. et al. (2007). "The Little Heston Trap." — Pitfall 2 basis
-- Heston, S.L. (1993). "A Closed-Form Solution for Options with Stochastic Volatility." — model basis
-- Hamilton, J.D. (1989). "A New Approach to the Economic Analysis of Nonstationary Time Series." — HMM basis
-- Cox, Ingersoll, Ross (1985). "A Theory of the Term Structure of Interest Rates." — CIR basis
-- `.planning/PROJECT.md` — requirements and constraints
+- Direct codebase inspection: `src/indicators/technical_indicators.py`, `static/js/tabs.js`, `static/js/peerComparison.js`, `static/js/stockScraper.js`, `static/js/displayManager.js`, `templates/index.html`, `webapp.py`
+- `.planning/research/STACK.md` (v2.2, 2026-04-07)
+- `.planning/research/FEATURES.md` (v2.2, 2026-04-07)
+- `.planning/research/ARCHITECTURE.md` (v2.2, 2026-04-07)
+- `.planning/research/PITFALLS.md` (v2.2, 2026-04-07)
+- Market Profile theory (Steidlmayer) — Volume Profile POC/VAH/VAL 70% definition
+- Elder (1993) "Trading for a Living" — buying/selling pressure per bar
+- Kaufman (2013) "Trading Systems and Methods" — daily-bar volume approximations
+- ICT/SMC methodology (public domain) — liquidity sweep and imbalance candle definitions
 
 ### Secondary (MEDIUM confidence)
-- Standard MFE curricula patterns (Columbia IEOR, Baruch MFE, CMU MSCF, NYU Courant) — ML-in-finance feature list
-- scipy documentation (docs.scipy.org) — version compatibility
-- Plotly.js releases (github.com/plotly/plotly.js/releases) — CDN version guidance
+- pandas-ta GitHub source — confirms session-VWAP only, no anchored VWAP
+- yfinance 0.2.x changelog — `auto_adjust=True` default and `.earnings_dates` structure
+- Plotly.js documentation — `make_subplots`, `shared_yaxes`, `staticPlot`, `Plotly.react()`
 
 ### Tertiary (LOW confidence)
-- numpy 2.0 migration guide — compatibility with existing `>=1.23.0` pin; needs empirical validation
+- Composite signal 2/3 threshold — author recommendation; not a quant standard
+- Imbalance candle thresholds — SMC community practitioner heuristics; not peer-reviewed
 
 ---
-*Research completed: 2026-03-03*
+
+*Research completed: 2026-04-07*
 *Ready for roadmap: yes*

@@ -101,6 +101,11 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Volume Divergence badge**: Always visible below the chart — shows "⚠ Volume Divergence" with price and volume slope values when price and volume trends diverge over the last 10 bars, or a muted "✔ No divergence" when aligned.
 - **Imbalance candle annotations**: ▲/▼ markers appear on bars where the body exceeds 70% of the high-low range AND volume exceeds 1.2× the 20-day average, flagging high-conviction directional moves.
 
+### End-to-End Test Suite (Phase 23)
+- **Three-tier test architecture**: Unit (pytest markers), Integration (Flask test client, 25 routes covered), and Regression (frozen fixture snapshots) tiers managed via `Makefile` targets (`make test-unit`, `make test-integration`, `make test-regression`).
+- **Frozen fixture regression**: Analytics modules (correlation, Monte Carlo VaR, DCF, credit transitions) snapshot their outputs; any numerical drift breaks the regression tier immediately.
+- **conftest.py fixtures**: Shared app factory, sample ticker data, and mock helpers eliminate boilerplate across all test files.
+
 ### Peer Comparison
 - **GET /api/peers?ticker=AAPL**: Returns sector peers with P/E, P/B, ROE, and Operating Margin for each comparable company, plus percentile ranks showing where the primary ticker stands relative to peers.
 - **Sector-Scoped Cache**: 30-minute TTL cache keyed by sector — tickers in the same sector share one fetch, avoiding redundant Finviz requests.
@@ -559,7 +564,21 @@ stock_scraper/
 ├── output/                           # Output files
 ├── logs/                             # Log files
 └── tests/                            # Test modules
+    ├── conftest.py                   # Shared fixtures, Flask test client, marker registration
+    ├── fixtures/                     # Frozen data: OHLCV CSVs, SPY .npy, Heston JSON
+    └── test_*.py                     # 25 test files across unit, integration, and regression tiers
 ```
+
+### Running Tests
+
+```bash
+make test-unit        # Fast unit tests only (no network calls)
+make test-integration # Flask route integration tests
+make test-regression  # Regression tests — pin Volume Profile, Order Flow, Heston RMSE, HMM regimes
+make test             # All tiers sequentially
+```
+
+Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). Phase 23 added unit tests for `options_pricer`, `rl_models`, `financial_analytics`, and `ml_models` (TEST-03), plus regression tests that pin expected outputs for Volume Profile, Order Flow, Heston calibration, and HMM regime detection against frozen fixture data.
 
 ---
 

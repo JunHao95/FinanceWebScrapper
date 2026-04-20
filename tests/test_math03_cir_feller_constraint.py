@@ -14,6 +14,8 @@ sys.path.insert(0, '/Users/junhaotee/Desktop/Side_projects/FinanceWebScrapper')
 import inspect
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_normal_calibration_works():
     """Test 1: Normal calibration returns a valid result dict."""

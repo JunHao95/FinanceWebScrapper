@@ -1,6 +1,17 @@
 """
-Shared fixtures for Phase 1 math correctness benchmarks.
+Shared fixtures and configuration for the FinanceWebScrapper test suite.
+
+Critical user flows (TEST-01):
+  1. Stock scraping pipeline — user enters a ticker, scraper fetches financials, results returned as JSON.
+  2. Stochastic model computation — user POSTs parameters, backend runs Heston/CIR/Vasicek, returns calibrated curve.
+  3. Trading indicator generation — user GETs /api/trading_indicators?ticker=X, backend returns volume profile,
+     anchored VWAP, order flow, liquidity sweep, and composite bias.
+  4. Chatbot interaction — user POSTs a message with optional context, LLM agent responds with financial analysis.
+  5. Portfolio health scoring — user POSTs ticker list, backend fetches returns, computes Sharpe/VaR metrics.
 """
+import socket
+import threading
+import time
 import numpy as np
 import pytest
 import os
@@ -8,6 +19,36 @@ import os
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow (requires network/long runtime)")
+    config.addinivalue_line("markers", "unit: fast, isolated, no I/O")
+    config.addinivalue_line("markers", "integration: uses Flask test client or real subsystems")
+    config.addinivalue_line("markers", "regression: guards against previously fixed bugs")
+    config.addinivalue_line("markers", "e2e: full browser end-to-end via Playwright")
+
+
+@pytest.fixture
+def client():
+    import webapp
+    webapp.app.config['TESTING'] = True
+    with webapp.app.test_client() as c:
+        yield c
+
+
+@pytest.fixture(scope='session')
+def flask_server():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+
+    import webapp
+    t = threading.Thread(
+        target=webapp.app.run,
+        kwargs=dict(host='localhost', port=port, use_reloader=False),
+        daemon=True,
+    )
+    t.start()
+    time.sleep(0.5)
+    yield f'http://localhost:{port}'
 
 
 @pytest.fixture
@@ -50,7 +91,7 @@ def spy_returns():
     dates_path = os.path.join(os.path.dirname(__file__), 'fixtures', 'spy_2017_2021_dates.npy')
 
     if os.path.exists(fixture_path):
-        returns = np.load(fixture_path)
+        returns = np.load(fixture_path).ravel()  # ensure 1-D (fixture may be stored as (N,1))
         dates = np.load(dates_path, allow_pickle=True) if os.path.exists(dates_path) else None
         return returns, dates
 

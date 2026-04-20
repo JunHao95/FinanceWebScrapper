@@ -12,6 +12,8 @@ import json
 import pytest
 from unittest.mock import patch, MagicMock
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def client():

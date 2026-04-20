@@ -17,6 +17,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import pytest
 from unittest.mock import patch, MagicMock
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def client():

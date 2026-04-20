@@ -12,6 +12,8 @@ sys.path.insert(0, '/Users/junhaotee/Desktop/Side_projects/FinanceWebScrapper')
 import inspect
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_heston_calibrator_imports():
     """Test 3: HestonCalibrator imports and instantiates without error."""
