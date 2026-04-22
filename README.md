@@ -127,6 +127,23 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Lookback dropdown**: 30 / 90 / 180 / 365 day selector in the tab header; changing selection clears the per-ticker session cache and re-fetches all charts automatically without requiring a re-scrape.
 - **Lazy-load on tab activate**: Trading Indicators tab fetches data only when first activated; `TradingIndicators.clearSession()` called from `stockScraper.js` on each new scrape to prevent stale renders.
 
+### Footprint Delta Heatmap — Backend (Phase 24-01)
+- **`fetch_intraday(ticker, days=60)`**: Fetches 15-minute OHLCV data via `yf.Ticker().history(interval='15m')`, hard-capped at 60 days (yfinance intraday horizon limit), returning a tz-naive DatetimeIndex DataFrame.
+- **`compute_footprint(df_15m, ticker)`**: Builds a per-day delta heatmap (buy − sell volume per adaptive price bin) as a Plotly dark-theme figure, adds a POC scatter and current-close reference line, and returns `{traces, layout, signal, cum_delta, total_volume}`. Signal is `bullish`/`bearish`/`neutral` based on a 5% cumulative-delta threshold.
+- **`GET /api/footprint?ticker=AAPL&days=60`**: New Flask route returning the full footprint payload for a given ticker and day window.
+- **5-voice composite bias**: `compute_composite_bias()` now accepts an optional `footprint_result` kwarg, extending the scoring denominator to 5 when footprint is available (backward-compatible — existing callers unchanged).
+
+### Footprint Delta Heatmap — Frontend (Phase 24-02)
+- **3-column Trading Indicators grid**: `.ti-2x2-grid` CSS expanded from 2 to 3 columns, adding a Footprint heatmap panel (row 2, position 2) and an empty placeholder cell for a future 6th indicator.
+- **Parallel fetch**: `fetchForTicker` now fires `/api/trading_indicators` and `/api/footprint` simultaneously via `Promise.all`, eliminating the sequential fetch waterfall.
+- **Footprint cell**: renders the heatmap with Plotly, shows a colour-coded cumulative delta badge (✔ Bullish / ⚠ Bearish / — Neutral with share count), and a note indicating the 60-day / 15m horizon.
+- **Client-side 5-voice composite badge**: composite bias score is now computed in JS after both fetches resolve, including Footprint as the 5th voice (e.g. "Bullish (4/5)"), replacing the server-side 4-voice badge.
+
+### Footprint Delta Heatmap — Test Suite (Phase 24-03)
+- **11 unit tests** (`tests/test_unit_footprint.py`): cover `fetch_intraday` tz-stripping and empty-raise, `compute_footprint` keys/heatmap/signal logic, and 5-voice composite bias scenarios (all-available, unavailable fallback, dissenter).
+- **3 integration tests** (`TestFootprintRoute`): verify `/api/footprint` schema on 200, JSON error on missing ticker, and 500 on invalid ticker.
+- **2 regression tests** with a frozen 30-row 15m fixture (`tests/fixtures/footprint_15m_ohlcv.csv`): pin cumulative delta to `-189166.667` and signal to `bearish` — any numerical drift fails immediately.
+
 ### End-to-End Test Suite (Phase 23)
 - **Three-tier test architecture**: Unit (pytest markers), Integration (Flask test client, 25 routes covered), and Regression (frozen fixture snapshots) tiers managed via `Makefile` targets (`make test-unit`, `make test-integration`, `make test-regression`).
 - **Frozen fixture regression**: Analytics modules (correlation, Monte Carlo VaR, DCF, credit transitions) snapshot their outputs; any numerical drift breaks the regression tier immediately.

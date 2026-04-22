@@ -660,7 +660,7 @@ def compute_liquidity_sweep(df: pd.DataFrame, lookback: int = 90) -> dict:
     }
 
 
-def compute_composite_bias(results: dict) -> dict:
+def compute_composite_bias(results: dict, footprint_result: dict = None) -> dict:
     sub_map = {
         'volume_profile':  results.get('volume_profile',  {}),
         'anchored_vwap':   results.get('anchored_vwap',   {}),
@@ -673,6 +673,8 @@ def compute_composite_bias(results: dict) -> dict:
         'order_flow':      'Order Flow',
         'liquidity_sweep': 'Sweep',
     }
+    sub_map['footprint'] = footprint_result if isinstance(footprint_result, dict) else {}
+    labels['footprint'] = 'Footprint'
     _to_direction = {
         'bullish': 'bullish', 'bearish': 'bearish', 'neutral': 'neutral',
         'inside':  'bullish', 'outside': 'bearish',
@@ -716,4 +718,116 @@ def compute_composite_bias(results: dict) -> dict:
         'score':       score_str,
         'dissenters':  dissenters,
         'unavailable': unavailable,
+    }
+
+
+def fetch_intraday(ticker: str, days: int = 60) -> pd.DataFrame:
+    # yfinance hard-limits 15m intraday data to the last 60 days — no buffer applied
+    days = min(int(days), 59)
+    end = datetime.now()
+    start = end - timedelta(days=days)
+    df = yf.Ticker(ticker).history(
+        start=start.strftime('%Y-%m-%d'),
+        end=end.strftime('%Y-%m-%d'),
+        interval='15m',
+        auto_adjust=True,
+    )
+    if df.empty:
+        raise ValueError(f"No 15m intraday data returned for {ticker}")
+    df.index = df.index.tz_localize(None) if df.index.tz is not None else df.index
+    return df[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+
+def compute_footprint(df_15m: pd.DataFrame, ticker: str = '') -> dict:
+    if df_15m is None or df_15m.empty:
+        return {'signal': None, 'error': 'No intraday data', 'traces': [], 'layout': {}}
+
+    df = df_15m.copy()
+    if df.index.tz is not None:
+        df.index = df.index.tz_localize(None)
+
+    ranges = (df['High'] - df['Low']).clip(lower=1e-10)
+    buy_volume = (df['Close'] - df['Low']) / ranges * df['Volume']
+    sell_volume = df['Volume'] - buy_volume
+    df['delta'] = buy_volume - sell_volume
+
+    price_min = df['Low'].min()
+    price_max = df['High'].max()
+    price_range = price_max - price_min
+    mid_price = (price_min + price_max) / 2.0
+    n_bins = max(20, min(200, int(price_range / (mid_price * 0.002))))
+    bin_edges = np.linspace(price_min, price_max, n_bins + 1)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+
+    df['bin_idx'] = np.digitize(df['Close'], bin_edges) - 1
+    df['bin_idx'] = df['bin_idx'].clip(0, n_bins - 1)
+    df['date'] = df.index.date
+
+    unique_dates = sorted(df['date'].unique())
+    date_strings = [str(d) for d in unique_dates]
+
+    delta_matrix = np.zeros((len(unique_dates), n_bins))
+    vol_matrix = np.zeros((len(unique_dates), n_bins))
+    for i, d in enumerate(unique_dates):
+        day_df = df[df['date'] == d]
+        for _, row in day_df.iterrows():
+            b = int(row['bin_idx'])
+            delta_matrix[i, b] += row['delta']
+            vol_matrix[i, b] += row['Volume']
+
+    heatmap = go.Heatmap(
+        z=delta_matrix.tolist(),
+        x=date_strings,
+        y=bin_centers.tolist(),
+        colorscale=[[0.0, '#e74c3c'], [0.5, '#1e1e2e'], [1.0, '#2ecc71']],
+        zmid=0,
+        showscale=True,
+        hovertemplate='Date: %{x}<br>Price: %{y:.2f}<br>Delta: %{z:.0f}<extra></extra>',
+    )
+
+    poc_x, poc_y = [], []
+    for i, d in enumerate(unique_dates):
+        best_bin = int(np.argmax(vol_matrix[i]))
+        poc_x.append(date_strings[i])
+        poc_y.append(float(bin_centers[best_bin]))
+    poc_scatter = go.Scatter(
+        x=poc_x, y=poc_y, mode='markers',
+        marker=dict(symbol='circle', size=6, color='#f9e2af', opacity=0.85),
+        name='POC',
+    )
+
+    current_close = float(df['Close'].iloc[-1])
+    fig = go.Figure(data=[heatmap, poc_scatter])
+    fig.add_shape(
+        type='line',
+        x0=date_strings[0], x1=date_strings[-1],
+        y0=current_close, y1=current_close,
+        line=dict(color='#cdd6f4', width=1, dash='dash'),
+    )
+    fig.update_layout(
+        title=f'Footprint Delta Heatmap — {ticker}',
+        paper_bgcolor='#1e1e2e',
+        plot_bgcolor='#1e1e2e',
+        font=dict(color='#cdd6f4'),
+        height=500,
+        xaxis=dict(gridcolor='#313244'),
+        yaxis=dict(gridcolor='#313244'),
+    )
+
+    cum_delta = float(df['delta'].sum())
+    total_volume = float(df['Volume'].sum())
+    threshold = 0.05 * total_volume
+    if cum_delta > threshold:
+        signal = 'bullish'
+    elif cum_delta < -threshold:
+        signal = 'bearish'
+    else:
+        signal = 'neutral'
+
+    return {
+        'traces': fig.to_dict()['data'],
+        'layout': fig.to_dict()['layout'],
+        'signal': signal,
+        'cum_delta': cum_delta,
+        'total_volume': total_volume,
     }
