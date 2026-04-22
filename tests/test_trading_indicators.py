@@ -537,3 +537,127 @@ class TestComputeCompositeBias:
         r = compute_composite_bias(self._results())
         for k in ('direction', 'score', 'dissenters', 'unavailable'):
             assert k in r, f"Missing key: {k}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 24-01: fetch_intraday, compute_footprint, /api/footprint route
+# ---------------------------------------------------------------------------
+
+import numpy as np
+
+
+def _synthetic_15m(n=50):
+    """Minimal valid 15m OHLCV DataFrame with tz-naive index."""
+    dates = pd.date_range('2026-04-01', periods=n, freq='15min')
+    rng = np.random.default_rng(42)
+    return pd.DataFrame({
+        'Open':   rng.uniform(190, 210, n),
+        'High':   rng.uniform(210, 215, n),
+        'Low':    rng.uniform(185, 190, n),
+        'Close':  rng.uniform(190, 210, n),
+        'Volume': rng.uniform(1000, 5000, n),
+    }, index=dates)
+
+
+class TestComputeFootprint:
+    def test_returns_required_keys(self):
+        from src.analytics.trading_indicators import compute_footprint
+        df = _synthetic_15m()
+        r = compute_footprint(df, 'TEST')
+        for k in ('traces', 'layout', 'signal', 'cum_delta', 'total_volume'):
+            assert k in r, f"Missing key: {k}"
+
+    def test_signal_values(self):
+        from src.analytics.trading_indicators import compute_footprint
+        df = _synthetic_15m()
+        r = compute_footprint(df, 'TEST')
+        assert r['signal'] in ('bullish', 'bearish', 'neutral')
+
+    def test_empty_df_returns_error(self):
+        from src.analytics.trading_indicators import compute_footprint
+        empty = pd.DataFrame(columns=['Open', 'High', 'Low', 'Close', 'Volume'])
+        r = compute_footprint(empty, 'TEST')
+        assert r['signal'] is None
+        assert 'error' in r
+
+    def test_bullish_signal_on_forced_buy_volume(self):
+        from src.analytics.trading_indicators import compute_footprint
+        # All bars close == High (max buy pressure)
+        dates = pd.date_range('2026-04-01', periods=20, freq='15min')
+        df = pd.DataFrame({
+            'Open':   [100.0] * 20,
+            'High':   [110.0] * 20,
+            'Low':    [90.0] * 20,
+            'Close':  [110.0] * 20,  # close at high => all buy volume
+            'Volume': [10000.0] * 20,
+        }, index=dates)
+        r = compute_footprint(df, 'TEST')
+        assert r['signal'] == 'bullish'
+        assert r['cum_delta'] > 0
+
+    def test_bearish_signal_on_forced_sell_volume(self):
+        from src.analytics.trading_indicators import compute_footprint
+        dates = pd.date_range('2026-04-01', periods=20, freq='15min')
+        df = pd.DataFrame({
+            'Open':   [100.0] * 20,
+            'High':   [110.0] * 20,
+            'Low':    [90.0] * 20,
+            'Close':  [90.0] * 20,  # close at low => all sell volume
+            'Volume': [10000.0] * 20,
+        }, index=dates)
+        r = compute_footprint(df, 'TEST')
+        assert r['signal'] == 'bearish'
+        assert r['cum_delta'] < 0
+
+
+class TestFootprintRoute:
+    @pytest.fixture(autouse=True)
+    def client(self):
+        flask_app.config['TESTING'] = True
+        with flask_app.test_client() as c:
+            self.client = c
+
+    def test_no_ticker_returns_error(self):
+        import json
+        r = self.client.get('/api/footprint')
+        d = json.loads(r.data)
+        assert 'error' in d
+
+    def test_with_ticker_calls_fetch_intraday(self):
+        import json
+        from unittest.mock import patch
+        df_stub = _synthetic_15m()
+        with patch('src.analytics.trading_indicators.fetch_intraday', return_value=df_stub) as _mock:
+            r = self.client.get('/api/footprint?ticker=AAPL')
+            d = json.loads(r.data)
+        assert r.status_code == 200
+        assert d.get('ticker') == 'AAPL'
+        assert 'signal' in d
+
+
+class TestComputeCompositeBias5Voice:
+    def _results(self):
+        return {
+            'volume_profile':  {'signal': 'inside'},
+            'anchored_vwap':   {'signal': 'above'},
+            'order_flow':      {'signal': 'bullish'},
+            'liquidity_sweep': {'signal': 'bullish'},
+        }
+
+    def test_5_voice_bullish_score(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(), footprint_result={'signal': 'bullish'})
+        assert r['score'] == '5/5'
+        assert r['direction'] == 'bullish'
+
+    def test_5_voice_unavailable_footprint_falls_back_to_4(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results(), footprint_result={'signal': None})
+        # footprint unavailable, score is out of 4
+        assert r['score'].endswith('/4')
+
+    def test_backward_compat_no_footprint_kwarg(self):
+        from src.analytics.trading_indicators import compute_composite_bias
+        r = compute_composite_bias(self._results())
+        assert r['score'].endswith('/4')
+        assert 'Footprint' in r['unavailable']

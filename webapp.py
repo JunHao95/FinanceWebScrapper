@@ -2177,6 +2177,22 @@ def get_trading_indicators():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/footprint', methods=['GET'])
+def get_footprint():
+    ticker = request.args.get('ticker', '').strip().upper()
+    days = min(int(request.args.get('days', 60)), 60)
+    if not ticker:
+        return jsonify({'error': 'ticker parameter required'})
+    try:
+        from src.analytics.trading_indicators import fetch_intraday, compute_footprint
+        df_15m = fetch_intraday(ticker, days)
+        result = compute_footprint(df_15m, ticker)
+        return jsonify({'ticker': ticker, 'days': days, **result})
+    except Exception as e:
+        logger.error(f"Error in get_footprint for {ticker}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/validate_ticker', methods=['GET'])
 def validate_ticker():
     symbol = request.args.get('symbol', '').strip().upper()

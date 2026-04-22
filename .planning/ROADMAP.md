@@ -180,6 +180,16 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 - Volume Profile histogram: `make_subplots(rows=1, cols=2, shared_yaxes=True)` — prevents vertical render
 - Composite label: "Trend-following bias" + caveat text — prevents overconfidence framing
 
+### Phase 24: I want to integrate footprint trading indicator
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 23
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 24 to break down)
+
 ---
 
 *Roadmap created: 2026-04-08*
