@@ -359,6 +359,38 @@
             }
         }
 
+        var fpCell = document.getElementById('tiCell_fp_' + ticker);
+        if (fpCell) {
+            var fpLegendEl = document.createElement('div');
+            fpLegendEl.className = 'ti-legend';
+            fpLegendEl.innerHTML =
+                '<div class="ti-legend-title">How to read this chart</div>' +
+                '<div class="ti-legend-grid">' +
+                  '<div class="ti-legend-item">' +
+                    '<span class="ti-swatch" style="background:linear-gradient(to right,#e74c3c,#1e1e2e,#2ecc71);height:12px;width:40px;border-radius:2px;margin-right:6px;"></span>' +
+                    '<div><strong>Delta heatmap</strong> \u2014 buy minus sell volume per price bin per day<br>' +
+                    '<span class="ti-legend-desc">Green cells = net buying pressure at that price on that day. Red cells = net selling. Intensity shows magnitude. Reveals where institutions accumulated or distributed.</span></div>' +
+                  '</div>' +
+                  '<div class="ti-legend-item">' +
+                    '<span class="ti-swatch" style="background:#f9e2af;width:10px;height:10px;border-radius:50%;margin-right:6px;"></span>' +
+                    '<div><strong>POC dots (yellow)</strong> \u2014 Point of Control per day<br>' +
+                    '<span class="ti-legend-desc">Price level with the highest traded volume for each session. A cluster of POC dots at the same price level marks a strong support/resistance zone.</span></div>' +
+                  '</div>' +
+                  '<div class="ti-legend-item">' +
+                    '<span class="ti-swatch" style="background:none;border-top:1px dashed rgba(205,214,244,0.5);height:0;width:24px;margin-right:6px;"></span>' +
+                    '<div><strong>Dashed line</strong> \u2014 current price<br>' +
+                    '<span class="ti-legend-desc">Shows where price sits now relative to the 60-day delta distribution.</span></div>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="ti-signal-guide">' +
+                  '<strong>Cumulative Delta signal</strong>: sum of all bar deltas over 60 days. ' +
+                  'If cumulative delta exceeds \u00b15% of total volume, the signal fires Bullish/Bearish; otherwise Neutral. ' +
+                  '\u00a0|\u00a0 ' +
+                  '<strong>Data horizon</strong>: limited to 15-minute bars for the last 60 days \u2014 the maximum available from the data provider.' +
+                '</div>';
+            fpCell.appendChild(fpLegendEl);
+        }
+
         // --- 5-voice composite bias badge ---
         var badgeEl = document.getElementById('cBadge_' + ticker);
         if (badgeEl) {
