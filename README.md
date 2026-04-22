@@ -139,6 +139,11 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Footprint cell**: renders the heatmap with Plotly, shows a colour-coded cumulative delta badge (✔ Bullish / ⚠ Bearish / — Neutral with share count), and a note indicating the 60-day / 15m horizon.
 - **Client-side 5-voice composite badge**: composite bias score is now computed in JS after both fetches resolve, including Footprint as the 5th voice (e.g. "Bullish (4/5)"), replacing the server-side 4-voice badge.
 
+### Footprint Delta Heatmap — Test Suite (Phase 24-03)
+- **11 unit tests** (`tests/test_unit_footprint.py`): cover `fetch_intraday` tz-stripping and empty-raise, `compute_footprint` keys/heatmap/signal logic, and 5-voice composite bias scenarios (all-available, unavailable fallback, dissenter).
+- **3 integration tests** (`TestFootprintRoute`): verify `/api/footprint` schema on 200, JSON error on missing ticker, and 500 on invalid ticker.
+- **2 regression tests** with a frozen 30-row 15m fixture (`tests/fixtures/footprint_15m_ohlcv.csv`): pin cumulative delta to `-189166.667` and signal to `bearish` — any numerical drift fails immediately.
+
 ### End-to-End Test Suite (Phase 23)
 - **Three-tier test architecture**: Unit (pytest markers), Integration (Flask test client, 25 routes covered), and Regression (frozen fixture snapshots) tiers managed via `Makefile` targets (`make test-unit`, `make test-integration`, `make test-regression`).
 - **Frozen fixture regression**: Analytics modules (correlation, Monte Carlo VaR, DCF, credit transitions) snapshot their outputs; any numerical drift breaks the regression tier immediately.

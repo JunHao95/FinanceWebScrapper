@@ -125,3 +125,34 @@ def test_order_flow_returns_traces_and_layout(of_df):
     result = compute_order_flow(of_df)
     assert 'traces' in result
     assert 'layout' in result
+
+
+# ---------------------------------------------------------------------------
+# Footprint (Phase 24)
+# ---------------------------------------------------------------------------
+
+EXPECTED_FP_CUM_DELTA = -189166.66666666666
+
+
+@pytest.fixture(scope='module')
+def fp_15m_df():
+    path = os.path.join(FIXTURES_DIR, 'footprint_15m_ohlcv.csv')
+    return pd.read_csv(path, index_col='Datetime', parse_dates=True)
+
+
+@pytest.mark.regression
+def test_footprint_cumulative_delta_regression(fp_15m_df):
+    """Pin cumulative delta on frozen 15m fixture — any drift triggers failure."""
+    from src.analytics.trading_indicators import compute_footprint
+    result = compute_footprint(fp_15m_df, 'REGTEST')
+    assert abs(result['cum_delta'] - EXPECTED_FP_CUM_DELTA) < 1.0, (
+        f"Footprint cum_delta drifted: expected {EXPECTED_FP_CUM_DELTA}, got {result['cum_delta']}"
+    )
+
+
+@pytest.mark.regression
+def test_footprint_signal_on_fixture(fp_15m_df):
+    """Fixture is designed to produce a bearish signal (sell-dominant days 2)."""
+    from src.analytics.trading_indicators import compute_footprint
+    result = compute_footprint(fp_15m_df, 'REGTEST')
+    assert result['signal'] == 'bearish'

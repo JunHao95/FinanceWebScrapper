@@ -630,3 +630,53 @@ class TestRlPortfolioRotationQl:
     def test_bad_alpha_returns_500(self, client):
         resp = client.post('/api/rl_portfolio_rotation_ql', json={'alpha': 'bad'})
         assert resp.status_code == 500
+
+# ---------------------------------------------------------------------------
+# GET /api/footprint (Phase 24)
+# ---------------------------------------------------------------------------
+
+def _make_mini_15m_df(n=10):
+    idx = pd.date_range('2024-01-02 09:30', periods=n, freq='15min')
+    return pd.DataFrame({
+        'Open': [150.0]*n, 'High': [152.0]*n,
+        'Low': [149.0]*n, 'Close': [151.0]*n, 'Volume': [100000]*n,
+    }, index=idx)
+
+
+class TestFootprintRoute:
+
+    @patch('src.analytics.trading_indicators.compute_footprint')
+    @patch('src.analytics.trading_indicators.fetch_intraday')
+    def test_footprint_route_200(self, mock_fetch, mock_compute, client):
+        """GET /api/footprint returns 200 with required schema keys."""
+        mock_fetch.return_value = _make_mini_15m_df()
+        mock_compute.return_value = {
+            'traces': [{'type': 'heatmap'}],
+            'layout': {},
+            'signal': 'bullish',
+            'cum_delta': 500000.0,
+            'total_volume': 10000000.0,
+        }
+        resp = client.get('/api/footprint?ticker=AAPL&days=60')
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert data.get('ticker') == 'AAPL'
+        assert 'signal' in data
+        assert 'cum_delta' in data
+        assert 'traces' in data
+
+    def test_footprint_route_missing_ticker(self, client):
+        """GET /api/footprint with no ticker returns JSON error (not HTTP 500)."""
+        resp = client.get('/api/footprint')
+        assert resp.status_code == 200
+        data = json.loads(resp.data)
+        assert 'error' in data
+
+    @patch('src.analytics.trading_indicators.fetch_intraday',
+           side_effect=ValueError('No 15m intraday data returned for FAKE'))
+    def test_footprint_route_invalid_ticker(self, mock_fetch, client):
+        """GET /api/footprint for invalid ticker returns 500 with error key."""
+        resp = client.get('/api/footprint?ticker=FAKE')
+        assert resp.status_code == 500
+        data = json.loads(resp.data)
+        assert 'error' in data
