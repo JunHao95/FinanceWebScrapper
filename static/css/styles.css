@@ -1481,10 +1481,10 @@ body.results-loaded .skeleton-preview {
     color: #a6adc8;
 }
 
-/* Phase 22 — 2×2 grid layout */
+/* Phase 22 — 2×2 grid layout (Phase 24 expanded to 3 columns) */
 .ti-2x2-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 16px;
     margin-top: 12px;
 }

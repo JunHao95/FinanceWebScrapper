@@ -10,28 +10,30 @@
 
     function fetchForTicker(ticker, lookback) {
         var cacheKey = ticker + '-' + lookback;
+        var fpCacheKey = ticker + '-footprint';
         if (_sessionCache[cacheKey]) return;
         _sessionCache[cacheKey] = true;
+        _sessionCache[fpCacheKey] = true;
 
         var container = document.getElementById('tradingIndicatorsTabContent');
         if (!container) return;
 
-        fetch('/api/trading_indicators?ticker=' + encodeURIComponent(ticker) +
-              '&lookback=' + encodeURIComponent(lookback))
-            .then(function (r) { return r.json(); })
-            .then(function (resp) {
-                if (resp.error) {
-                    console.warn('[TradingIndicators] API error:', resp.error);
-                    return;
-                }
-                _renderTickerCard(container, ticker, lookback, resp);
-            })
-            .catch(function (err) {
-                console.error('[TradingIndicators] fetch failed:', err);
-            });
+        Promise.all([
+            fetch('/api/trading_indicators?ticker=' + encodeURIComponent(ticker) +
+                  '&lookback=' + encodeURIComponent(lookback)).then(function(r) { return r.json(); }),
+            fetch('/api/footprint?ticker=' + encodeURIComponent(ticker) +
+                  '&days=60').then(function(r) { return r.json(); }),
+        ]).then(function(results) {
+            var resp   = results[0];
+            var fpResp = results[1];
+            if (resp.error) { console.warn('[TradingIndicators] API error:', resp.error); return; }
+            _renderTickerCard(container, ticker, lookback, resp, fpResp);
+        }).catch(function(err) {
+            console.error('[TradingIndicators] fetch failed:', err);
+        });
     }
 
-    function _renderTickerCard(container, ticker, lookback, resp) {
+    function _renderTickerCard(container, ticker, lookback, resp, fpResp) {
         var cardId = 'tiCard_' + ticker;
 
         var existing = document.getElementById(cardId);
@@ -99,6 +101,16 @@
               '<div class="ti-grid-cell" id="tiCell_sweep_' + ticker + '">' +
                 '<div id="sweepChart_' + ticker + '" style="width:100%;height:500px;"></div>' +
                 '<div id="sweepBadge_' + ticker + '" class="ti-va-badge"></div>' +
+              '</div>' +
+              '<div class="ti-grid-cell" id="tiCell_fp_' + ticker + '">' +
+                '<div id="fpChart_' + ticker + '" style="width:100%;height:500px;"></div>' +
+                '<div id="fpBadge_' + ticker + '" class="ti-va-badge"></div>' +
+                '<div id="fpNote_' + ticker + '" style="color:#7f849c;font-size:12px;margin:4px 0 8px 0;"></div>' +
+              '</div>' +
+              '<div class="ti-grid-cell">' +
+                '<div class="ti-unavailable-placeholder" style="height:500px;">' +
+                  'Future indicator — coming soon' +
+                '</div>' +
               '</div>' +
             '</div>';
         container.appendChild(card);
@@ -312,18 +324,84 @@
             sweepCell.appendChild(sweepLegendEl);
         }
 
-        // --- Composite bias badge ---
-        var cb = resp.composite_bias;
+        // --- Footprint panel ---
+        var fp = (fpResp && !fpResp.error) ? fpResp : null;
+        if (fp && fp.traces && fp.traces.length > 0 && fp.layout) {
+            Plotly.newPlot('fpChart_' + ticker, fp.traces, fp.layout,
+                { staticPlot: true, responsive: true });
+            var fpBadgeEl = document.getElementById('fpBadge_' + ticker);
+            if (fpBadgeEl && fp.signal) {
+                var cumDeltaAbs = Math.abs(fp.cum_delta || 0);
+                var cumDeltaStr = cumDeltaAbs >= 1e6
+                    ? (fp.cum_delta >= 0 ? '+' : '') + (fp.cum_delta / 1e6).toFixed(1) + 'M'
+                    : (fp.cum_delta >= 0 ? '+' : '') + Math.round(fp.cum_delta).toLocaleString();
+                var fpIcon = fp.signal === 'bullish' ? '\u2714'
+                           : fp.signal === 'bearish' ? '\u26a0' : '\u2014';
+                var fpLabel = fp.signal.charAt(0).toUpperCase() + fp.signal.slice(1);
+                var fpColor = fp.signal === 'bullish' ? '#2ecc71'
+                            : fp.signal === 'bearish' ? '#e74c3c' : '#7f849c';
+                fpBadgeEl.textContent = fpIcon + ' ' + fpLabel + ' Footprint \u2014 Cum \u0394: '
+                    + cumDeltaStr + ' shares (60d)';
+                fpBadgeEl.style.color      = fpColor;
+                fpBadgeEl.style.fontWeight = 'bold';
+                fpBadgeEl.style.fontSize   = '14px';
+                fpBadgeEl.style.display    = 'block';
+            }
+            var fpNoteEl = document.getElementById('fpNote_' + ticker);
+            if (fpNoteEl) {
+                fpNoteEl.textContent = 'Footprint limited to 60d \u2014 15m data horizon';
+            }
+        } else {
+            var fpEl = document.getElementById('fpChart_' + ticker);
+            if (fpEl) {
+                fpEl.className = 'ti-unavailable-placeholder';
+                fpEl.textContent = 'Footprint unavailable \u2014 intraday data not available for this ticker';
+            }
+        }
+
+        // --- 5-voice composite bias badge ---
         var badgeEl = document.getElementById('cBadge_' + ticker);
-        if (cb && badgeEl) {
-            var dotColor = cb.direction === 'bullish' ? '#2ecc71'
-                         : cb.direction === 'bearish' ? '#e74c3c' : '#7f849c';
-            var dissenterText = cb.dissenters && cb.dissenters.length > 0
-                ? ' \u2014 ' + cb.dissenters.join(', ') + ' dissent' + (cb.dissenters.length > 1 ? '' : 's')
-                : (cb.unavailable && cb.unavailable.length > 0 ? ' \u2014 ' + cb.unavailable.join(', ') + ' unavailable' : '');
-            badgeEl.textContent = '\u25cf '
-                + (cb.direction.charAt(0).toUpperCase() + cb.direction.slice(1))
-                + ' (' + (cb.score || '0/0') + ')' + dissenterText;
+        if (badgeEl) {
+            var _toDir = {
+                bullish:'bullish', bearish:'bearish', neutral:'neutral',
+                inside:'bullish', outside:'bearish',
+                above:'bullish', below:'bearish', between:'neutral',
+            };
+            var subSignals = {
+                'Volume Profile': resp.volume_profile  && resp.volume_profile.signal,
+                'AVWAP':          resp.anchored_vwap   && resp.anchored_vwap.signal,
+                'Order Flow':     resp.order_flow      && resp.order_flow.signal,
+                'Sweep':          resp.liquidity_sweep && resp.liquidity_sweep.signal,
+                'Footprint':      fp && fp.signal,
+            };
+            var available = {}, unavailable = [];
+            Object.keys(subSignals).forEach(function(name) {
+                var sig = subSignals[name];
+                if (sig && _toDir[sig]) { available[name] = _toDir[sig]; }
+                else { unavailable.push(name); }
+            });
+            var nTotal   = Object.keys(available).length;
+            var nBullish = Object.keys(available).filter(function(k){ return available[k]==='bullish'; }).length;
+            var nBearish = Object.keys(available).filter(function(k){ return available[k]==='bearish'; }).length;
+            var direction, scoreStr, dissenters;
+            if (nTotal === 0) {
+                direction = 'neutral'; scoreStr = '0/0'; dissenters = [];
+            } else if (nBullish > nTotal / 2) {
+                direction = 'bullish'; scoreStr = nBullish + '/' + nTotal;
+                dissenters = Object.keys(available).filter(function(k){ return available[k] !== 'bullish'; });
+            } else if (nBearish > nTotal / 2) {
+                direction = 'bearish'; scoreStr = nBearish + '/' + nTotal;
+                dissenters = Object.keys(available).filter(function(k){ return available[k] !== 'bearish'; });
+            } else {
+                direction = 'neutral'; scoreStr = Math.max(nBullish,nBearish) + '/' + nTotal;
+                dissenters = [];
+            }
+            var dotColor = direction === 'bullish' ? '#2ecc71' : direction === 'bearish' ? '#e74c3c' : '#7f849c';
+            var dissenterText = dissenters.length > 0
+                ? ' \u2014 ' + dissenters.join(', ') + (dissenters.length > 1 ? ' dissent' : ' dissents')
+                : (unavailable.length > 0 ? ' \u2014 ' + unavailable.join(', ') + ' unavailable' : '');
+            badgeEl.textContent = '\u25cf ' + direction.charAt(0).toUpperCase() + direction.slice(1)
+                + ' (' + scoreStr + ')' + dissenterText;
             badgeEl.style.color = dotColor;
         }
     }
