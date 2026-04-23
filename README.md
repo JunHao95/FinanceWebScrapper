@@ -578,7 +578,7 @@ make test-regression  # Regression tests — pin Volume Profile, Order Flow, Hes
 make test             # All tiers sequentially
 ```
 
-Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). Phase 23 added unit tests for `options_pricer`, `rl_models`, `financial_analytics`, and `ml_models` (TEST-03), plus regression tests that pin expected outputs for Volume Profile, Order Flow, Heston calibration, and HMM regime detection against frozen fixture data.
+Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). Phase 23 added unit tests for `options_pricer`, `rl_models`, `financial_analytics`, and `ml_models` (TEST-03), plus regression tests that pin expected outputs for Volume Profile, Order Flow, Heston calibration, and HMM regime detection against frozen fixture data. Phase 23-04 added a Playwright E2E golden-path test (`tests/test_e2e_golden_path.py`) that exercises the full browser-to-server pipeline — enters AAPL, clicks Run Analysis, and verifies all four result tabs render without JS errors; all external scrapers and analytics API routes are mocked so no live network calls are required.
 
 ---
 

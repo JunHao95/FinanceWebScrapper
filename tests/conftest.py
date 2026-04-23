@@ -35,20 +35,62 @@ def client():
 
 @pytest.fixture(scope='session')
 def flask_server():
+    """Session-scoped live Flask server with all external I/O mocked (no live network calls)."""
+    from unittest.mock import patch, MagicMock
+
+    mock_stock_data = {
+        'Company Name': 'Apple Inc.',
+        'Price': '175.00',
+        'Market Cap': '2.80T',
+        'P/E Ratio': '28.50',
+        'EPS': '6.14',
+        '52-Week High': '199.62',
+        '52-Week Low': '124.17',
+        'Volume': '55,000,000',
+        'Beta': '1.29',
+        'Dividend Yield': '0.55%',
+    }
+    mock_cnn_data = {
+        'Fear & Greed Value': 65,
+        'Fear & Greed Label': 'Greed',
+    }
+
+    yahoo_instance = MagicMock()
+    yahoo_instance.get_data.return_value = mock_stock_data
+    cnn_instance = MagicMock()
+    cnn_instance.scrape_data.return_value = mock_cnn_data
+
+    patches = [
+        patch('webapp.YahooFinanceScraper', return_value=yahoo_instance),
+        patch('webapp.FinvizScraper', return_value=MagicMock(get_data=MagicMock(return_value={}))),
+        patch('webapp.GoogleFinanceScraper', return_value=MagicMock(get_data=MagicMock(return_value={}))),
+        patch('webapp.CNNFearGreedScraper', return_value=cnn_instance),
+        patch('webapp.AlphaVantageAPIScraper', return_value=MagicMock(get_data=MagicMock(return_value={}))),
+        patch('webapp.FinhubAPIScraper', return_value=MagicMock(get_data=MagicMock(return_value={}))),
+    ]
+    for p in patches:
+        p.start()
+
+    import webapp
+    webapp.app.config['TESTING'] = True
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('localhost', 0))
     port = sock.getsockname()[1]
     sock.close()
 
-    import webapp
     t = threading.Thread(
         target=webapp.app.run,
         kwargs=dict(host='localhost', port=port, use_reloader=False),
         daemon=True,
     )
     t.start()
-    time.sleep(0.5)
+    time.sleep(1.0)
+
     yield f'http://localhost:{port}'
+
+    for p in patches:
+        p.stop()
 
 
 @pytest.fixture
