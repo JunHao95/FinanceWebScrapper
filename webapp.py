@@ -610,6 +610,7 @@ def send_email_report():
         all_data = payload.get('data', {})
         cnn_data = payload.get('cnn_data', {})
         analytics_data = payload.get('analytics_data', {})
+        trading_indicators_data = payload.get('trading_indicators_data', {})
         recipients = payload.get('email')
         cc = payload.get('cc')
         bcc = payload.get('bcc')
@@ -650,7 +651,8 @@ def send_email_report():
             recipients=recipients,
             cc=cc,
             bcc=bcc,
-            analytics_data=analytics_data
+            analytics_data=analytics_data,
+            trading_indicators_data=trading_indicators_data
         )
         
         # Clean up temporary files

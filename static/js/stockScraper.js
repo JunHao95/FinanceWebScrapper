@@ -322,6 +322,7 @@ const StockScraper = {
                 data: AppState.currentData,
                 cnn_data: AppState.currentCnnData,
                 analytics_data: AppState.currentAnalytics,
+                trading_indicators_data: AppState.tradingIndicatorsData || {},
                 email: email
             };
 

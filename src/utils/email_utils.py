@@ -997,7 +997,142 @@ def generate_analytics_section(analytics_data, tickers):
     html += "</div>"
     return html
 
-def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None, analytics_data=None):
+def generate_trading_indicators_section(trading_data):
+    """
+    Generate HTML section for trading indicators (Volume Profile, AVWAP, Order Flow,
+    Liquidity Sweep, Footprint) from the signal-level data cached on the frontend.
+
+    Args:
+        trading_data (dict): Keyed by ticker. Each value is the signal dict saved by
+                             tradingIndicators.js (no Plotly traces, just scalars).
+
+    Returns:
+        str: HTML string, or empty string if no data.
+    """
+    if not trading_data:
+        return ""
+
+    def _signal_badge(signal, label=None):
+        if not signal or signal in ('--', 'no_sweep', 'no_swings'):
+            return f'<span style="color:#95a5a6;">{label or signal or "--"}</span>'
+        s = str(signal).lower()
+        if s in ('bullish', 'inside', 'above'):
+            color, icon = '#27ae60', '▲'
+        elif s in ('bearish', 'outside', 'below'):
+            color, icon = '#e74c3c', '▼'
+        else:
+            color, icon = '#f39c12', '–'
+        display = label or signal.title()
+        return (f'<span style="background:{color};color:white;padding:3px 10px;'
+                f'border-radius:12px;font-size:12px;font-weight:bold;">'
+                f'{icon} {display}</span>')
+
+    def _composite_badge(direction, score):
+        color_map = {'bullish': '#27ae60', 'bearish': '#e74c3c', 'neutral': '#f39c12'}
+        color = color_map.get(str(direction).lower(), '#95a5a6')
+        return (f'<span style="background:{color};color:white;padding:5px 14px;'
+                f'border-radius:16px;font-size:14px;font-weight:bold;">'
+                f'{str(direction).title()} ({score})</span>')
+
+    rows_html = ''
+    for ticker, d in trading_data.items():
+        if not d:
+            continue
+        vp_sig    = d.get('volume_profile_signal')
+        av_sig    = d.get('avwap_signal')
+        av_conv   = d.get('avwap_convergence') or []
+        of_sig    = d.get('order_flow_signal')
+        of_div    = d.get('order_flow_divergence') or {}
+        sw_sig    = d.get('sweep_signal')
+        sw_price  = d.get('sweep_price')
+        fp_sig    = d.get('footprint_signal')
+        fp_delta  = d.get('footprint_cum_delta')
+        comp_dir  = d.get('composite_direction', '--')
+        comp_sc   = d.get('composite_score', '--')
+        comp_diss = d.get('composite_dissenters') or []
+        lookback  = d.get('lookback', '--')
+
+        conv_note = (f'Convergence: {", ".join(av_conv)}' if av_conv
+                     else 'No AVWAP convergence')
+        div_note  = ('Volume divergence detected' if of_div.get('detected')
+                     else 'No divergence')
+        fp_delta_str = '--'
+        if fp_delta is not None:
+            fp_delta_str = (f'+{fp_delta/1e6:.1f}M' if fp_delta >= 1e6
+                            else f'{fp_delta/1e6:.1f}M' if fp_delta <= -1e6
+                            else f'{int(fp_delta):+,}')
+        sw_note = ''
+        if sw_price:
+            sw_note = f' @ ${float(sw_price):.2f}'
+
+        rows_html += f"""
+        <div style="background:white;border-radius:10px;padding:20px;margin-bottom:15px;
+                    box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        margin-bottom:15px;flex-wrap:wrap;gap:10px;">
+                <span style="background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:white;
+                             padding:8px 20px;border-radius:20px;font-size:18px;font-weight:bold;">
+                    {ticker}
+                </span>
+                <div>
+                    {_composite_badge(comp_dir, comp_sc)}
+                    {"" if not comp_diss else
+                      f'<span style="color:#7f8c8d;font-size:11px;margin-left:8px;">'
+                      f'Dissenters: {", ".join(comp_diss)}</span>'}
+                </div>
+                <span style="color:#95a5a6;font-size:12px;">Lookback: {lookback}d</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                    <tr style="background:#f8f9fa;">
+                        <th style="padding:8px 12px;text-align:left;color:#7f8c8d;font-weight:600;">Indicator</th>
+                        <th style="padding:8px 12px;text-align:left;color:#7f8c8d;font-weight:600;">Signal</th>
+                        <th style="padding:8px 12px;text-align:left;color:#7f8c8d;font-weight:600;">Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #ecf0f1;">
+                        <td style="padding:8px 12px;font-weight:600;">Volume Profile</td>
+                        <td style="padding:8px 12px;">{_signal_badge(vp_sig)}</td>
+                        <td style="padding:8px 12px;color:#7f8c8d;">Price {'inside' if vp_sig == 'inside' else 'outside'} value area</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #ecf0f1;background:#fafafa;">
+                        <td style="padding:8px 12px;font-weight:600;">Anchored VWAP</td>
+                        <td style="padding:8px 12px;">{_signal_badge(av_sig)}</td>
+                        <td style="padding:8px 12px;color:#7f8c8d;">{conv_note}</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #ecf0f1;">
+                        <td style="padding:8px 12px;font-weight:600;">Order Flow</td>
+                        <td style="padding:8px 12px;">{_signal_badge(of_sig)}</td>
+                        <td style="padding:8px 12px;color:#7f8c8d;">{div_note}</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #ecf0f1;background:#fafafa;">
+                        <td style="padding:8px 12px;font-weight:600;">Liquidity Sweep</td>
+                        <td style="padding:8px 12px;">{_signal_badge(sw_sig)}</td>
+                        <td style="padding:8px 12px;color:#7f8c8d;">Last swept{sw_note}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 12px;font-weight:600;">Footprint</td>
+                        <td style="padding:8px 12px;">{_signal_badge(fp_sig)}</td>
+                        <td style="padding:8px 12px;color:#7f8c8d;">Cum Δ (60d): {fp_delta_str}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        """
+
+    return f"""
+    <div style="background:linear-gradient(135deg,#2d3436 0%,#636e72 100%);
+                padding:25px;border-radius:15px;margin:20px 0;">
+        <h3 style="color:white;text-align:center;margin-bottom:20px;font-size:24px;">
+            📡 Trading Indicators
+        </h3>
+        {rows_html}
+    </div>
+    """
+
+
+def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, recipients, summary_path=None, cc=None, bcc=None, analytics_data=None, trading_indicators_data=None):
     """
     Send a visually enhanced consolidated report email for multiple stocks using modern HTML formatting.
     
@@ -1024,6 +1159,8 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     combined_analysis_html = generate_combined_analysis_section(all_data)
     # Generate analytics section if data is available
     analytics_html = generate_analytics_section(analytics_data, tickers) if analytics_data else ""
+    # Generate trading indicators section if data is available
+    trading_indicators_html = generate_trading_indicators_section(trading_indicators_data) if trading_indicators_data else ""
     # Create the enhanced HTML email body
         
     email_body = f"""
@@ -1102,7 +1239,10 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
                 
                 <!-- Advanced Analytics Section -->
                 {analytics_html}
-                
+
+                <!-- Trading Indicators Section -->
+                {trading_indicators_html}
+
                 <div style="background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); padding: 25px; border-radius: 15px; margin: 20px 0; color: white; text-align: center;">
                     <h3 style="margin: 0 0 15px 0; font-size: 24px;">📎 Detailed Reports Attached</h3>
                     <p style="margin: 0; font-size: 16px;">Individual stock analysis reports and summary comparisons are included as attachments for deeper insights.</p>

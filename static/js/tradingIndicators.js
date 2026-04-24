@@ -27,6 +27,26 @@
             var resp   = results[0];
             var fpResp = results[1];
             if (resp.error) { console.warn('[TradingIndicators] API error:', resp.error); return; }
+            // Store signal-level data (no Plotly traces) for email report
+            if (typeof AppState !== 'undefined') {
+                var fp = (fpResp && !fpResp.error) ? fpResp : null;
+                AppState.tradingIndicatorsData[ticker] = {
+                    volume_profile_signal:  resp.volume_profile  && resp.volume_profile.signal,
+                    avwap_signal:           resp.anchored_vwap   && resp.anchored_vwap.signal,
+                    avwap_convergence:      resp.anchored_vwap   && resp.anchored_vwap.convergence,
+                    avwap_current_price:    resp.anchored_vwap   && resp.anchored_vwap.current_price,
+                    order_flow_signal:      resp.order_flow      && resp.order_flow.signal,
+                    order_flow_divergence:  resp.order_flow      && resp.order_flow.divergence,
+                    sweep_signal:           resp.liquidity_sweep && resp.liquidity_sweep.signal,
+                    sweep_price:            resp.liquidity_sweep && resp.liquidity_sweep.swept_price,
+                    footprint_signal:       fp && fp.signal,
+                    footprint_cum_delta:    fp && fp.cum_delta,
+                    composite_direction:    resp.composite_bias  && resp.composite_bias.direction,
+                    composite_score:        resp.composite_bias  && resp.composite_bias.score,
+                    composite_dissenters:   resp.composite_bias  && resp.composite_bias.dissenters,
+                    lookback: lookback,
+                };
+            }
             _renderTickerCard(container, ticker, lookback, resp, fpResp);
         }).catch(function(err) {
             console.error('[TradingIndicators] fetch failed:', err);

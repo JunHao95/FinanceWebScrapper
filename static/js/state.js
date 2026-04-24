@@ -7,6 +7,7 @@ const AppState = {
     currentCnnData: null,
     currentTickers: [],
     currentAnalytics: {},
+    tradingIndicatorsData: {},
     keepAliveInterval: null,
     keepAliveEnabled: true,
     pingCount: 0,
