@@ -82,7 +82,10 @@ class AlphaVantageAPIScraper(BaseScraper):
                         value = float(result[av_field])
                         # Format percentages in a recognizable way
                         if "Margin" in our_field or "ROA" in our_field or "ROE" in our_field or "Yield" in our_field:
-                            data[our_field] = f"{value:.2f}%"
+                            if "ROE" in our_field and abs(value) > 500:
+                                data[our_field] = f"{value:.2f}% *"  # * = negative equity
+                            else:
+                                data[our_field] = f"{value:.2f}%"
                         else:
                             data[our_field] = f"{value:.2f}"
                     except (ValueError, TypeError):
@@ -242,7 +245,11 @@ class FinhubAPIScraper(BaseScraper):
                 if fh_field in metrics and metrics[fh_field] is not None:
                     # Format percentages in a recognizable way
                     if "Margin" in our_field or "ROA" in our_field or "ROE" in our_field or "ROIC" in our_field or "Yield" in our_field:
-                        data[our_field] = f"{metrics[fh_field]:.2f}%"
+                        fh_val = metrics[fh_field]
+                        if "ROE" in our_field and abs(fh_val) > 500:
+                            data[our_field] = f"{fh_val:.2f}% *"  # * = negative equity
+                        else:
+                            data[our_field] = f"{fh_val:.2f}%"
                     else:
                         data[our_field] = f"{metrics[fh_field]:.2f}"
             

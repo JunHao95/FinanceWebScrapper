@@ -157,7 +157,11 @@ class YahooFinanceScraper(BaseScraper):
             
             # Profitability metrics
             if "ROE (Yahoo)" not in data and info.get("returnOnEquity"):
-                data["ROE (Yahoo)"] = f"{info.get('returnOnEquity')*100:.2f}%"
+                roe_val = info.get('returnOnEquity') * 100
+                if abs(roe_val) > 500:
+                    data["ROE (Yahoo)"] = f"{roe_val:.2f}% *"  # * = negative equity
+                else:
+                    data["ROE (Yahoo)"] = f"{roe_val:.2f}%"
             if "ROA (Yahoo)" not in data and info.get("returnOnAssets"):
                 data["ROA (Yahoo)"] = f"{info.get('returnOnAssets')*100:.2f}%"
             if "Profit Margin (Yahoo)" not in data and info.get("profitMargins"):

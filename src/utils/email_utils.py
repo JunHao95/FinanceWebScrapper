@@ -316,6 +316,7 @@ def generate_enhanced_html_metrics_table(all_data):
                 elif value < 25: return "#f39c12"  # Moderate
                 else: return "#e74c3c"  # High
             elif "ROE" in metric or "Profit Margin" in metric:
+                if abs(value) > 500: return "#95a5a6"  # Negative equity artifact — grey/neutral
                 if value > 15: return "#27ae60"  # Good
                 elif value > 5: return "#f39c12"  # Moderate
                 else: return "#e74c3c"  # Low

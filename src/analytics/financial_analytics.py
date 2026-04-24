@@ -1463,7 +1463,10 @@ class FinancialAnalytics:
             roe = self._extract_metric(data, ['ROE', 'Return on Equity', 'Return On Equity', 'ROE %'])
             if roe:
                 metrics_found += 1
-                if roe > 20:
+                if abs(roe) > 500:
+                    # Extreme ROE caused by negative/near-zero shareholders' equity — not meaningful
+                    concerns.append(f"ROE of {roe:.2f}% likely reflects negative equity (not a profitability signal)")
+                elif roe > 20:
                     score += 2.0
                     strengths.append(f"Excellent ROE of {roe:.2f}% (above 20%)")
                 elif roe > 15:
@@ -1472,7 +1475,7 @@ class FinancialAnalytics:
                 elif 5 <= roe <= 15:
                     score += 0.5
                     strengths.append(f"Decent ROE of {roe:.2f}%")
-                elif roe < 5: # too low
+                elif roe < 5:
                     score -= 1.5
                     concerns.append(f"Low ROE of {roe:.2f}%")
             
