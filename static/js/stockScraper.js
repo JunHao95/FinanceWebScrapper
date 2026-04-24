@@ -281,7 +281,7 @@ const StockScraper = {
      */
     validateEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+        return email.split(',').map(e => e.trim()).filter(e => e).every(e => emailRegex.test(e));
     },
 
     /**
