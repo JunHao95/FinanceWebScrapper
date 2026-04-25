@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-Keep-Alive Service for Render.com Free Tier
-Pings the server every 10 minutes to prevent spin-down
+DEPRECATED: Keep-Alive Service for Render.com Free Tier
+
+NOTE: This script is no longer required and has been decoupled from the primary deployment workflow.
+It is highly recommended to use a free external uptime monitoring service (e.g., UptimeRobot, Cron-job.org)
+to ping the '/health' endpoint every 5-10 minutes. This external ping effectively prevents the free 
+server from spinning down without relying on this internal keep-alive loop.
+
+Pings the server every 10 minutes to prevent spin-down if run manually.
 """
 import requests
 import time

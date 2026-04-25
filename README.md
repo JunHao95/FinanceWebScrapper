@@ -7,7 +7,7 @@ A high-performance Python application for scraping and analyzing financial metri
 ![Finance Data Platform Architecture](finance_data_platform.png)
 
 > **🔗 Live Demo**: [https://finance-web-scrapper.onrender.com](https://finance-web-scrapper.onrender.com)  
-> **⚡ Keep-Alive**: Automatic ping system prevents Render.com free tier spin-down. See [KEEP_ALIVE.md](KEEP_ALIVE.md) for details.
+> **⚡ Keep-Alive**: Use a free Uptime Monitor to hit `/health` and prevent Render.com free tier spin-down.
 
 ## 🌟 Key Features
 
@@ -460,12 +460,11 @@ Render.com free tier spins down after 15 minutes of inactivity. We've implemente
 - Works even when no one is using the website
 - Setup: Just enable GitHub Actions in your repo
 
-#### 3. **Python Keep-Alive Script**
-- Standalone script for custom hosting
-- Run on any always-on server
-- Full control over ping intervals
-
-**For detailed setup instructions, see**: [KEEP_ALIVE.md](KEEP_ALIVE.md)
+#### 3. **External Uptime Monitor** (Recommended for 24/7) ⭐
+- Use a free service like [UptimeRobot](https://uptimerobot.com/) or [Cron-job.org](https://cron-job.org/)
+- Ping the `/health` endpoint (`https://finance-web-scrapper.onrender.com/health`) every 5-10 minutes
+- Completely free and prevents the server from spinning down
+- **Note:** The included `keep_alive.py` script is now deprecated in favor of this zero-maintenance solution.
 
 ---
 
