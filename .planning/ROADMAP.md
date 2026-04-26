@@ -190,6 +190,20 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 Plans:
 - [ ] TBD (run /gsd:plan-phase 24 to break down)
 
+### Phase 25: Codebase Health: Critical Bug Fixes, Security Patches, and Performance Quick Wins
+
+**Goal:** All three confirmed bugs fixed, all four security vulnerabilities patched, four performance quick wins applied, and three tech-debt items closed — no new features, every change is isolated and independently tested, codebase is safe to deploy on Render.
+**Requirements**: BUG-01, BUG-02, BUG-03, SEC-01, SEC-02, SEC-03, SEC-04, PERF-01, PERF-02, PERF-03, PERF-04, TECH-01, TECH-03, TECH-04
+**Depends on:** Phase 24
+**Plans:** 5 plans
+
+Plans:
+- [ ] 25-01-PLAN.md — Wave 0 test scaffold + bug fixes: debug prints, JS ID ref, percentile rank (wave 1)
+- [ ] 25-02-PLAN.md — Security patches: SECRET_KEY guard, email allowlist, rate limiting, remove client API keys (wave 2)
+- [ ] 25-03-PLAN.md — Tech debt + performance config: pre-commit linting, JS helper dedup, Gunicorn workers=2 (wave 2, parallel with 25-02)
+- [ ] 25-04-PLAN.md — Performance: HMM TTL cache, bounded LRU/TTL caches, full suite regression check (wave 3)
+- [ ] 25-05-PLAN.md — Pin requirements.txt + README.md update (wave 4)
+
 ---
 
 *Roadmap created: 2026-04-08*
