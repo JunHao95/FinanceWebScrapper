@@ -711,6 +711,11 @@ This project is for educational purposes. Web scraping may violate terms of serv
 - 🆕 **Full 2×2 Trading Indicators Tab** (Phase 22): Interactive Plotly grid per ticker; lookback dropdown (30/90/180/365d) clears cache and re-fetches on change; lazy-loaded on tab activation
 - 🐛 **Phase 22 interactive charts**: Reverted `staticPlot: true` — all four indicator charts are fully interactive with scroll-zoom and modebar
 
+### Phase 25 — Codebase Health Wave 1 (April 2026)
+- 🐛 **BUG-01 — Debug prints removed**: All bare `print()` calls in `src/` replaced with `logging` calls at the appropriate level (`debug`/`info`/`warning`/`error`); production log output is now clean.
+- 🐛 **BUG-02 — Advanced settings drawer fix**: `stockScraper.js` now references `settings-drawer` (the actual div ID) instead of the non-existent `advanced-settings`; open-state check updated to `classList.contains('drawer-open')`.
+- 🐛 **BUG-03 — Peer percentile rank fixed**: `percentile_rank` in `webapp.py` replaced broken exact-float-equality check with `bisect.bisect_left`; rankings now span the full 0–100 range instead of always returning 50.
+
 ### Phase 21 Hotfix (April 2026)
 - 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.
 

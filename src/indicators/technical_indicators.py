@@ -1048,8 +1048,6 @@ class TechnicalIndicators:
         df = self.get_historical_data(ticker)
 
         if df.empty:
-            print(20*"###")
-            print("No historical data available for the ticker.")
             self.logger.error("No historical data available for the ticker.")
             return {"error": "Could not retrieve historical data"}
         

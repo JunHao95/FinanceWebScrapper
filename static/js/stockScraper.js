@@ -46,8 +46,8 @@ const StockScraper = {
         }
 
         // Get selected sources — use smart defaults if advanced settings are collapsed
-        const advancedDetails = document.getElementById('advanced-settings');
-        const advancedOpen = advancedDetails && advancedDetails.open;
+        const advancedDetails = document.getElementById('settings-drawer');
+        const advancedOpen = advancedDetails && advancedDetails.classList.contains('drawer-open');
 
         let sources = [];
         if (advancedOpen) {

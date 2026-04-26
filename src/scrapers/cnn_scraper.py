@@ -1,8 +1,11 @@
 """
 CNN Fear and Greed Index Scraper
 """
+import logging
 from bs4 import BeautifulSoup
 from ..utils.request_handler import make_request
+
+logger = logging.getLogger(__name__)
 
 
 class CNNFearGreedScraper:
@@ -54,10 +57,10 @@ class CNNFearGreedScraper:
                     results[metric] = {'score': score, 'rating': rating}
                 else:
                     results[metric] = {'score': None, 'rating': None}
-            print(f"DEBUG, results: {results}")
+            logger.debug(f"CNN Fear and Greed results: {results}")
             return results
 
         except Exception as e:
-            print(f"Error fetching data from CNN Fear and Greed API: {e}")
+            logger.error(f"Error fetching data from CNN Fear and Greed API: {e}")
             return {"error": str(e)}
 

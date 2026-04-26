@@ -428,7 +428,7 @@ class GoogleTrendsCollector:
         
         # All attempts failed - return default values instead of error
         self.logger.warning(f"All Google Trends attempts failed for {ticker}, returning default values")
-        print(f"debugging trends_data: {default_response}")
+        self.logger.debug(f"Google Trends default response for {ticker}: {default_response}")
         
         # Cache the failed result for a shorter time to avoid repeated requests
         self.cache[cache_key] = {
@@ -518,14 +518,14 @@ class EnhancedSentimentAnalyzer:
             "analysis_timestamp": datetime.now().isoformat(),
             "data_sources": {}
         }
-        print(f"Analyzing Google Trends for {ticker}...")
+        self.logger.info(f"Analyzing Google Trends for {ticker}")
         trends_data = self.get_google_trends_data(ticker)
-        print(f"debugging trends_data: {trends_data}")
+        self.logger.debug(f"Google Trends data for {ticker}: {trends_data}")
         results["data_sources"]["google_trends"] = trends_data
-        print(f"Analyzing news sentiment for {ticker}...")
+        self.logger.info(f"Analyzing news sentiment for {ticker}")
         news_sentiment = self.get_news_sentiment(ticker)
         results["data_sources"]["news_sentiment"] = news_sentiment
-        print(f"Analyzing Reddit sentiment for {ticker}...")
+        self.logger.info(f"Analyzing Reddit sentiment for {ticker}")
         reddit_sentiment = self.get_reddit_sentiment(ticker)
         results["data_sources"]["reddit_sentiment"] = reddit_sentiment
         all_texts = []
@@ -536,7 +536,7 @@ class EnhancedSentimentAnalyzer:
             for post in reddit_sentiment["posts"]:
                 all_texts.append(f"{post.get('title', '')} {post.get('text', '')}")
         if all_texts:
-            print(f"Performing topic analysis for {ticker}...")
+            self.logger.info(f"Performing topic analysis for {ticker}")
             topic_analysis = self.perform_topic_analysis(all_texts)
             results["data_sources"]["topic_analysis"] = topic_analysis
         sentiment_scores = []

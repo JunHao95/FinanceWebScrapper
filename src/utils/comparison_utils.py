@@ -1,9 +1,12 @@
 """
 Utilities for comparing and analyzing multiple stocks
 """
+import logging
 import pandas as pd
 import numpy as np
 import os
+
+logger = logging.getLogger(__name__)
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -372,7 +375,7 @@ def create_screener(data_dict, criteria):
     # Apply each criterion as a filter
     for metric, (operator, value) in criteria.items():
         if metric not in df.columns:
-            print(f"Warning: Metric '{metric}' not found, skipping this criterion")
+            logger.warning(f"Warning: Metric '{metric}' not found, skipping this criterion")
             continue
         
         # Convert column to numeric
@@ -392,6 +395,6 @@ def create_screener(data_dict, criteria):
         elif operator == '!=':
             df = df[df[metric] != value]
         else:
-            print(f"Warning: Operator '{operator}' not recognized, skipping this criterion")
+            logger.warning(f"Warning: Operator '{operator}' not recognized, skipping this criterion")
     
     return df

@@ -30,14 +30,14 @@ class FinvizScraper(BaseScraper):
         try:
             price_target = soup.find(text="Target Price").find_next("td").text
             data["Analyst Price Target (Finviz)"] = price_target
-            print(  f"Analyst Price Target (Finviz): {price_target}")
+            self.logger.debug(f"Analyst Price Target (Finviz): {price_target}")
         except Exception as e:
             self.logger.warning(f"Error scraping analyst price target for {ticker} from Finviz: {str(e)}")
         # Scrape current price 
         try:
             price_target = soup.find(text="Price").find_next("td").text
             data["Current Price (Finviz)"] = price_target
-            print( f"Curernt Price (Finviz): {price_target}")
+            self.logger.debug(f"Current Price (Finviz): {price_target}")
         except Exception as e:
             self.logger.warning(f"Error scraping current price  for {ticker} from Finviz: {str(e)}")
         # Find the snapshot table

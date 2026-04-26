@@ -1265,9 +1265,7 @@ def send_consolidated_report(tickers, report_paths, all_data, cnnMetricData, rec
     if summary_path:
         attachments.append(summary_path)
     
-    # Debug info
-    print(f"📧 Sending enhanced consolidated report with {len(attachments)} attachments")
-    print(f"📬 Recipients: {recipients}")
+    logger.info(f"Sending enhanced consolidated report with {len(attachments)} attachments to {recipients}")
     
     # Send email
     return send_email(

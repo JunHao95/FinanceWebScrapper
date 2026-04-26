@@ -2,7 +2,10 @@
 Data formatting utilities for the stock scraper
 """
 import os
+import logging
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 def format_data_as_dataframe(data):
     """
@@ -110,7 +113,7 @@ def save_to_csv(df, file_path):
         df.to_csv(file_path, index=False)
         return True
     except Exception as e:
-        print(f"Error saving to CSV: {str(e)}")
+        logger.error(f"Error saving to CSV: {str(e)}")
         return False
 
 def save_to_excel(df, file_path):
@@ -163,5 +166,5 @@ def save_to_excel(df, file_path):
         writer.close()
         return True
     except Exception as e:
-        print(f"Error saving to Excel: {str(e)}")
+        logger.error(f"Error saving to Excel: {str(e)}")
         return False

@@ -15,6 +15,7 @@ from logging.handlers import RotatingFileHandler
 import numpy as np
 import copy
 import concurrent.futures
+import bisect
 import threading
 import time
 import traceback
@@ -2092,9 +2093,8 @@ def get_peers():
                     vals = sorted([r[field] for r in rows if r[field] is not None])
                     if len(vals) < 2:
                         return 50
-                    if target not in vals:
-                        return 50
-                    idx = vals.index(target)
+                    idx = bisect.bisect_left(vals, target)
+                    idx = min(idx, len(vals) - 1)
                     return round(100 * idx / (len(vals) - 1))
 
                 ticker_row = next((r for r in cached_peer_data if r['ticker'] == ticker), None)
@@ -2126,9 +2126,8 @@ def get_peers():
             vals = sorted([r[field] for r in rows if r[field] is not None])
             if len(vals) < 2:
                 return 50
-            if target not in vals:
-                return 50
-            idx = vals.index(target)
+            idx = bisect.bisect_left(vals, target)
+            idx = min(idx, len(vals) - 1)
             return round(100 * idx / (len(vals) - 1))
 
         ticker_row = next((r for r in peer_data if r['ticker'] == ticker), None)

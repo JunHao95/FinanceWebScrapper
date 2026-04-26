@@ -315,4 +315,4 @@ if __name__ == '__main__':
     result = expected_bond_value('AAA', 1, coupon_rate=0.05, face_value=1000.0, P=P_identity)
     val = result['expected_bond_value']
     status = 'PASS' if abs(val - 1000.0) < 0.01 else 'FAIL'
-    print(f"{status}: Par bond (AAA, 1yr, zero-default) = {val:.4f} (expected ~1000.0)")
+    logger.debug(f"{status}: Par bond (AAA, 1yr, zero-default) = {val:.4f} (expected ~1000.0)")
