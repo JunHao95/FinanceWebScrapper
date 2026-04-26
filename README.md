@@ -722,6 +722,7 @@ This project is for educational purposes. Web scraping may violate terms of serv
 - 🔧 **TECH-03 — Pre-commit linting**: `.flake8` (max 120 chars) and `.pre-commit-config.yaml` (black 25.1.0 + flake8 7.1.2) added; hooks enforce style automatically on every commit.
 - ⚡ **PERF-04 — Gunicorn 2 workers**: Procfile updated from `--workers 1` to `--workers 2`, unblocking concurrent requests on Render.
 - 🔧 **TECH-04 — Deduplicating JS helpers**: `parseNumeric` consolidated into `Utils.parseNumeric` in `utils.js`; local copies removed from `healthScore.js`, `earningsQuality.js`, `dcfValuation.js`. Local `escapeHtml` in `chatbot.js` replaced with `Utils.escapeHtml`.
+- ⚡ **PERF-01/02/03 — Backend caching**: HMM regime results cached in `TTLCache(maxsize=50, ttl=900)` — eliminates repeated 2–10s fits for same ticker/range. `_peer_cache`, `_ticker_validation_cache`, and `_ticker_sector_map` replaced with bounded cachetools caches; manual `fetched_at` TTL check removed in favour of automatic TTLCache expiry.
 
 ### Phase 21 Hotfix (April 2026)
 - 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.
