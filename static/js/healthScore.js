@@ -13,25 +13,6 @@
     // Internal helpers
     // ---------------------------------------------------------------------------
 
-    function parseNumeric(val) {
-        if (val === null || val === undefined || val === '' || val === 'N/A' || val === 'N/A%') return null;
-        if (typeof val === 'number') return isNaN(val) ? null : val;
-        const s = String(val).trim();
-        // Strip leading $
-        let cleaned = s.replace(/^\$/, '');
-        // Handle B/M/K multipliers
-        const multipliers = { 'B': 1e9, 'M': 1e6, 'K': 1e3 };
-        const lastChar = cleaned.slice(-1).toUpperCase();
-        if (multipliers[lastChar]) {
-            const n = parseFloat(cleaned.slice(0, -1));
-            return isNaN(n) ? null : n * multipliers[lastChar];
-        }
-        // Strip trailing %
-        cleaned = cleaned.replace(/%$/, '');
-        const n = parseFloat(cleaned);
-        return isNaN(n) ? null : n;
-    }
-
     function extractMetric(data, aliases) {
         if (!data || typeof data !== 'object') return null;
         for (const alias of aliases) {
@@ -39,7 +20,7 @@
                 if (key.toLowerCase().includes(alias.toLowerCase())) {
                     const val = data[key];
                     if (val === null || val === undefined || val === '' || val === 'N/A' || val === 'N/A%') continue;
-                    const parsed = parseNumeric(val);
+                    const parsed = Utils.parseNumeric(val);
                     if (parsed !== null) return parsed;
                 }
             }

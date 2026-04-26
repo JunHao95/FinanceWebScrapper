@@ -719,6 +719,9 @@ This project is for educational purposes. Web scraping may violate terms of serv
 - 🔒 **SEC-02 — Email recipient allowlist**: `/api/send-email` validates the recipient against `config.json["recipients"]`; unrecognised addresses receive HTTP 403.
 - 🔒 **SEC-03 — Rate limiting**: Flask-Limiter 4.1.1 added; 8 compute-heavy routes protected (10 req/min on scrape, 5 req/min on calibration/regime/RL routes).
 - 🔒 **SEC-04 — API keys env-only**: Client-side Alpha Vantage and Finhub key inputs removed from the settings drawer; backend reads keys from environment variables only.
+- 🔧 **TECH-03 — Pre-commit linting**: `.flake8` (max 120 chars) and `.pre-commit-config.yaml` (black 25.1.0 + flake8 7.1.2) added; hooks enforce style automatically on every commit.
+- ⚡ **PERF-04 — Gunicorn 2 workers**: Procfile updated from `--workers 1` to `--workers 2`, unblocking concurrent requests on Render.
+- 🔧 **TECH-04 — Deduplicating JS helpers**: `parseNumeric` consolidated into `Utils.parseNumeric` in `utils.js`; local copies removed from `healthScore.js`, `earningsQuality.js`, `dcfValuation.js`. Local `escapeHtml` in `chatbot.js` replaced with `Utils.escapeHtml`.
 
 ### Phase 21 Hotfix (April 2026)
 - 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.

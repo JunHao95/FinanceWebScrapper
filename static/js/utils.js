@@ -15,6 +15,22 @@ const Utils = {
         return div.innerHTML;
     },
 
+    parseNumeric(val) {
+        if (val === null || val === undefined || val === '' || val === 'N/A' || val === 'N/A%') return null;
+        if (typeof val === 'number') return isNaN(val) ? null : val;
+        let s = String(val).trim().replace(/,/g, '');
+        let cleaned = s.replace(/^\$/, '');
+        const multipliers = { 'B': 1e9, 'M': 1e6, 'K': 1e3 };
+        const lastChar = cleaned.slice(-1).toUpperCase();
+        if (multipliers[lastChar]) {
+            const n = parseFloat(cleaned.slice(0, -1));
+            return isNaN(n) ? null : n * multipliers[lastChar];
+        }
+        cleaned = cleaned.replace(/%$/, '');
+        const n = parseFloat(cleaned);
+        return isNaN(n) ? null : n;
+    },
+
     /**
      * Format display values
      */

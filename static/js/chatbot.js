@@ -70,8 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMarkdown(text) {
         return text
             .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-                `<pre><code>${escapeHtml(code.trim())}</code></pre>`)
-            .replace(/`([^`]+)`/g, (_, code) => `<code>${escapeHtml(code)}</code>`)
+                `<pre><code>${Utils.escapeHtml(code.trim())}</code></pre>`)
+            .replace(/`([^`]+)`/g, (_, code) => `<code>${Utils.escapeHtml(code)}</code>`)
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.+?)\*/g, '<em>$1</em>')
             .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
@@ -80,10 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/\n{2,}/g, '</p><p>')
             .replace(/\n/g, '<br>')
             .replace(/^(?!<(ul|ol|pre|li))(.+)$/, '<p>$2</p>');
-    }
-
-    function escapeHtml(str) {
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
