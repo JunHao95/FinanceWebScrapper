@@ -31,8 +31,10 @@
     "sender_password": "your-app-password",
     "recipient_email": "recipient@example.com"
   },
+  "email_allowlist": [],
+  "email_allowlist_note": "Allowlist for /api/send-email. Empty list disables the check. Add addresses as strings.",
   "recipients": [],
-  "recipients_note": "Allowlist for /api/send-email. Empty list disables the check. Add addresses as strings.",
+  "recipients_note": "Cron job recipient list. Independent from the web email allowlist.",
   "logging": {
     "level": "INFO",
     "file": "logs/stock_scraper.log",

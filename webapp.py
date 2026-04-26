@@ -733,7 +733,10 @@ def send_email_report():
         cc = payload.get("cc")
         bcc = payload.get("bcc")
 
-        allowed = config.get("recipients", [])
+        _allowlist_env = os.environ.get("EMAIL_ALLOWLIST", "")
+        allowed = [
+            a.strip() for a in _allowlist_env.split(",") if a.strip()
+        ] or config.get("email_allowlist", [])
         if allowed and recipients not in allowed:
             return (
                 jsonify({"success": False, "error": "Recipient not in allowed list"}),

@@ -161,6 +161,23 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Visual Feedback**: Gradient hover effects on ticker headers
 - **Mobile-Friendly**: Less scrolling, faster navigation to relevant data
 
+### Security & Performance Hardening (Phase 25)
+
+**Security:**
+- Server now requires `SECRET_KEY` environment variable on startup — fails loudly rather than using a hardcoded fallback, preventing accidental insecure deployments.
+- Email report endpoint validates recipient addresses against a configurable allowlist in `config.json`; requests to unlisted addresses are rejected before sending.
+- Rate limiting applied to compute-heavy routes: 5 req/min per IP on regime detection and Heston calibration, 10 req/min on the scrape endpoint; `API_KEY` values (Alpha Vantage, Finnhub) read exclusively from environment variables — client-side key passing removed.
+
+**Performance:**
+- HMM regime detection results cached with a 15-minute TTL, eliminating repeated model fitting for the same ticker and date range.
+- All in-memory caches now use bounded LRU/TTL eviction to prevent unbounded memory growth under sustained load.
+- Gunicorn updated to 2 workers for concurrent request handling without blocking on Render's free tier.
+
+**Bug fixes:**
+- Fixed percentile rank computation returning 50 for all non-exact float matches — now uses `bisect` for correct ranking.
+- Fixed broken `advanced-settings` element reference in the JS settings drawer that prevented the panel from opening.
+- Removed `print()` debug calls from production source files; replaced with structured logging.
+
 ---
 
 ## 📦 Installation
