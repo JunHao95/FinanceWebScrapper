@@ -715,6 +715,10 @@ This project is for educational purposes. Web scraping may violate terms of serv
 - 🐛 **BUG-01 — Debug prints removed**: All bare `print()` calls in `src/` replaced with `logging` calls at the appropriate level (`debug`/`info`/`warning`/`error`); production log output is now clean.
 - 🐛 **BUG-02 — Advanced settings drawer fix**: `stockScraper.js` now references `settings-drawer` (the actual div ID) instead of the non-existent `advanced-settings`; open-state check updated to `classList.contains('drawer-open')`.
 - 🐛 **BUG-03 — Peer percentile rank fixed**: `percentile_rank` in `webapp.py` replaced broken exact-float-equality check with `bisect.bisect_left`; rankings now span the full 0–100 range instead of always returning 50.
+- 🔒 **SEC-01 — SECRET_KEY startup guard**: App now raises `RuntimeError` on startup if `SECRET_KEY` env var is missing; hardcoded fallback removed.
+- 🔒 **SEC-02 — Email recipient allowlist**: `/api/send-email` validates the recipient against `config.json["recipients"]`; unrecognised addresses receive HTTP 403.
+- 🔒 **SEC-03 — Rate limiting**: Flask-Limiter 4.1.1 added; 8 compute-heavy routes protected (10 req/min on scrape, 5 req/min on calibration/regime/RL routes).
+- 🔒 **SEC-04 — API keys env-only**: Client-side Alpha Vantage and Finhub key inputs removed from the settings drawer; backend reads keys from environment variables only.
 
 ### Phase 21 Hotfix (April 2026)
 - 🐛 **Order Flow panel not rendering**: Fixed a scoping bug in `tradingIndicators.js` where the Order Flow DOM block was placed outside `_renderTickerCard`, causing a `TypeError` at IIFE load time that silently prevented all Trading Indicators charts from rendering.

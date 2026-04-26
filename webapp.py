@@ -8,6 +8,8 @@ import json
 import requests
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 import tempfile
 import logging
@@ -49,7 +51,19 @@ from src.utils.email_utils import send_consolidated_report
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+app.config['SECRET_KEY'] = _secret_key
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Set socket timeout for cloud hosting (prevents timeout during long scraping operations)
@@ -357,6 +371,7 @@ def fundamental_analysis():
         }), 500
 
 @app.route('/api/scrape', methods=['POST'])
+@limiter.limit("10 per minute")
 def scrape_data():
     """
     API endpoint to scrape stock data
@@ -365,8 +380,6 @@ def scrape_data():
     {
         "tickers": ["AAPL", "MSFT"],
         "sources": ["all"],
-        "alpha_key": "optional",
-        "finhub_key": "optional",
         "portfolio_allocation": {"AAPL": 0.6, "MSFT": 0.4}  // optional
     }
     
@@ -384,8 +397,8 @@ def scrape_data():
         
         tickers = data.get('tickers', [])
         sources = data.get('sources', ['all'])
-        alpha_key = data.get('alpha_key') or os.environ.get("ALPHA_VANTAGE_API_KEY")
-        finhub_key = data.get('finhub_key') or os.environ.get("FINHUB_API_KEY")
+        alpha_key = os.environ.get("ALPHA_VANTAGE_API_KEY")
+        finhub_key = os.environ.get("FINHUB_API_KEY")
         portfolio_allocation = data.get('portfolio_allocation')  # Get custom allocation from UI
         
         # Validate tickers
@@ -615,7 +628,11 @@ def send_email_report():
         recipients = payload.get('email')
         cc = payload.get('cc')
         bcc = payload.get('bcc')
-        
+
+        allowed = config.get('recipients', [])
+        if allowed and recipients not in allowed:
+            return jsonify({'success': False, 'error': 'Recipient not in allowed list'}), 403
+
         if not recipients:
             return jsonify({
                 'success': False,
@@ -1297,6 +1314,7 @@ def merton_price_endpoint():
 
 
 @app.route('/api/regime_detection', methods=['POST'])
+@limiter.limit("5 per minute")
 def regime_detection_endpoint():
     """
     Detect market regime using 2-state HMM (Hamilton filter).
@@ -1438,6 +1456,7 @@ def regime_detection_endpoint():
 
 
 @app.route('/api/calibrate_heston', methods=['POST'])
+@limiter.limit("5 per minute")
 def calibrate_heston_endpoint():
     """
     Calibrate Heston parameters to real market options data.
@@ -1502,6 +1521,7 @@ def calibrate_heston_stream():
 
 
 @app.route('/api/calibrate_merton', methods=['POST'])
+@limiter.limit("5 per minute")
 def calibrate_merton_endpoint():
     """
     Calibrate Merton jump-diffusion parameters to real market options data.
@@ -1533,6 +1553,7 @@ def calibrate_merton_endpoint():
 
 
 @app.route('/api/calibrate_bcc', methods=['POST'])
+@limiter.limit("5 per minute")
 def calibrate_bcc_endpoint():
     """
     Calibrate BCC (Bates-Chan-Chang) parameters to real market options data.
@@ -1847,6 +1868,7 @@ def rl_gridworld():
 
 
 @app.route('/api/rl_portfolio_rotation_pi', methods=['POST'])
+@limiter.limit("5 per minute")
 def rl_portfolio_rotation_pi():
     """L3: Portfolio rotation via policy iteration on SPY/IEF/SHY MDP."""
     try:
@@ -1865,6 +1887,7 @@ def rl_portfolio_rotation_pi():
 
 
 @app.route('/api/stoch_portfolio_mdp', methods=['POST'])
+@limiter.limit("5 per minute")
 def stoch_portfolio_mdp():
     """Portfolio MDP policy iteration with user-specified tickers (Stochastic Models tab)."""
     try:
@@ -1886,6 +1909,7 @@ def stoch_portfolio_mdp():
 
 
 @app.route('/api/rl_portfolio_rotation_ql', methods=['POST'])
+@limiter.limit("5 per minute")
 def rl_portfolio_rotation_ql():
     """L4: Portfolio rotation via Q-learning (ε-greedy TD)."""
     try:

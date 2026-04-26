@@ -683,42 +683,98 @@ class TestFootprintRoute:
 
 
 # ---------------------------------------------------------------------------
-# Phase 25 security stubs (SEC-02, SEC-03, SEC-04)
-# These are Wave 0 stubs — they turn GREEN when the fixes land in plan 25-02.
+# Phase 25 security tests (SEC-02, SEC-03, SEC-04)
 # ---------------------------------------------------------------------------
 
 class TestEmailAllowlist:
-    """SEC-02: /api/send_report must reject addresses not in the allowlist."""
+    """SEC-02: /api/send-email must reject addresses not in the allowlist."""
 
     def test_email_not_in_allowlist_returns_403(self, client):
-        resp = client.post('/api/send_report', json={
+        resp = client.post('/api/send-email', json={
             'email': 'attacker@evil.com',
-            'ticker': 'AAPL',
+            'tickers': ['AAPL'],
+            'data': {},
+            'cnn_data': {},
         })
         assert resp.status_code == 403, \
-            "POST /api/send_report with non-allowlisted email must return 403 (SEC-02)"
+            "POST /api/send-email with non-allowlisted email must return 403 (SEC-02)"
 
 
 class TestRateLimiting:
     """SEC-03: scrape route must be rate-limited."""
 
-    @pytest.mark.skip(reason="Flask-Limiter installed in plan 25-02")
     def test_scrape_rate_limit(self, client):
-        for _ in range(20):
-            client.post('/api/scrape', json={'tickers': 'AAPL'})
-        resp = client.post('/api/scrape', json={'tickers': 'AAPL'})
-        assert resp.status_code == 429, \
+        import webapp
+        webapp.limiter.reset()
+        statuses = []
+        for _ in range(12):
+            r = client.post('/api/scrape', json={'tickers': ['AAPL'], 'sources': ['yahoo']})
+            statuses.append(r.status_code)
+        assert 429 in statuses, \
             "POST /api/scrape must return 429 after rate limit exceeded (SEC-03)"
 
 
 class TestNoClientApiKeys:
     """SEC-04: /api/scrape must ignore API keys sent in the request body."""
 
-    @patch('webapp.run_scraper', return_value={'AAPL': {}})
-    def test_client_api_key_ignored(self, mock_scraper, client):
+    def test_client_api_key_ignored(self, client):
+        import webapp
+        webapp.limiter.reset()
+        mock_cnn = MagicMock()
+        mock_cnn.scrape_data.return_value = {}
+        with patch('webapp.CNNFearGreedScraper', return_value=mock_cnn), \
+             patch('webapp.run_scrapers_for_ticker', return_value={}) as mock_run:
+            resp = client.post('/api/scrape', json={
+                'tickers': ['AAPL'],
+                'alpha_key': 'FAKE_KEY_FROM_CLIENT',
+            })
+        assert resp.status_code in (200, 400), \
+            "Route must not crash; client-supplied API key must be ignored (SEC-04)"
+        if mock_run.called:
+            call_args = mock_run.call_args[0]
+            assert 'FAKE_KEY_FROM_CLIENT' not in str(call_args), \
+                "run_scrapers_for_ticker must not receive client-supplied alpha_key"
+
+
+# ---------------------------------------------------------------------------
+# Standalone functions matching plan 25-02 pytest node IDs
+# ---------------------------------------------------------------------------
+
+def test_email_allowlist(client):
+    """SEC-02: unlisted recipient returns 403."""
+    resp = client.post('/api/send-email', json={
+        'email': 'attacker@evil.com',
+        'tickers': ['AAPL'],
+        'data': {},
+        'cnn_data': {},
+    })
+    assert resp.status_code == 403
+
+
+def test_rate_limiting(client):
+    """SEC-03: /api/scrape returns 429 after exceeding 10/min limit."""
+    import webapp
+    webapp.limiter.reset()
+    statuses = []
+    for _ in range(12):
+        r = client.post('/api/scrape', json={'tickers': ['AAPL'], 'sources': ['yahoo']})
+        statuses.append(r.status_code)
+    assert 429 in statuses
+
+
+def test_no_client_api_keys(client):
+    """SEC-04: alpha_key in request body is ignored; route does not crash."""
+    import webapp
+    webapp.limiter.reset()
+    mock_cnn = MagicMock()
+    mock_cnn.scrape_data.return_value = {}
+    with patch('webapp.CNNFearGreedScraper', return_value=mock_cnn), \
+         patch('webapp.run_scrapers_for_ticker', return_value={}) as mock_run:
         resp = client.post('/api/scrape', json={
-            'tickers': 'AAPL',
+            'tickers': ['AAPL'],
             'alpha_key': 'FAKE_KEY_FROM_CLIENT',
         })
-        assert resp.status_code in (200, 202, 400), \
-            "Route must not crash; client-supplied API key must be ignored (SEC-04)"
+    assert resp.status_code in (200, 400)
+    if mock_run.called:
+        call_args = mock_run.call_args[0]
+        assert 'FAKE_KEY_FROM_CLIENT' not in str(call_args)

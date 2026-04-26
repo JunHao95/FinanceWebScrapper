@@ -67,9 +67,6 @@ const StockScraper = {
             sources = ['yahoo', 'finviz', 'google', 'technical'];
         }
 
-        const alphaKey = document.getElementById('alphaKey').value.trim();
-        const finhubKey = document.getElementById('finhubKey').value.trim();
-
         // Get portfolio allocation
         const portfolioAllocation = FormManager.getPortfolioAllocation();
 
@@ -89,9 +86,7 @@ const StockScraper = {
         try {
             const requestBody = {
                 tickers: tickers,
-                sources: sources,
-                alpha_key: alphaKey || undefined,
-                finhub_key: finhubKey || undefined
+                sources: sources
             };
             
             if (portfolioAllocation) {

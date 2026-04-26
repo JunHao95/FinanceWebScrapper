@@ -16,6 +16,11 @@ import numpy as np
 import pytest
 import os
 
+# Ensure SECRET_KEY is set before webapp is imported in any test.
+# This avoids RuntimeError from the SEC-01 guard while still letting
+# test_secret_key_guard verify the guard fires in a clean subprocess.
+os.environ.setdefault('SECRET_KEY', 'test-only-secret-key-not-for-production')
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow (requires network/long runtime)")

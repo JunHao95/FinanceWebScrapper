@@ -31,6 +31,8 @@
     "sender_password": "your-app-password",
     "recipient_email": "recipient@example.com"
   },
+  "recipients": [],
+  "recipients_note": "Allowlist for /api/send-email. Empty list disables the check. Add addresses as strings.",
   "logging": {
     "level": "INFO",
     "file": "logs/stock_scraper.log",
