@@ -123,6 +123,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 21. Order Flow | 0/2 | Not started | - |
 | 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/3 | Not started | - |
 | 23. End-to-End Test Suite Design | 4/4 | Complete   | 2026-04-23 |
+| 11. Responsive Layout & Dashboard Customisation | 0/3 | Not started | - |
 
 ---
 
@@ -179,6 +180,18 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 - Order flow doji guard: `(close - low) / (high - low + 1e-10)` — prevents NaN propagation
 - Volume Profile histogram: `make_subplots(rows=1, cols=2, shared_yaxes=True)` — prevents vertical render
 - Composite label: "Trend-following bias" + caveat text — prevents overconfidence framing
+
+### Phase 11: Responsive Layout & Dashboard Customisation
+
+**Goal:** The app is functional and presentable at 360px–1024px+ screen widths; per-ticker card sections (Financial Health Score group, Regime Detection block, Portfolio Health Card) have collapse/expand chevron toggles with sessionStorage-backed state. No new features, no backend changes — pure CSS/JS polish.
+**Requirements**: None (standalone UX phase)
+**Depends on:** None (pure frontend — no backend dependency)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — CSS: expand 768px block, add 480px + 1024px blocks, section-body collapse CSS, table-scroll-wrap (wave 1)
+- [ ] 11-02-PLAN.md — JS collapse toggles: SectionCollapse helper, healthScore.js migration, autoRun.js + portfolioHealth.js wiring (wave 2)
+- [ ] 11-03-PLAN.md — JS tab scrollIntoView, table wrapping in peerComparison.js + optionsDisplay.js, README update (wave 2, parallel with 11-02)
 
 ### Phase 24: I want to integrate footprint trading indicator
 
