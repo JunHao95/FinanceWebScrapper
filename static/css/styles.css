@@ -1126,6 +1126,18 @@ body.results-loaded .skeleton-preview {
     .main-tab-button { padding: 12px 14px; font-size: 12px; }
     .settings-drawer { width: 100%; }
     .skeleton-preview { flex-direction: column; }
+
+    /* Pill / icon buttons must not stretch to 100% — reset them */
+    .ticker-badge,
+    .mode-btn,
+    .chip .chip-remove,
+    .drawer-close-btn,
+    .settings-gear-btn { width: auto; }
+
+    /* Allocation input rows go to two-column at tablet */
+    .allocation-input-row { flex-wrap: wrap; }
+    .allocation-input-row label { flex: 0 0 100%; min-width: 0; }
+    .allocation-input-row input { width: 100%; }
 }
 
 /* Chatbot Styles */
@@ -1535,4 +1547,106 @@ body.results-loaded .skeleton-preview {
     padding: 4px 10px;
     font-size: 13px;
     cursor: pointer;
+}
+
+/* ── 1024px: constrained desktop ── */
+@media (max-width: 1024px) {
+    .input-section,
+    .main-tabs { padding: 20px; }
+}
+
+/* ── 480px: phone ── */
+@media (max-width: 480px) {
+    body { padding: 10px; }
+    header { padding: 16px; }
+    header h1 { font-size: 1.4rem; }
+    .input-section { padding: 16px; }
+
+    /* Inner results tab bar: switch from wrap to horizontal scroll */
+    .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;        /* Firefox */
+    }
+    .tabs::-webkit-scrollbar { display: none; }  /* WebKit */
+    .tab-button {
+        padding: 10px 16px;
+        font-size: 14px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* Main tab bar: scrollbar hiding (overflow-x already set at line 1045) */
+    .main-tab-buttons {
+        scrollbar-width: none;
+    }
+    .main-tab-buttons::-webkit-scrollbar { display: none; }
+    .main-tab-button { white-space: nowrap; flex-shrink: 0; }
+
+    /* Chatbot mobile sizing */
+    #chatbot-toggle-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+    #chatbot-window {
+        width: calc(100vw - 20px);
+        right: 10px;
+    }
+
+    /* Allocation rows: single column */
+    .allocation-input-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .allocation-input-row label { flex: none; }
+    .allocation-input-row input { width: 100%; }
+
+    /* Single-column grids */
+    .analysis-grid { grid-template-columns: 1fr; }
+    .option-results-grid { grid-template-columns: 1fr; }
+    /* .metrics-grid already 1fr from 768px block — no duplicate needed */
+
+    /* Table overflow */
+    .table-scroll-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ── Section collapse toggles (Phase 11) ── */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 0;
+}
+
+.section-chevron {
+    transition: transform 0.3s ease;
+    font-size: 0.9rem;
+    color: var(--text-secondary, #888);
+    display: inline-block;
+}
+
+.section-body {
+    max-height: 5000px;
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.35s ease;
+    opacity: 1;
+}
+
+.section-body.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* ── Table horizontal scroll wrapper ── */
+.table-scroll-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }

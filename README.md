@@ -47,6 +47,11 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Smart Parsing**: Handles financial notation (125.82B, 99.58M) and flexible metric extraction
 - **Actionable Insights**: Automated strengths/concerns identification and investment summary
 
+### Responsive Layout & Dashboard Customisation (Phase 11)
+- **Mobile-first breakpoints**: The app is fully functional at 360px–1024px+ screen widths. Fixed-width overflow culprits (chatbot window, settings drawer, allocation rows) are corrected via CSS media queries at 480px and 1024px. Tab navigation scrolls horizontally on mobile without a visible scrollbar.
+- **Collapse/expand toggles**: Per-ticker card sections (Financial Health Score, Regime Detection, Portfolio Health) can be collapsed and expanded with a chevron toggle. Collapsed state persists across re-scrapes within the same browser session via sessionStorage.
+- **Table scroll wrapping**: Multi-column tables (Peer Comparison raw data, Options Pricing convergence details) are wrapped in `.table-scroll-wrap` so they scroll horizontally at narrow viewports instead of breaking layout.
+
 ### AI Chatbot Assistant (Phase 10 / 10.1 / 12)
 - **Floating chat widget**: Fixed bottom-right overlay with open/close toggle, accessible from any tab without interrupting analysis workflow.
 - **Dual-agent personas**: Toggle between **QuantAssistant** (quant finance — derivatives, stochastic models, VaR, regime detection) and **FinancialAnalyst** (sell-side — fundamentals, P/E, EPS, revenue trends); unknown agent keys fall back to QuantAssistant for backward compatibility.

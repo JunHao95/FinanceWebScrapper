@@ -6,9 +6,6 @@
 (function () {
     'use strict';
 
-    // Session state: tracks which tickers are currently expanded
-    const _expandedTickers = new Set();
-
     // ---------------------------------------------------------------------------
     // Internal helpers
     // ---------------------------------------------------------------------------
@@ -199,18 +196,16 @@
             `</div>`;
     }
 
-    function buildHTML(overallLetter, cls, subScores, explanation, ticker, isExpanded) {
-        const displayStyle = isExpanded ? 'block' : 'none';
-        const chevron = isExpanded ? '▲' : '▼';
+    function buildHTML(overallLetter, cls, subScores, explanation, ticker) {
         const grade = overallLetter || 'N/A';
         const subRows = subScores.map(buildSubScoreRow).join('');
 
         return `<div class="deep-analysis-group" id="deep-analysis-group-${ticker}" style="border-top: 1px solid #e0e0e0; margin-top: 12px; padding-top: 10px;">` +
-            `<div class="deep-analysis-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:6px 0;" onclick="HealthScore.toggleDeepAnalysis('${ticker}')">` +
+            `<div class="section-header deep-analysis-header" onclick="HealthScore.toggleDeepAnalysis('${ticker}')">` +
             `<span>🏥 Financial Health: <span class="badge ${cls}">${grade}</span></span>` +
-            `<span class="deep-analysis-chevron" id="deep-analysis-chevron-${ticker}" style="transition:transform 0.3s;">${chevron}</span>` +
+            `<span class="section-chevron" id="deep-analysis-chevron-${ticker}">▼</span>` +
             `</div>` +
-            `<div class="deep-analysis-content" id="deep-analysis-content-${ticker}" style="display:${displayStyle}; padding: 8px 0;">` +
+            `<div class="section-body deep-analysis-content" id="deep-analysis-content-${ticker}" style="padding: 8px 0;">` +
             `<div class="metric-group">${subRows}</div>` +
             `<p style="margin:6px 0 0; font-size:13px; color:#555;">${explanation}</p>` +
             `</div>` +
@@ -237,31 +232,34 @@
         const cls = gradeClass(overallLetter);
         const explanation = buildExplanation(subScores);
         const warnings = subScores.filter(s => s.missing).map(s => `${s.name} data incomplete`);
-        const isExpanded = _expandedTickers.has(ticker);
-        const html = buildHTML(overallLetter, cls, subScores, explanation, ticker, isExpanded);
+        const html = buildHTML(overallLetter, cls, subScores, explanation, ticker);
+
+        setTimeout(() => {
+            const body = document.getElementById('deep-analysis-content-' + ticker);
+            const chevron = document.getElementById('deep-analysis-chevron-' + ticker);
+            if (body && typeof SectionCollapse !== 'undefined') {
+                SectionCollapse.applyInitialState(body, chevron, ticker, 'deepAnalysis');
+            }
+        }, 0);
 
         return { grade: overallLetter, subScores, explanation, warnings, html };
     }
 
     function toggleDeepAnalysis(ticker) {
-        const content = document.getElementById('deep-analysis-content-' + ticker);
+        const body = document.getElementById('deep-analysis-content-' + ticker);
         const chevron = document.getElementById('deep-analysis-chevron-' + ticker);
-        if (!content) return;
-
-        if (content.style.display === 'none') {
-            content.style.display = 'block';
-            _expandedTickers.add(ticker);
-            if (chevron) chevron.textContent = '▲';
+        if (!body) return;
+        if (typeof SectionCollapse !== 'undefined') {
+            SectionCollapse.toggle(body, chevron, ticker, 'deepAnalysis');
         } else {
-            content.style.display = 'none';
-            _expandedTickers.delete(ticker);
-            if (chevron) chevron.textContent = '▼';
+            body.classList.toggle('collapsed');
+            if (chevron) {
+                chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+            }
         }
     }
 
-    function clearSession() {
-        _expandedTickers.clear();
-    }
+    function clearSession() {}
 
     // Attach to window
     window.HealthScore = { computeGrade, toggleDeepAnalysis, clearSession };

@@ -157,33 +157,38 @@ function initCard(tickers, analyticsData, allocations) {
     });
 
     const cardHTML = `
-<div id="portfolioHealthCard" style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <span id="healthTrafficLight" style="font-size:18px;" title="Overall portfolio regime">\u26aa</span>
-        <strong style="font-size:15px;color:#333;">Portfolio Health</strong>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;margin-bottom:10px;">
-        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
-            <span style="font-size:11px;color:#888;font-weight:500;">VaR (95%)</span>
-            <span
-                id="healthVarValue"
-                style="font-size:14px;font-weight:600;color:#333;cursor:pointer;text-decoration:underline dotted;"
-                onclick="if(window.TabManager){TabManager.switchTab('analytics');var el=document.getElementById('analyticsVarSection');if(el){el.scrollIntoView({behavior:'smooth'});el.style.transition='box-shadow 0.8s';el.style.boxShadow='0 0 0 3px #667eea';setTimeout(function(){el.style.boxShadow='';},800);}}"
-                title="Click to jump to Monte Carlo / VaR section"
-            >${varDisplay}</span>
+<div id="portfolioHealthCard" style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:0;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+    <div class="section-header" style="padding:16px;" onclick="if(typeof SectionCollapse!=='undefined'){var b=document.getElementById('portfolioHealthBody');var c=document.getElementById('portfolioHealthChevron');SectionCollapse.toggle(b,c,'portfolio','healthCard');}">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span id="healthTrafficLight" style="font-size:18px;" title="Overall portfolio regime">\u26aa</span>
+            <strong style="font-size:15px;color:#333;">Portfolio Health</strong>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
-            <span style="font-size:11px;color:#888;font-weight:500;">Sharpe (2yr)</span>
-            <span
-                id="healthSharpeValue"
-                style="font-size:14px;font-weight:600;color:#333;cursor:pointer;text-decoration:underline dotted;"
-                onclick="if(window.TabManager){TabManager.switchTab('analytics');var el=document.getElementById('analyticsSharpeSection')||document.getElementById('analyticsVarSection')||document.getElementById('analyticsTabContent');if(el){el.scrollIntoView({behavior:'smooth'});el.style.transition='box-shadow 0.8s';el.style.boxShadow='0 0 0 3px #667eea';setTimeout(function(){el.style.boxShadow='';},800);}}"
-                title="Click to jump to Sharpe / Correlation section"
-            >Computing...</span>
-        </div>
-        ${regimeBadgesHTML}
+        <span class="section-chevron" id="portfolioHealthChevron">\u25bc</span>
     </div>
-    <div id="healthSummaryText" style="font-size:12px;color:#555;margin-top:4px;"></div>
+    <div class="section-body" id="portfolioHealthBody" style="padding:0 16px 16px;">
+        <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;margin-bottom:10px;">
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                <span style="font-size:11px;color:#888;font-weight:500;">VaR (95%)</span>
+                <span
+                    id="healthVarValue"
+                    style="font-size:14px;font-weight:600;color:#333;cursor:pointer;text-decoration:underline dotted;"
+                    onclick="if(window.TabManager){TabManager.switchTab('analytics');var el=document.getElementById('analyticsVarSection');if(el){el.scrollIntoView({behavior:'smooth'});el.style.transition='box-shadow 0.8s';el.style.boxShadow='0 0 0 3px #667eea';setTimeout(function(){el.style.boxShadow='';},800);}}"
+                    title="Click to jump to Monte Carlo / VaR section"
+                >${varDisplay}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                <span style="font-size:11px;color:#888;font-weight:500;">Sharpe (2yr)</span>
+                <span
+                    id="healthSharpeValue"
+                    style="font-size:14px;font-weight:600;color:#333;cursor:pointer;text-decoration:underline dotted;"
+                    onclick="if(window.TabManager){TabManager.switchTab('analytics');var el=document.getElementById('analyticsSharpeSection')||document.getElementById('analyticsVarSection')||document.getElementById('analyticsTabContent');if(el){el.scrollIntoView({behavior:'smooth'});el.style.transition='box-shadow 0.8s';el.style.boxShadow='0 0 0 3px #667eea';setTimeout(function(){el.style.boxShadow='';},800);}}"
+                    title="Click to jump to Sharpe / Correlation section"
+                >Computing...</span>
+            </div>
+            ${regimeBadgesHTML}
+        </div>
+        <div id="healthSummaryText" style="font-size:12px;color:#555;margin-top:4px;"></div>
+    </div>
 </div>`;
 
     // Insert card immediately before .tabs-container inside #resultsSection
@@ -192,6 +197,12 @@ function initCard(tickers, analyticsData, allocations) {
     const tabsContainer = resultsSection.querySelector('.tabs-container');
     if (!tabsContainer) return;
     tabsContainer.insertAdjacentHTML('beforebegin', cardHTML);
+
+    const body = document.getElementById('portfolioHealthBody');
+    const chevron = document.getElementById('portfolioHealthChevron');
+    if (body && typeof SectionCollapse !== 'undefined') {
+        SectionCollapse.applyInitialState(body, chevron, 'portfolio', 'healthCard');
+    }
 
     // Kick off async Sharpe fetch
     _fetchSharpe(tickers, allocations);

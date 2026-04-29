@@ -31,6 +31,7 @@ const TabManager = {
                 if (stocksTab && stocksContent) {
                     stocksTab.classList.add('active');
                     stocksContent.classList.add('active');
+                    stocksTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
                 } else {
                     console.error('Stocks tab elements not found');
                 }
@@ -40,6 +41,7 @@ const TabManager = {
                 if (analyticsTab && analyticsContent) {
                     analyticsTab.classList.add('active');
                     analyticsContent.classList.add('active');
+                    analyticsTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
                 } else {
                     console.error('Analytics tab elements not found');
                 }
@@ -49,6 +51,7 @@ const TabManager = {
                 if (autoanalysisTab && autoanalysisContent) {
                     autoanalysisTab.classList.add('active');
                     autoanalysisContent.classList.add('active');
+                    autoanalysisTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
                 }
             } else if (tabName === 'tradingindicators') {
                 const tiTab = document.getElementById('tradingIndicatorsTab');
@@ -56,6 +59,7 @@ const TabManager = {
                 if (tiTab && tiContent) {
                     tiTab.classList.add('active');
                     tiContent.classList.add('active');
+                    tiTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
                     if (typeof TradingIndicators !== 'undefined' &&
                         window.pageContext && window.pageContext.tickers) {
                         var sel = document.getElementById('tiLookbackSelect');
@@ -108,6 +112,7 @@ const TabManager = {
                 : document.querySelector(`.main-tab-button[onclick*="${tabName}"]`);
             if (targetButton) {
                 targetButton.classList.add('active');
+                targetButton.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
                 const accent = targetButton.getAttribute('data-accent') || '#667eea';
                 if (selectedTab) selectedTab.style.setProperty('--tab-accent', accent);
             }
