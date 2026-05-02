@@ -3,6 +3,49 @@
 // Handles rendering of results and analytics
 // ===========================
 
+// ---------------------------------------------------------------------------
+// SectionCollapse — per-section collapse toggles backed by sessionStorage
+// Keys: collapse-{ticker}-{sectionName}
+// Section name tokens: healthCard, deepAnalysis, regimeDetection, tradingIndicators
+// ---------------------------------------------------------------------------
+const SectionCollapse = {
+    KEY_PREFIX: 'collapse-',
+
+    getKey(ticker, section) {
+        return `${this.KEY_PREFIX}${ticker}-${section}`;
+    },
+
+    isCollapsed(ticker, section) {
+        return sessionStorage.getItem(this.getKey(ticker, section)) === '1';
+    },
+
+    setCollapsed(ticker, section, collapsed) {
+        if (collapsed) {
+            sessionStorage.setItem(this.getKey(ticker, section), '1');
+        } else {
+            sessionStorage.removeItem(this.getKey(ticker, section));
+        }
+    },
+
+    toggle(bodyEl, chevronEl, ticker, section) {
+        if (!bodyEl) return;
+        const nowCollapsed = !bodyEl.classList.contains('collapsed');
+        bodyEl.classList.toggle('collapsed', nowCollapsed);
+        if (chevronEl) {
+            chevronEl.style.transform = nowCollapsed ? 'rotate(-90deg)' : '';
+        }
+        this.setCollapsed(ticker, section, nowCollapsed);
+    },
+
+    applyInitialState(bodyEl, chevronEl, ticker, section) {
+        const collapsed = this.isCollapsed(ticker, section);
+        bodyEl.classList.toggle('collapsed', collapsed);
+        if (chevronEl) {
+            chevronEl.style.transform = collapsed ? 'rotate(-90deg)' : '';
+        }
+    }
+};
+
 const DisplayManager = {
     /**
      * Escape HTML to prevent XSS attacks
@@ -285,8 +328,9 @@ const DisplayManager = {
 
 // Export for browser environment
 window.DisplayManager = DisplayManager;
+window.SectionCollapse = SectionCollapse;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DisplayManager;
+    module.exports = { DisplayManager, SectionCollapse };
 }

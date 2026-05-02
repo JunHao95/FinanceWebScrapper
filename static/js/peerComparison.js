@@ -111,7 +111,7 @@
                 '</tr>';
         }).join('');
 
-        var rawTable = '<table class="peer-raw-table" style="display:none;width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">' +
+        var rawTable = '<div class="table-scroll-wrap"><table class="peer-raw-table" style="display:none;width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">' +
             '<thead><tr>' +
             '<th style="text-align:left;padding:3px 6px;border-bottom:1px solid #e2e8f0;">Ticker</th>' +
             '<th style="text-align:right;padding:3px 6px;border-bottom:1px solid #e2e8f0;">P/E</th>' +
@@ -120,7 +120,7 @@
             '<th style="text-align:right;padding:3px 6px;border-bottom:1px solid #e2e8f0;">Op. Margin</th>' +
             '</tr></thead>' +
             '<tbody>' + tableRows + '</tbody>' +
-            '</table>';
+            '</table></div>';
 
         var contentId = 'peer-content-' + ticker;
 

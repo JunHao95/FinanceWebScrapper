@@ -24,13 +24,18 @@ function buildAutoRunHTML(tickers) {
     tickers.forEach(ticker => {
         tickerBlocks += `
         <div class="autoRegimeBlock" style="margin-bottom:24px;">
-            <h4 style="margin-bottom:10px;">
-                Regime Detection &mdash; ${ticker}
-                <span id="autoRegimeBadge_${ticker}" style="${BADGE_RUNNING}">Rolling...</span>
-            </h4>
-            <p id="autoRegimePlaceholder_${ticker}" style="color:#555;font-size:13px;">Analyzing regime...</p>
-            <div id="autoRegimeProb_${ticker}" style="display:none;margin-bottom:20px;"></div>
-            <div id="autoRegimePrice_${ticker}" style="display:none;margin-bottom:20px;"></div>
+            <div class="section-header" onclick="if(typeof SectionCollapse!=='undefined'){var b=document.getElementById('autoRegimeBody_${ticker}');var c=document.getElementById('autoRegimeChevron_${ticker}');SectionCollapse.toggle(b,c,'${ticker}','regimeDetection');}">
+                <h4 style="margin:0;">
+                    Regime Detection &mdash; ${ticker}
+                    <span id="autoRegimeBadge_${ticker}" style="${BADGE_RUNNING}">Rolling...</span>
+                </h4>
+                <span class="section-chevron" id="autoRegimeChevron_${ticker}">▼</span>
+            </div>
+            <div class="section-body" id="autoRegimeBody_${ticker}">
+                <p id="autoRegimePlaceholder_${ticker}" style="color:#555;font-size:13px;">Analyzing regime...</p>
+                <div id="autoRegimeProb_${ticker}" style="display:none;margin-bottom:20px;"></div>
+                <div id="autoRegimePrice_${ticker}" style="display:none;margin-bottom:20px;"></div>
+            </div>
         </div>`;
     });
 
@@ -368,6 +373,15 @@ async function triggerAutoRun(tickers) {
 
     // Inject HTML scaffold
     autoAnalysisContent.insertAdjacentHTML('afterbegin', buildAutoRunHTML(tickers));
+
+    // Apply sessionStorage-backed collapse state for each regime block
+    tickers.forEach(ticker => {
+        const body = document.getElementById('autoRegimeBody_' + ticker);
+        const chevron = document.getElementById('autoRegimeChevron_' + ticker);
+        if (body && typeof SectionCollapse !== 'undefined') {
+            SectionCollapse.applyInitialState(body, chevron, ticker, 'regimeDetection');
+        }
+    });
 
     // Build promise array — regime per ticker + optional MDP
     const regimePromises = tickers.map(t => runAutoRegime(t, startDate, endDate));

@@ -164,7 +164,7 @@ const OptionsDisplay = {
         if (result.iterations && Array.isArray(result.iterations) && result.iterations.length > 0) {
             html += '<hr style="margin: 15px 0;">';
             html += '<h5>Convergence Details (Last 5 iterations)</h5>';
-            html += '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<div class="table-scroll-wrap"><table style="width: 100%; border-collapse: collapse;">';
             html += '<tr><th>Iter</th><th>Sigma</th><th>Price</th><th>Diff</th></tr>';
             const lastIterations = result.iterations.slice(-5);
             for (const iter of lastIterations) {
@@ -177,11 +177,11 @@ const OptionsDisplay = {
                     html += `</tr>`;
                 }
             }
-            html += '</table>';
+            html += '</table></div>';
         }
-        
+
         html += '</div>';
-        
+
         contentDiv.innerHTML = html;
         resultsDiv.style.display = 'block';
     },
