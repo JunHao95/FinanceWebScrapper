@@ -151,6 +151,9 @@
                     <button class="tab-button" onclick="switchTab('tradingindicators')" id="tradingIndicatorsTab">
                         📊 Trading Indicators
                     </button>
+                    <button class="tab-button" onclick="switchTab('mlsignals')" id="mlSignalsTab">
+                        🤖 ML Signals
+                    </button>
                 </div>
             </div>
 
@@ -239,6 +242,12 @@
                             <option value="365">365d</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Tab 5: ML Signals -->
+                <div class="tab-content" id="mlSignalsTabContent">
+                    <div id="mlSignalsPcaSection"></div>
+                    <div id="mlSignalsContent"></div>
                 </div>
             </div>
 
@@ -1343,6 +1352,7 @@
     <script src="/static/js/dcfValuation.js"></script>
     <script src="/static/js/peerComparison.js"></script>
     <script src="/static/js/tradingIndicators.js"></script>
+    <script src="/static/js/mlSignals.js"></script>
     <script src="/static/js/displayManager.js?v=2.2"></script>
     <script src="/static/js/analyticsRenderer.js?v=2.2"></script>
     <script src="/static/js/optionsDisplay.js"></script>
