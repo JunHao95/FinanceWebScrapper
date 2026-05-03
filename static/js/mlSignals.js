@@ -41,19 +41,24 @@
     }
 
     function fetchPCA(tickers) {
+        var pcaCacheKey = 'pca:' + tickers.slice().sort().join(',');
+        if (_sessionCache[pcaCacheKey]) return;
+        _sessionCache[pcaCacheKey] = true;
         var container = document.getElementById('mlSignalsTabContent');
         if (!container) return;
         var pcaId = 'mlSignalsPcaSection';
-        var existing = document.getElementById(pcaId);
-        if (existing) return;
-        var section = document.createElement('div');
-        section.id = pcaId;
-        var firstCard = container.querySelector('.ml-ticker-card');
-        if (firstCard) {
-            container.insertBefore(section, firstCard);
-        } else {
-            container.appendChild(section);
+        var section = document.getElementById(pcaId);
+        if (!section) {
+            section = document.createElement('div');
+            section.id = pcaId;
+            var firstCard = container.querySelector('.ml-ticker-card');
+            if (firstCard) {
+                container.insertBefore(section, firstCard);
+            } else {
+                container.appendChild(section);
+            }
         }
+        section.innerHTML = '<p style="color:#7f849c;font-style:italic;">Computing PCA…</p>';
         var url = '/api/ml_signals?feature=pca&' +
             tickers.map(function (t) { return 'tickers=' + encodeURIComponent(t); }).join('&');
         fetch(url).then(function (r) { return r.json(); }).then(function (result) {
@@ -122,7 +127,8 @@
             if (credData.top_factors && credData.top_factors.length) {
                 html += '<ul style="margin:6px 0 6px 18px;">';
                 credData.top_factors.slice(0, 3).forEach(function (f) {
-                    html += '<li>' + f + '</li>';
+                    var label = (f && typeof f === 'object') ? f.name : f;
+                    html += '<li>' + label + '</li>';
                 });
                 html += '</ul>';
             }

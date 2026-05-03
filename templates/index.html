@@ -246,6 +246,34 @@
 
                 <!-- Tab 5: ML Signals -->
                 <div class="tab-content" id="mlSignalsTabContent">
+                    <details class="ml-info-panel" style="margin-bottom:16px;background:#1e1e2e;border:1px solid #313244;border-radius:8px;padding:12px 16px;">
+                        <summary style="cursor:pointer;font-weight:600;color:#cdd6f4;list-style:none;display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:1.1em;">ℹ️</span> About these ML signals
+                            <span style="margin-left:auto;color:#7f849c;font-size:0.85em;font-weight:400;">click to expand</span>
+                        </summary>
+                        <div style="margin-top:14px;display:grid;gap:14px;">
+                            <div>
+                                <strong style="color:#89b4fa;">PCA Portfolio Decomposition</strong>
+                                <p style="color:#a6adc8;margin:4px 0 0;font-size:0.9em;line-height:1.5;">Decomposes portfolio return variance into orthogonal factors. <em>Market Factor</em> (PC1) captures broad co-movement — high loading means both stocks rise and fall together. <em>Sector Tilt</em> (PC2) captures divergence between them. The scree chart shows how much variance each factor explains; the heatmap shows each ticker's loading (red = positive, blue = negative). Use this to check whether your portfolio is truly diversified or duplicating the same market bet.</p>
+                            </div>
+                            <div>
+                                <strong style="color:#89b4fa;">RF Direction Signal</strong>
+                                <p style="color:#a6adc8;margin:4px 0 0;font-size:0.9em;line-height:1.5;">A Random Forest trained on return-based features (Ret25/60/120/240 = rolling returns, RC = rate of change) to predict whether the stock will be up 25 trading days from now. The confidence % is the fraction of trees that agreed. The feature importance chart shows which return horizon drove the prediction — long-horizon dominance (Ret120/Ret240) suggests momentum; short-horizon (Ret25) suggests mean-reversion dynamics.</p>
+                            </div>
+                            <div>
+                                <strong style="color:#89b4fa;">Market Regime</strong>
+                                <p style="color:#a6adc8;margin:4px 0 0;font-size:0.9em;line-height:1.5;">Two independent regime detectors run in parallel. <em>HMM</em> (Hidden Markov Model) infers latent Bull/Bear states from return and volatility sequences. <em>K-Means</em> clusters recent return windows into regimes by distance. When they <span style="color:#2ecc71;">agree</span>, the signal is more reliable. When they <span style="color:#f39c12;">diverge</span>, the market is at a transition — neither model has high conviction. The timeline shows regime history over the past ~16 months.</p>
+                            </div>
+                            <div>
+                                <strong style="color:#89b4fa;">Credit Risk Score</strong>
+                                <p style="color:#a6adc8;margin:4px 0 0;font-size:0.9em;line-height:1.5;">An ensemble classifier trained on financial ratios (debt-to-equity, current ratio, operating margin, earnings growth, etc.) calibrated to industry distress thresholds. The percentage is the estimated probability of financial distress. The three bullet points are the ratios that contributed most to the score. <em>Treat as a relative signal, not a credit rating</em> — the model trains on synthetic ratio benchmarks, not live filings.</p>
+                            </div>
+                            <div>
+                                <strong style="color:#89b4fa;">LSTM Direction Signal</strong>
+                                <p style="color:#a6adc8;margin:4px 0 0;font-size:0.9em;line-height:1.5;">A Long Short-Term Memory neural network trained on a 60-day return sequence using a sliding window. The loss curve shows training convergence over 20 epochs — a flat curve means the model converged early (typical for low-volatility tickers). When RF and LSTM <span style="color:#2ecc71;">agree</span>, conviction is higher. When they <span style="color:#f39c12;">diverge</span>, the linear and sequential models see different patterns — treat as uncertainty, not contradiction. Disabled on cloud deployment due to memory constraints.</p>
+                            </div>
+                        </div>
+                    </details>
                     <div id="mlSignalsPcaSection"></div>
                     <div id="mlSignalsContent"></div>
                 </div>
