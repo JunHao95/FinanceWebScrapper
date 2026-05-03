@@ -187,6 +187,10 @@ A high-performance Python application for scraping and analyzing financial metri
 
 Added `tests/test_unit_ml_signals.py` with 10 unit test stubs covering five upcoming ML analytics features: direction signal (Random Forest), PCA portfolio decomposition, K-Means market regime, ensemble credit risk score, and LSTM direction signal (environment-gated). Two integration test stubs for the `/api/ml_signals` route were also added to `tests/test_integration_routes.py`. All tests skip cleanly until `src/analytics/ml_signals.py` is implemented in Phase 26-02.
 
+### ML Signals Tab — Core Analytics Module (Phase 26-02)
+
+Added `src/analytics/ml_signals.py` implementing five ML compute functions: `compute_ml_direction_signal` (Random Forest binary classifier with M1 momentum + M5 technical features), `compute_pca_decomposition` (top-3 PC decomposition of multi-ticker return matrix), `compute_kmeans_regime` (k=4 clustering with HMM side-by-side comparison), `compute_credit_risk_score` (RF ensemble distress scorer with synthetic peer training data), and `compute_lstm_direction_signal` (Keras LSTM(64) direction signal, environment-gated — disabled on Render). All supervised models enforce chronological splits and fit scalers on training data only (anti-leakage from M1 curriculum). All 10 Phase 26-01 unit tests now pass green.
+
 ---
 
 ## 📦 Installation
