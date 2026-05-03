@@ -6,17 +6,17 @@
 <domain>
 ## Phase Boundary
 
-Extract key ML concepts from the WorldQuant University "Machine Learning in Finance" notebook (Modules 1–7) and implement four new analytical features in a dedicated "ML Signals" tab. The notebook lives at:
+Extract key ML concepts from the WorldQuant University "Machine Learning in Finance" notebook (Modules 1–7) and implement five new analytical features in a dedicated "ML Signals" tab. The notebook lives at:
 `/Users/junhaotee/Library/Mobile Documents/com~apple~CloudDocs/Desktop/mfe/6 Machine Learning in Finance/ML_Finance_Consolidated_All_Modules.ipynb`
 
-The four features, all powered by sklearn (no tensorflow/keras — Render 512MB ceiling):
-1. **ML Direction Signal** — supervised binary classifier predicting 25-day forward return direction per ticker
-2. **PCA Portfolio Decomposition** — factor analysis on multi-ticker return covariance matrix
-3. **K-Means Market Regime** — unsupervised clustering to label current market regime
-4. **Ensemble Credit Risk Score** — RF/GradBoost model outputting P(financial distress) with feature contributions
+The five features:
+1. **ML Direction Signal** — supervised binary classifier predicting 25-day forward return direction per ticker (sklearn RF)
+2. **PCA Portfolio Decomposition** — factor analysis on multi-ticker return covariance matrix (sklearn)
+3. **K-Means Market Regime** — unsupervised clustering to label current market regime (sklearn)
+4. **Ensemble Credit Risk Score** — RF/GradBoost model outputting P(financial distress) with feature contributions (sklearn)
+5. **LSTM Direction Signal** — M6 deep learning model (Keras/TensorFlow) predicting 25-day return direction; **environment-gated**: enabled locally, disabled on Render (512MB ceiling)
 
 **Explicitly out of scope:**
-- Deep learning / tensorflow / keras (memory ceiling)
 - Modifying existing Analytics tab content (Financial Health Score, DCF, Peers, Earnings Quality remain untouched)
 - New trading signals that aren't derived from ML model outputs
 - Interactive parameter sliders for model hyperparameters
@@ -27,7 +27,7 @@ The four features, all powered by sklearn (no tensorflow/keras — Render 512MB 
 ## Implementation Decisions
 
 ### UI placement
-- All four ML features live in a new **"ML Signals"** top-level tab — the 5th tab alongside Stocks / Analytics / Stochastic Models / Trading Indicators
+- All five ML features live in a new **"ML Signals"** top-level tab — the 5th tab alongside Stocks / Analytics / Stochastic Models / Trading Indicators
 - Tab wiring follows the same pattern established in Phases 18–22 (tradingIndicators.js lazy-load, tabs.js validTabs extension, clearSession on re-scrape)
 
 ### ML training timing
@@ -78,8 +78,24 @@ The four features, all powered by sklearn (no tensorflow/keras — Render 512MB 
   - Framing: "ML Credit Risk Score" — explicitly distinct from the rule-based "Financial Health Score" A–F grade (Phase 13) which remains in the Analytics tab unchanged
 - **Caveat displayed**: "Model trained on ratio thresholds — indicative only. Not a credit rating."
 
+### LSTM Direction Signal (M6 — environment-gated)
+- **Model**: Single-layer LSTM (64 units) + Dense(1, activation='sigmoid') — from M6 curriculum
+- **Sequence length**: 20 trading days of daily returns as input window
+- **Prediction target**: same as RF Direction Signal — 25-day forward return direction (binary)
+- **Environment gate**: `is_cloud_environment()` (checks `RENDER`/`RENDER_SERVICE_ID` env vars) — same pattern as `get_enhanced_sentiment_scraper()` for torch/transformers in `webapp.py:60-67`
+  - If cloud: backend returns `{"lstm_available": false}` immediately without importing keras
+  - If local: train and return `{"lstm_available": true, "signal": ..., "confidence": ..., "loss_curve": [...]}`
+- **Import pattern**: `try: from tensorflow import keras; KERAS_AVAILABLE = True\nexcept ImportError: KERAS_AVAILABLE = False` at top of `ml_signals.py`
+- **Render placeholder**: Grey card with text "Deep learning disabled on cloud — run locally to enable." Consistent with insufficient-data placeholder style
+- **Local output displayed**:
+  - Same Bullish/Bearish badge + confidence % as RF Direction Signal
+  - Training loss curve: Plotly line chart (train loss vs. epoch) — shows M6 convergence behaviour
+  - Side-by-side comparison row: RF signal vs. LSTM signal — when they agree, reinforce in green; when diverge, amber note
+- **Anti-leakage**: chronological split (`shuffle=False`), scale on train only — same rules as all other ML features
+
 ### Claude's Discretion
 - Exact RF hyperparameters (n_estimators, max_depth) — keep fast: n_estimators ≤ 100
+- Exact LSTM epochs and batch_size — keep fast locally: epochs ≤ 20, batch_size = 32
 - Whether to use one combined `/api/ml_signals` route or separate routes per feature
 - Exact Plotly colorscale stops for feature importance and factor loadings heatmaps
 - How to handle tickers with insufficient history (<252 trading days) — grey placeholder with "Insufficient data" message
@@ -106,6 +122,7 @@ The four features, all powered by sklearn (no tensorflow/keras — Render 512MB 
 - Return `{traces, layout, signal, confidence, ...}` JSON payload shape from route → JS renderer
 - All sklearn data scaled on train only, `scaler.transform()` on test/latest — M1 anti-leakage rule
 - Plotly `{ staticPlot: true, responsive: true }` render config for all charts
+- Heavy ML gating: `webapp.py:60-67` `get_enhanced_sentiment_scraper()` lazy-loads torch — mirror for Keras: `try/except ImportError` at module level + `is_cloud_environment()` guard in route handler; never import keras on Render path
 
 ### Integration Points
 - `webapp.py`: new route(s) for ML Signals (follows `/api/trading_indicators` pattern)
@@ -133,7 +150,6 @@ The four features, all powered by sklearn (no tensorflow/keras — Render 512MB 
 <deferred>
 ## Deferred Ideas
 
-- Deep learning / LSTM price forecasting — tensorflow/keras excluded due to 512MB Render ceiling; revisit if moved to paid tier
 - Interactive hyperparameter sliders (adjust RF n_estimators, K-Means k) — UI complexity not warranted for v1
 - Cross-sectional ML (train across multiple tickers simultaneously) — current design is per-ticker; cross-sectional training is its own phase
 - SMOTE / class imbalance handling for credit risk — synthetic labels make class balance controllable; defer real imbalance handling until real credit data is used
