@@ -2451,6 +2451,61 @@ def get_trading_indicators():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/ml_signals", methods=["GET"])
+def get_ml_signals():
+    ticker = request.args.get("ticker", "").strip().upper()
+    feature = request.args.get("feature", "").strip().lower()
+    tickers = [t.strip().upper() for t in request.args.getlist("tickers") if t.strip()]
+
+    if feature not in ("direction", "pca", "regime", "credit", "lstm"):
+        return jsonify(
+            {
+                "error": (
+                    f"Unknown feature '{feature}'. "
+                    "Valid: direction, pca, regime, credit, lstm"
+                )
+            }
+        )
+    if feature == "pca":
+        effective_tickers = tickers if tickers else ([ticker] if ticker else [])
+        if not effective_tickers:
+            return jsonify({"error": "tickers or ticker parameter required for pca"})
+    else:
+        if not ticker:
+            return jsonify({"error": "ticker parameter required"})
+
+    try:
+        from src.analytics.ml_signals import (
+            KERAS_AVAILABLE,
+            compute_credit_risk_score,
+            compute_kmeans_regime,
+            compute_lstm_direction_signal,
+            compute_ml_direction_signal,
+            compute_pca_decomposition,
+        )
+
+        if feature == "direction":
+            result = compute_ml_direction_signal(ticker)
+        elif feature == "pca":
+            result = compute_pca_decomposition(effective_tickers)
+        elif feature == "regime":
+            result = compute_kmeans_regime(ticker)
+        elif feature == "credit":
+            result = compute_credit_risk_score(ticker, {})
+        elif feature == "lstm":
+            if is_cloud_environment() or not KERAS_AVAILABLE:
+                return jsonify(
+                    {"ticker": ticker, "feature": feature, "lstm_available": False}
+                )
+            result = compute_lstm_direction_signal(ticker)
+        return jsonify(
+            convert_numpy_types({"ticker": ticker, "feature": feature, **result})
+        )
+    except Exception as e:
+        logger.error(f"Error in get_ml_signals [{feature}] for {ticker}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/footprint", methods=["GET"])
 def get_footprint():
     ticker = request.args.get("ticker", "").strip().upper()

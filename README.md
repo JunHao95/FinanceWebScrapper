@@ -20,6 +20,7 @@ A high-performance Python application for scraping and analyzing financial metri
 - **Tab 2 - Advanced Analytics**: Portfolio-level analytics with visual indicators showing when data is ready
 - **Tab 3 - Stochastic Models**: Heston calibration (with SSE streaming), Markov chain credit transitions, interest rate models (CIR/Vasicek), ML/RL finance modules — all interactive with auto-run on scrape completion
 - **Tab 4 - Trading Indicators**: Lazy-loaded 2×2 Plotly grid per ticker (Volume Profile, Anchored VWAP, Order Flow, Liquidity Sweep) with a composite Bullish/Bearish/Neutral bias badge and lookback dropdown
+- **Tab 5 - ML Signals**: Five ML analytics drawn from the WorldQuant University curriculum — RF direction signal with feature importance (M1/M5), K-Means market regime vs. HMM comparison (M4), ensemble credit risk score with top contributing factors (M3), PCA portfolio decomposition in multi-ticker mode (M2), and an LSTM direction signal that trains locally but is disabled on cloud deployment to respect the 512MB memory ceiling (M6)
 - **Smart Organization**: Clean separation of individual stock data vs. portfolio analysis
 - **Stock Count Badge**: Shows number of analyzed stocks at a glance
 
