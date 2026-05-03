@@ -183,6 +183,10 @@ A high-performance Python application for scraping and analyzing financial metri
 - Fixed broken `advanced-settings` element reference in the JS settings drawer that prevented the panel from opening.
 - Removed `print()` debug calls from production source files; replaced with structured logging.
 
+### ML Signals Tab — Test Scaffold (Phase 26-01)
+
+Added `tests/test_unit_ml_signals.py` with 10 unit test stubs covering five upcoming ML analytics features: direction signal (Random Forest), PCA portfolio decomposition, K-Means market regime, ensemble credit risk score, and LSTM direction signal (environment-gated). Two integration test stubs for the `/api/ml_signals` route were also added to `tests/test_integration_routes.py`. All tests skip cleanly until `src/analytics/ml_signals.py` is implemented in Phase 26-02.
+
 ---
 
 ## 📦 Installation
