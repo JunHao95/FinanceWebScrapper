@@ -184,6 +184,7 @@ const StockScraper = {
         if (typeof DCFValuation !== 'undefined')    DCFValuation.clearSession();
         if (typeof PeerComparison !== 'undefined')  PeerComparison.clearSession();
         if (typeof TradingIndicators !== 'undefined') TradingIndicators.clearSession();
+        if (typeof MLSignals !== 'undefined') MLSignals.clearSession();
 
         // Clear ticker results
         const tickerResultsDiv = document.getElementById('tickerResults');

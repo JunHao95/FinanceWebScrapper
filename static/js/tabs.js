@@ -13,7 +13,7 @@ const TabManager = {
             return;
         }
 
-        const validTabs = ['stocks', 'analytics', 'autoanalysis', 'tradingindicators'];
+        const validTabs = ['stocks', 'analytics', 'autoanalysis', 'tradingindicators', 'mlsignals'];
         if (!validTabs.includes(tabName)) {
             console.error('Invalid tab name:', tabName);
             return;
@@ -68,6 +68,22 @@ const TabManager = {
                         window.pageContext.tickers.forEach(function (ticker) {
                             TradingIndicators.fetchForTicker(ticker, lookback);
                         });
+                    }
+                }
+            } else if (tabName === 'mlsignals') {
+                var mlTab = document.getElementById('mlSignalsTab');
+                var mlContent = document.getElementById('mlSignalsTabContent');
+                if (mlTab && mlContent) {
+                    mlTab.classList.add('active');
+                    mlContent.classList.add('active');
+                    mlTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+                    if (typeof MLSignals !== 'undefined' && window.pageContext && window.pageContext.tickers) {
+                        window.pageContext.tickers.forEach(function (ticker) {
+                            MLSignals.fetchForTicker(ticker);
+                        });
+                        if (window.pageContext.tickers.length >= 2) {
+                            MLSignals.fetchPCA(window.pageContext.tickers);
+                        }
                     }
                 }
             }
