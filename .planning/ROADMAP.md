@@ -124,6 +124,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 22. Liquidity Sweep + Composite Bias + Tab Wiring | 0/3 | Not started | - |
 | 23. End-to-End Test Suite Design | 4/4 | Complete   | 2026-04-23 |
 | 11. Responsive Layout & Dashboard Customisation | 0/3 | Not started | - |
+| 26. ML Finance Notebook Integration | 0/6 | Planning complete | - |
 
 ---
 
@@ -158,7 +159,18 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | TEST-04 | Phase 23 |
 | TEST-05 | Phase 23 |
 
-**Coverage:** 23/23 v2.2 requirements mapped. No orphans.
+**Phase 26 Requirements → Phase Mapping**
+
+| Requirement | Phase |
+|-------------|-------|
+| ML-DIR-01 (RF Direction Signal) | Phase 26 |
+| ML-PCA-01 (PCA Portfolio Decomposition) | Phase 26 |
+| ML-REG-01 (K-Means Market Regime) | Phase 26 |
+| ML-CRED-01 (Ensemble Credit Risk Score) | Phase 26 |
+| ML-LSTM-01 (LSTM Direction Signal, env-gated) | Phase 26 |
+| ML-TAB-01 (ML Signals tab wiring) | Phase 26 |
+
+**Coverage:** 23/23 v2.2 requirements mapped. 6/6 Phase 26 requirements mapped. No orphans.
 
 ---
 
@@ -216,6 +228,21 @@ Plans:
 - [ ] 25-03-PLAN.md — Tech debt + performance config: pre-commit linting, JS helper dedup, Gunicorn workers=2 (wave 2, parallel with 25-02)
 - [ ] 25-04-PLAN.md — Performance: HMM TTL cache, bounded LRU/TTL caches, full suite regression check (wave 3)
 - [ ] 25-05-PLAN.md — Pin requirements.txt + README.md update (wave 4)
+
+### Phase 26: ML Finance Notebook Integration
+
+**Goal:** A new "ML Signals" fifth tab is live, powered by five ML models drawn from the WorldQuant University ML-in-Finance curriculum: RF direction signal (M1/M5), PCA portfolio decomposition (M2), K-Means market regime vs HMM comparison (M4), ensemble credit risk score (M3), and environment-gated LSTM direction signal (M6). All computation trains on-demand per scrape using sklearn and Keras; the LSTM is disabled on Render via an env gate. No existing tabs or analytics modules are modified.
+**Requirements**: ML-DIR-01, ML-PCA-01, ML-REG-01, ML-CRED-01, ML-LSTM-01, ML-TAB-01
+**Depends on:** Phase 25
+**Plans:** 6 plans
+
+Plans:
+- [ ] 26-01-PLAN.md — Test scaffold: test_unit_ml_signals.py (10 stubs) + integration test stubs in test_integration_routes.py (wave 1)
+- [ ] 26-02-PLAN.md — src/analytics/ml_signals.py: 4 sklearn features + LSTM with env gate (wave 2)
+- [ ] 26-03-PLAN.md — webapp.py: GET /api/ml_signals route + README.md update (wave 3)
+- [ ] 26-04-PLAN.md — static/js/mlSignals.js IIFE + tabs.js + stockScraper.js wiring (wave 4)
+- [ ] 26-05-PLAN.md — templates/index.html: 5th tab button + content div + script tag (wave 4, parallel with 26-04)
+- [ ] 26-06-PLAN.md — Full test suite run + visual checkpoint (wave 5)
 
 ---
 
