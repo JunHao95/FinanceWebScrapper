@@ -1012,7 +1012,7 @@ def test_ml_signals_missing_ticker(client):
 
 
 # ---------------------------------------------------------------------------
-# Phase 28 Price History route stubs
+# Phase 28 Price History route
 # ---------------------------------------------------------------------------
 
 
@@ -1034,7 +1034,6 @@ def _stub_ohlcv_ph():
 
 
 class TestPriceHistory:
-    @pytest.mark.xfail(strict=False, reason="route not yet implemented")
     def test_price_history_200_shape(self, client):
         """GET /api/price_history?ticker=AAPL&period=3mo → 200 with traces+layout keys."""
         with patch(
@@ -1047,9 +1046,9 @@ class TestPriceHistory:
         assert "traces" in data
         assert "layout" in data
 
-    @pytest.mark.xfail(strict=False, reason="route not yet implemented")
     def test_price_history_missing_ticker(self, client):
         """GET /api/price_history (no ticker) → response contains 'error' key."""
         resp = client.get("/api/price_history")
+        assert resp.status_code == 400
         data = resp.get_json()
         assert "error" in data

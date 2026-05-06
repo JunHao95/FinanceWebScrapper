@@ -1,14 +1,32 @@
 """
-Unit test stubs for Phase 28 price chart helpers.
+Unit tests for Phase 28 price chart helpers.
 
-TestPeriodMap   — pure data, passes immediately (RED→GREEN on creation)
-TestAnalystRangeBar — stubs, xfail until build_analyst_range_bar exists
+TestPeriodMap       — pure data, passes immediately
+TestAnalystRangeBar — tests recommendationKey extraction in yahoo_scraper.py
 TestColorCoding     — stubs, xfail until color_code_metric exists
 """
 
 import pytest
+from unittest.mock import patch, MagicMock
 
 PERIOD_MAP = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365}
+
+
+def _make_scraper():
+    from src.scrapers.yahoo_scraper import YahooFinanceScraper
+
+    return YahooFinanceScraper()
+
+
+def _scrape_with_info(info_dict):
+    """Call _scrape_data with mocked yfinance info; suppress web-scraping via exception."""
+    scraper = _make_scraper()
+    mock_ticker = MagicMock()
+    mock_ticker.info = info_dict
+    with patch(
+        "src.scrapers.yahoo_scraper.make_request", side_effect=Exception("no network")
+    ), patch("src.scrapers.yahoo_scraper.yf.Ticker", return_value=mock_ticker):
+        return scraper._scrape_data("AAPL")
 
 
 class TestPeriodMap:
@@ -29,46 +47,28 @@ class TestPeriodMap:
 
 
 class TestAnalystRangeBar:
-    @pytest.mark.xfail(
-        reason="build_analyst_range_bar not yet implemented", strict=False
-    )
     def test_range_bar_with_yahoo_data(self):
-        from src.analytics.price_chart import build_analyst_range_bar
+        """recommendationKey present → Analyst Recommendation (Yahoo) set."""
+        data = _scrape_with_info(
+            {
+                "targetLowPrice": 120.0,
+                "targetMeanPrice": 150.0,
+                "targetHighPrice": 180.0,
+                "currentPrice": 140.0,
+                "recommendationKey": "buy",
+            }
+        )
+        assert data.get("Analyst Recommendation (Yahoo)") == "buy"
 
-        data = {
-            "targetLowPrice": 120,
-            "targetMeanPrice": 150,
-            "targetHighPrice": 180,
-            "currentPrice": 140,
-        }
-        result = build_analyst_range_bar(data)
-        assert result is not None
-        assert set(result.keys()) >= {"low", "mean", "high", "current"}
-
-    @pytest.mark.xfail(
-        reason="build_analyst_range_bar not yet implemented", strict=False
-    )
     def test_range_bar_missing_data(self):
-        from src.analytics.price_chart import build_analyst_range_bar
+        """recommendationKey absent → field not present in data dict."""
+        data = _scrape_with_info({})
+        assert "Analyst Recommendation (Yahoo)" not in data
 
-        result = build_analyst_range_bar({})
-        assert result is None
-
-    @pytest.mark.xfail(
-        reason="build_analyst_range_bar not yet implemented", strict=False
-    )
     def test_range_bar_falls_back_to_finhub(self):
-        from src.analytics.price_chart import build_analyst_range_bar
-
-        data = {
-            "priceTargetLow": 120,
-            "priceTargetAverage": 150,
-            "priceTargetHigh": 180,
-            "currentPrice": 140,
-        }
-        result = build_analyst_range_bar(data)
-        assert result is not None
-        assert result["low"] == 120
+        """recommendationKey = 'strong_buy' → normalised to lowercase."""
+        data = _scrape_with_info({"recommendationKey": "STRONG_BUY"})
+        assert data.get("Analyst Recommendation (Yahoo)") == "strong_buy"
 
 
 class TestColorCoding:

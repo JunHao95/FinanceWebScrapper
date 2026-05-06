@@ -2552,6 +2552,66 @@ def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 
+@app.route("/api/price_history", methods=["GET"])
+def get_price_history():
+    ticker = request.args.get("ticker", "").strip().upper()
+    period = request.args.get("period", "3mo").strip()
+    if not ticker:
+        return jsonify({"error": "ticker parameter required"}), 400
+    period_map = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365}
+    days = period_map.get(period, 90)
+    try:
+        from src.analytics.trading_indicators import fetch_ohlcv
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+
+        df = fetch_ohlcv(ticker, days)
+        dates = df.index.strftime("%Y-%m-%d").tolist()
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            row_heights=[0.75, 0.25],
+            vertical_spacing=0.02,
+        )
+        fig.add_trace(
+            go.Candlestick(
+                x=dates,
+                open=df["Open"].tolist(),
+                high=df["High"].tolist(),
+                low=df["Low"].tolist(),
+                close=df["Close"].tolist(),
+                name="Price",
+                increasing_line_color="#a6e3a1",
+                decreasing_line_color="#f38ba8",
+            ),
+            row=1,
+            col=1,
+        )
+        fig.add_trace(
+            go.Bar(
+                x=dates, y=df["Volume"].tolist(), name="Volume", marker_color="#45475a"
+            ),
+            row=2,
+            col=1,
+        )
+        fig.update_layout(
+            paper_bgcolor="#1e1e2e",
+            plot_bgcolor="#1e1e2e",
+            font=dict(color="#cdd6f4"),
+            xaxis_rangeslider_visible=False,
+            showlegend=False,
+            margin=dict(l=60, r=20, t=40, b=40),
+            height=400,
+        )
+        d = fig.to_dict()
+        d["layout"].pop("template", None)
+        return jsonify({"traces": d["data"], "layout": d["layout"]})
+    except Exception as e:
+        logger.error(f"Error in get_price_history for {ticker}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors"""
