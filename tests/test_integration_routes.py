@@ -1009,3 +1009,47 @@ def test_ml_signals_missing_ticker(client):
     assert resp.status_code == 200
     data = resp.get_json()
     assert "error" in data
+
+
+# ---------------------------------------------------------------------------
+# Phase 28 Price History route stubs
+# ---------------------------------------------------------------------------
+
+
+def _stub_ohlcv_ph():
+    """Minimal 90-row OHLCV DataFrame for price_history route tests."""
+    import pandas as pd
+
+    idx = pd.date_range("2024-01-01", periods=90, freq="B")
+    return pd.DataFrame(
+        {
+            "Open": 1.0,
+            "High": 2.0,
+            "Low": 0.5,
+            "Close": 1.5,
+            "Volume": 1000.0,
+        },
+        index=idx,
+    )
+
+
+class TestPriceHistory:
+    @pytest.mark.xfail(strict=False, reason="route not yet implemented")
+    def test_price_history_200_shape(self, client):
+        """GET /api/price_history?ticker=AAPL&period=3mo → 200 with traces+layout keys."""
+        with patch(
+            "src.analytics.trading_indicators.fetch_ohlcv",
+            return_value=_stub_ohlcv_ph(),
+        ):
+            resp = client.get("/api/price_history?ticker=AAPL&period=3mo")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "traces" in data
+        assert "layout" in data
+
+    @pytest.mark.xfail(strict=False, reason="route not yet implemented")
+    def test_price_history_missing_ticker(self, client):
+        """GET /api/price_history (no ticker) → response contains 'error' key."""
+        resp = client.get("/api/price_history")
+        data = resp.get_json()
+        assert "error" in data
