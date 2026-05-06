@@ -125,6 +125,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 23. End-to-End Test Suite Design | 4/4 | Complete   | 2026-04-23 |
 | 11. Responsive Layout & Dashboard Customisation | 0/3 | Not started | - |
 | 26. ML Finance Notebook Integration | 0/6 | Planning complete | - |
+| 27. Codebase Quality, Security, and Reliability Hardening | 0/4 | Not started | - |
 
 ---
 
@@ -170,7 +171,24 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | ML-LSTM-01 (LSTM Direction Signal, env-gated) | Phase 26 |
 | ML-TAB-01 (ML Signals tab wiring) | Phase 26 |
 
-**Coverage:** 23/23 v2.2 requirements mapped. 6/6 Phase 26 requirements mapped. No orphans.
+**Phase 27 Requirements → Phase Mapping**
+
+| Requirement | Description | Phase |
+|-------------|-------------|-------|
+| REL-01 | Add `timeout=30` to all `requests` calls in scrapers | Phase 27 |
+| REL-02 | Add explicit `verify=True` to all `requests` calls in scrapers | Phase 27 |
+| REL-03 | Wrap `request.get_json()` / `request.json` in try/except JSONDecodeError in all POST endpoints | Phase 27 |
+| REL-04 | Rate-limit I/O-heavy endpoints (fundamental_analysis and others) | Phase 27 |
+| QA-01 | Remove debug `print(f"DEBBUUGG save reports , ...")` from main.py:713 | Phase 27 |
+| QA-02 | Replace 95 `print()` calls with `logger.*` in main.py | Phase 27 |
+| QA-03 | Narrow bare `except:` to `except OSError` in webapp.py:794 | Phase 27 |
+| QA-04 | Standardise error response shape to `{"error": "..."}` across all endpoints | Phase 27 |
+| TEST-09 | Flask error-path tests: malformed JSON, missing fields, invalid ticker format | Phase 27 |
+| TEST-10 | Email injection test for `send_consolidated_report` endpoint | Phase 27 |
+| TEST-11 | Scraper failure simulation tests (network failure, API error paths) | Phase 27 |
+| ARCH-01 | Cap thread `max_workers` in webapp scraper path to match main.py cap of 4 | Phase 27 |
+
+**Coverage:** 23/23 v2.2 requirements mapped. 6/6 Phase 26 requirements mapped. 12/12 Phase 27 requirements mapped. No orphans.
 
 ---
 
@@ -244,8 +262,35 @@ Plans:
 - [ ] 26-05-PLAN.md — templates/index.html: 5th tab button + content div + script tag (wave 4, parallel with 26-04)
 - [ ] 26-06-PLAN.md — Full test suite run + visual checkpoint (wave 5)
 
+### Phase 27: Codebase Quality, Security, and Reliability Hardening
+
+**Goal:** All 12 identified reliability, security, code-quality, and test-coverage gaps are closed — scraper `requests` calls have timeouts and explicit SSL verify, every POST endpoint handles malformed JSON without a 500, heavy routes are rate-limited, debug prints are removed, `print()` replaced with `logger`, bare `except` narrowed, error response shapes standardised, and three missing test categories (Flask error paths, email injection, scraper failure simulation) are implemented — no new features, every change is isolated and independently tested.
+**Requirements**: REL-01, REL-02, REL-03, REL-04, QA-01, QA-02, QA-03, QA-04, TEST-09, TEST-10, TEST-11, ARCH-01
+**Depends on:** Phase 26
+**Plans:** 4 plans
+
+Plans:
+- [ ] 27-01-PLAN.md — Test scaffold: Flask error-path tests, email injection test, scraper failure simulation (wave 1)
+- [ ] 27-02-PLAN.md — Security + reliability: request timeouts, SSL verify, JSON decode error handling, rate-limit heavy endpoints (wave 2)
+- [ ] 27-03-PLAN.md — Code quality: remove debug prints, replace print() with logger, fix bare except, standardise error response shape, remove dead fallback (wave 2, parallel with 27-02)
+- [ ] 27-04-PLAN.md — Architecture: cap webapp scraper thread workers + README update + full test suite run (wave 3)
+
+### Phase 28: I want to enhance the Stock Details Tab
+
+**Goal:** Each ticker card in the Stock Details tab is reorganised into five sub-tabs (Overview, Financials, Technical, Sentiment, Deep Analysis) with a lazy-loaded candlestick + volume price chart and analyst target range bar in Overview, threshold-based color coding on 12 key financial ratios, and CSS hover tooltips on 13 metric labels — no new data sources, no new external dependencies.
+**Requirements**: None (pure frontend restructure + one new backend route)
+**Depends on:** Phase 27
+**Plans:** 4 plans
+
+Plans:
+- [ ] 28-01-PLAN.md — Test scaffold: test_unit_price_chart.py stubs + TestPriceHistory integration stubs (wave 1)
+- [ ] 28-02-PLAN.md — Backend: GET /api/price_history route + recommendationKey scraper addition (wave 2)
+- [ ] 28-03-PLAN.md — Frontend structure: createTickerCard sub-tab refactor + styles.css sub-tab + color classes (wave 3)
+- [ ] 28-04-PLAN.md — Frontend behavior: priceChart.js + utils.js colorCodeMetric + wiring + visual checkpoint (wave 4)
+
 ---
 
 *Roadmap created: 2026-04-08*
+*Phase 27 added: 2026-05-04 — Codebase Quality, Security, and Reliability Hardening (12 requirements from code review)*
 *Milestone: v2.2 Trading Indicators*
 *Previous milestone: v2.1 (Phases 13–17, all Complete)*
