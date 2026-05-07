@@ -1,9 +1,15 @@
 (function () {
     'use strict';
-    var _cache = {};  // key: ticker+'-'+period → {traces, layout}
+    var _cache = {};      // key: ticker+'-'+period → {traces, layout}
+    var _tickerData = {}; // key: ticker → scrape data object (for analyst bar)
 
     function clearSession() {
         Object.keys(_cache).forEach(function (k) { delete _cache[k]; });
+    }
+
+    // Called from createTickerCard (div may not be in DOM yet) — store data only
+    function storeData(ticker, data) {
+        _tickerData[ticker] = data;
     }
 
     function fetchIfNeeded(ticker, period) {
@@ -47,10 +53,17 @@
         if (!cached) return;
         var chartId = 'priceChart-' + ticker;
         var el = document.getElementById(chartId);
-        // Skip if container is hidden (non-active sub-tab); switchSubTab will retry
+        // Skip if container not in DOM or hidden (non-active sub-tab / collapsed card)
         if (!el || el.offsetParent === null) return;
-        Plotly.newPlot(chartId, cached.traces, cached.layout,
-            { responsive: true, displayModeBar: false, staticPlot: false });
+        // Render analyst bar once data is available and pane is visible
+        _renderAnalystBar(ticker);
+        // Defer Plotly call so browser paints display:block before measuring
+        setTimeout(function () {
+            var elNow = document.getElementById(chartId);
+            if (!elNow || elNow.offsetParent === null) return;
+            Plotly.newPlot(chartId, cached.traces, cached.layout,
+                { responsive: true, displayModeBar: false, staticPlot: false });
+        }, 0);
     }
 
     function _showError(ticker, msg) {
@@ -58,26 +71,12 @@
         if (el) el.innerHTML = '<div class="pc-error">' + msg + '</div>';
     }
 
-    function _injectPeriodNav(ticker) {
-        var chartEl = document.getElementById('priceChart-' + ticker);
-        if (!chartEl || document.getElementById('priceChart-' + ticker + '-nav')) return;
-        var nav = document.createElement('div');
-        nav.id = 'priceChart-' + ticker + '-nav';
-        nav.className = 'pc-period-nav';
-        ['1mo', '3mo', '6mo', '1y'].forEach(function (p, i) {
-            var btn = document.createElement('button');
-            btn.className = 'pc-period-btn' + (i === 1 ? ' active' : '');
-            btn.dataset.period = p;
-            btn.textContent = p === '1mo' ? '1M' : p === '3mo' ? '3M' : p === '6mo' ? '6M' : '1Y';
-            btn.onclick = function () { PriceChart.switchPeriod(ticker, p); };
-            nav.appendChild(btn);
-        });
-        chartEl.parentNode.insertBefore(nav, chartEl);
-    }
-
-    function _renderAnalystBar(ticker, data) {
+    function _renderAnalystBar(ticker) {
         var container = document.getElementById('analystRangeBar-' + ticker);
+        var data = _tickerData[ticker];
         if (!container || !data) return;
+        // Idempotent: skip if already rendered
+        if (container.dataset.rendered === '1') return;
         var low  = parseFloat(data['Analyst Price Target Low (Yahoo)'])
                 || parseFloat(data['Analyst Price Target Low (Finhub)']) || null;
         var mean = parseFloat(data['Analyst Price Target Mean (Yahoo)'])
@@ -88,11 +87,11 @@
         if (!low || !mean || !high || low >= high) { container.style.display = 'none'; return; }
         var recRaw = data['Analyst Recommendation (Yahoo)'] || '';
         var recMap = {
-            strong_buy: { label: 'Strong Buy', cls: 'rec-buy' },
-            buy:        { label: 'Buy',         cls: 'rec-buy' },
-            hold:       { label: 'Hold',        cls: 'rec-hold' },
-            sell:       { label: 'Sell',        cls: 'rec-sell' },
-            strong_sell:{ label: 'Strong Sell', cls: 'rec-sell' }
+            strong_buy:  { label: 'Strong Buy',  cls: 'rec-buy' },
+            buy:         { label: 'Buy',          cls: 'rec-buy' },
+            hold:        { label: 'Hold',         cls: 'rec-hold' },
+            sell:        { label: 'Sell',         cls: 'rec-sell' },
+            strong_sell: { label: 'Strong Sell',  cls: 'rec-sell' }
         };
         var rec = recMap[recRaw.toLowerCase()] || null;
         var recHtml = rec
@@ -121,19 +120,13 @@
                 ? '<div class="analyst-bar-caption">Current: $' + current.toFixed(2) +
                   ' | Target Mean: $' + mean.toFixed(2) + '</div>'
                 : '');
-    }
-
-    // Called by displayManager.js createTickerCard after div.innerHTML is set
-    function initCard(ticker, data) {
-        _injectPeriodNav(ticker);
-        _renderAnalystBar(ticker, data);
-        fetchIfNeeded(ticker, '3mo');
+        container.dataset.rendered = '1';
     }
 
     window.PriceChart = {
         fetchIfNeeded: fetchIfNeeded,
         switchPeriod:  switchPeriod,
         clearSession:  clearSession,
-        initCard:      initCard
+        storeData:     storeData
     };
 }());

@@ -222,6 +222,12 @@ const DisplayManager = {
 
         // Overview pane
         html += `<div id="subtab-${esc(ticker)}-overview" class="ticker-subtab-content${'overview' === savedTab ? ' active' : ''}">`;
+        html += `<div id="priceChart-${esc(ticker)}-nav" class="pc-period-nav">`;
+        html += `<button class="pc-period-btn" data-period="1mo" onclick="PriceChart.switchPeriod('${esc(ticker)}','1mo')">1M</button>`;
+        html += `<button class="pc-period-btn active" data-period="3mo" onclick="PriceChart.switchPeriod('${esc(ticker)}','3mo')">3M</button>`;
+        html += `<button class="pc-period-btn" data-period="6mo" onclick="PriceChart.switchPeriod('${esc(ticker)}','6mo')">6M</button>`;
+        html += `<button class="pc-period-btn" data-period="1y" onclick="PriceChart.switchPeriod('${esc(ticker)}','1y')">1Y</button>`;
+        html += '</div>'; // pc-period-nav
         html += `<div id="priceChart-${esc(ticker)}" class="price-chart-container"></div>`;
         html += `<div id="analystRangeBar-${esc(ticker)}" class="analyst-range-bar-container"></div>`;
         html += buildPaneMetrics('overview');
@@ -268,7 +274,7 @@ const DisplayManager = {
             PeerComparison.renderIntoGroup(ticker, data, div);
         }
         if (typeof PriceChart !== 'undefined') {
-            PriceChart.initCard(ticker, data);
+            PriceChart.storeData(ticker, data);
         }
         return div;
     },
