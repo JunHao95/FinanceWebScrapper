@@ -1759,3 +1759,11 @@ body.results-loaded .skeleton-preview {
 .pc-period-btn { background: #313244; border: 1px solid #45475a; color: #a6adc8; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.82rem; font-family: inherit; }
 .pc-period-btn.active { background: #45475a; color: #cdd6f4; border-color: #89b4fa; }
 .pc-error { color: #f38ba8; font-size: 0.82rem; padding: 8px 0; }
+
+/* Phase 28: Empty pane state */
+.subtab-no-data {
+    color: #6c7086;
+    font-size: 0.85rem;
+    padding: 20px 0;
+    text-align: center;
+}

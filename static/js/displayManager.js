@@ -155,6 +155,7 @@ const DisplayManager = {
         function buildPaneMetrics(tabName) {
             const groupNamesList = tabGroupNames[tabName] || [];
             let paneHtml = '<div class="metrics-grid">';
+            let hasMetrics = false;
             for (const groupName of groupNamesList) {
                 const keywords = groups[groupName];
                 if (!keywords) continue;
@@ -167,6 +168,7 @@ const DisplayManager = {
                     }
                 }
                 if (Object.keys(groupMetrics).length > 0) {
+                    hasMetrics = true;
                     paneHtml += '<div class="metric-group">';
                     paneHtml += `<h4>${self.escapeHtml(groupName)}</h4>`;
                     for (const [key, value] of Object.entries(groupMetrics)) {
@@ -186,6 +188,9 @@ const DisplayManager = {
                 }
             }
             paneHtml += '</div>'; // metrics-grid
+            if (!hasMetrics) {
+                paneHtml += '<p class="subtab-no-data">No data collected for this section. The data source may have timed out or been unavailable during the last scrape.</p>';
+            }
             return paneHtml;
         }
 
