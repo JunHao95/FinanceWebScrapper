@@ -173,7 +173,7 @@ const DisplayManager = {
                         paneHtml += '<div class="metric-item">';
                         const cleanKey = self.escapeHtml(key.replace(/\s*\(Enhanced\)\s*$/i, ''));
                         const keyLc = cleanKey.toLowerCase();
-                        const tooltipText = METRIC_TOOLTIPS[keyLc] || '';
+                        const tooltipText = Object.keys(METRIC_TOOLTIPS).reduce((found, tKey) => found || (keyLc.includes(tKey) ? METRIC_TOOLTIPS[tKey] : ''), '');
                         const tooltipAttr = tooltipText ? ` data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"` : '';
                         paneHtml += `<span class="metric-label"${tooltipAttr}>${cleanKey}</span>`;
                         const numericVal = (typeof Utils.parseNumeric === 'function') ? Utils.parseNumeric(value) : null;
