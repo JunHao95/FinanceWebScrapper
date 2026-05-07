@@ -384,12 +384,13 @@ python main.py --tickers AAPL,MSFT,GOOG,AMZN,TSLA,NVDA,META,NFLX \
 **Shows individual stock information:**
 - CNN Fear & Greed Index (market sentiment)
 - Stock count badge (e.g., "2" for 2 stocks)
-- Individual stock cards with:
-  - Basic info (price, market cap, company name)
-  - Valuation metrics (P/E, P/B, PEG, etc.)
-  - Technical indicators (RSI, Moving Averages, MACD)
-  - Sentiment analysis
-  - Performance metrics
+- Individual stock cards with five sub-tabs (Phase 28):
+  - **Overview**: Price chart, analyst range bar, basic info (price, market cap, company name)
+  - **Financials**: Valuation (P/E, P/B, PEG), Profitability, Earnings, Financial Metrics, Cash/CashFlow
+  - **Technical**: RSI, Moving Averages, BB Signal
+  - **Sentiment**: Full sentiment analysis group
+  - **Deep Analysis**: Financial Health Score, Earnings Quality, DCF Valuation, Peer Comparison
+- Sub-tab selection persisted per ticker via sessionStorage; multiple open cards stay independent
 
 ### Tab 2: 📈 Advanced Analytics
 **Shows portfolio-level analytics:**
@@ -651,7 +652,7 @@ make test-regression  # Regression tests — pin Volume Profile, Order Flow, Hes
 make test             # All tiers sequentially
 ```
 
-Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). Phase 23 added unit tests for `options_pricer`, `rl_models`, `financial_analytics`, and `ml_models` (TEST-03), plus regression tests that pin expected outputs for Volume Profile, Order Flow, Heston calibration, and HMM regime detection against frozen fixture data. Phase 23-04 added a Playwright E2E golden-path test (`tests/test_e2e_golden_path.py`) that exercises the full browser-to-server pipeline — enters AAPL, clicks Run Analysis, and verifies all four result tabs render without JS errors; all external scrapers and analytics API routes are mocked so no live network calls are required. Phase 28-01 added TDD stubs in `tests/test_unit_price_chart.py` (period map, analyst range bar, color coding) and `TestPriceHistory` integration stubs for the upcoming `/api/price_history` route. Phase 28-02 implemented `GET /api/price_history` (candlestick + volume Plotly subplots) and extended `yahoo_scraper.py` to extract `recommendationKey` as `Analyst Recommendation (Yahoo)`.
+Tests are tiered via `pytest` markers (`unit`, `integration`, `regression`, `e2e`). Phase 23 added unit tests for `options_pricer`, `rl_models`, `financial_analytics`, and `ml_models` (TEST-03), plus regression tests that pin expected outputs for Volume Profile, Order Flow, Heston calibration, and HMM regime detection against frozen fixture data. Phase 23-04 added a Playwright E2E golden-path test (`tests/test_e2e_golden_path.py`) that exercises the full browser-to-server pipeline — enters AAPL, clicks Run Analysis, and verifies all four result tabs render without JS errors; all external scrapers and analytics API routes are mocked so no live network calls are required. Phase 28-01 added TDD stubs in `tests/test_unit_price_chart.py` (period map, analyst range bar, color coding) and `TestPriceHistory` integration stubs for the upcoming `/api/price_history` route. Phase 28-02 implemented `GET /api/price_history` (candlestick + volume Plotly subplots) and extended `yahoo_scraper.py` to extract `recommendationKey` as `Analyst Recommendation (Yahoo)`. Phase 28-03 refactored `DisplayManager.createTickerCard` to emit a five sub-tab layout (Overview/Financials/Technical/Sentiment/Deep Analysis) with ticker-scoped `switchSubTab`, sessionStorage persistence, and matching CSS in `styles.css`.
 
 ---
 

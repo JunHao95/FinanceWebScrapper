@@ -94,7 +94,7 @@ const DisplayManager = {
     },
 
     /**
-     * Create ticker card with metrics
+     * Create ticker card with five sub-tab layout (Phase 28)
      */
     createTickerCard(ticker, data) {
         if (!ticker || !data || typeof data !== 'object') {
@@ -102,7 +102,6 @@ const DisplayManager = {
             return null;
         }
 
-        // Verify Utils dependency exists
         if (typeof Utils === 'undefined' || typeof Utils.formatValue !== 'function') {
             console.error('Required dependency not found: Utils.formatValue');
             return null;
@@ -111,7 +110,6 @@ const DisplayManager = {
         const div = document.createElement('div');
         div.className = 'ticker-results';
 
-        // Group metrics
         const groups = {
             'Basic Info': ['Current Price', 'Market Cap', 'Company Name', 'Sector', 'Industry', 'Exchange', 'Website', 'Description'],
             'Valuation': ['P/E Ratio', 'Forward P/E', 'P/B Ratio', 'P/S Ratio', 'PEG Ratio', 'EV/EBITDA'],
@@ -129,78 +127,148 @@ const DisplayManager = {
             ]
         };
 
+        const tabGroupNames = {
+            overview: ['Basic Info'],
+            financials: ['Valuation', 'Profitability', 'Earnings', 'Financial Metrics', 'Cash/CashFlow'],
+            technical: ['Technical'],
+            sentiment: ['Sentiment Analysis']
+        };
+
+        const self = this;
+
+        function buildPaneMetrics(tabName) {
+            const groupNamesList = tabGroupNames[tabName] || [];
+            let paneHtml = '<div class="metrics-grid">';
+            for (const groupName of groupNamesList) {
+                const keywords = groups[groupName];
+                if (!keywords) continue;
+                const groupMetrics = {};
+                for (const [key, value] of Object.entries(data)) {
+                    if (key === 'error' || key === 'Ticker' || key === 'Data Timestamp' || key === '_fundamental_analysis') continue;
+                    const keyLower = key.toLowerCase();
+                    if (keywords.some(kw => keyLower.includes(kw.toLowerCase()))) {
+                        groupMetrics[key] = value;
+                    }
+                }
+                if (Object.keys(groupMetrics).length > 0) {
+                    paneHtml += '<div class="metric-group">';
+                    paneHtml += `<h4>${self.escapeHtml(groupName)}</h4>`;
+                    for (const [key, value] of Object.entries(groupMetrics)) {
+                        paneHtml += '<div class="metric-item">';
+                        const cleanKey = self.escapeHtml(key.replace(/\s*\(Enhanced\)\s*$/i, ''));
+                        paneHtml += `<span class="metric-label">${cleanKey}</span>`;
+                        paneHtml += `<span class="metric-value">${Utils.formatValue(value)}</span>`;
+                        paneHtml += '</div>';
+                    }
+                    paneHtml += '</div>'; // metric-group
+                }
+            }
+            paneHtml += '</div>'; // metrics-grid
+            return paneHtml;
+        }
+
         const tickerContentId = `ticker-content-${ticker}`;
-        
+        const esc = this.escapeHtml.bind(this);
+        const savedTab = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('subtab-' + ticker)) || 'overview';
+
+        const tabDefs = [
+            { id: 'overview',   label: 'Overview' },
+            { id: 'financials', label: 'Financials' },
+            { id: 'technical',  label: 'Technical' },
+            { id: 'sentiment',  label: 'Sentiment' },
+            { id: 'deep',       label: 'Deep Analysis' }
+        ];
+
         let html = `<div class="ticker-header collapsed" onclick="DisplayManager.toggleTicker('${tickerContentId}')">`;
         html += '<div style="display: flex; align-items: center;">';
-        html += `<h3>${this.escapeHtml(ticker)}</h3>`;
+        html += `<h3>${esc(ticker)}</h3>`;
         html += '<span class="ticker-collapse-icon">▼</span>';
         html += '</div>';
-        html += `<span>${this.escapeHtml(data['Data Timestamp'] || '')}</span>`;
+        html += `<span>${esc(data['Data Timestamp'] || '')}</span>`;
         html += '</div>';
 
         html += `<div class="ticker-content collapsed" id="${tickerContentId}">`;
+        html += '<div class="ticker-subtabs">';
 
-        // Add fundamental analysis if available
+        // Sub-tab navigation
+        html += '<div class="ticker-subtab-nav">';
+        for (const { id, label } of tabDefs) {
+            const activeClass = id === savedTab ? ' active' : '';
+            html += `<button class="ticker-subtab-btn${activeClass}" data-ticker="${esc(ticker)}" data-tab="${id}" onclick="DisplayManager.switchSubTab('${esc(ticker)}','${id}')">${label}</button>`;
+        }
+        html += '</div>'; // ticker-subtab-nav
+
+        // Overview pane
+        html += `<div id="subtab-${esc(ticker)}-overview" class="ticker-subtab-content${'overview' === savedTab ? ' active' : ''}">`;
+        html += `<div id="priceChart-${esc(ticker)}" class="price-chart-container"></div>`;
+        html += `<div id="analystRangeBar-${esc(ticker)}" class="analyst-range-bar-container"></div>`;
+        html += buildPaneMetrics('overview');
+        html += '</div>'; // subtab-overview
+
+        // Financials pane
+        html += `<div id="subtab-${esc(ticker)}-financials" class="ticker-subtab-content${'financials' === savedTab ? ' active' : ''}">`;
+        html += buildPaneMetrics('financials');
+        html += '</div>'; // subtab-financials
+
+        // Technical pane
+        html += `<div id="subtab-${esc(ticker)}-technical" class="ticker-subtab-content${'technical' === savedTab ? ' active' : ''}">`;
+        html += buildPaneMetrics('technical');
+        html += '</div>'; // subtab-technical
+
+        // Sentiment pane
+        html += `<div id="subtab-${esc(ticker)}-sentiment" class="ticker-subtab-content${'sentiment' === savedTab ? ' active' : ''}">`;
+        html += buildPaneMetrics('sentiment');
+        html += '</div>'; // subtab-sentiment
+
+        // Deep Analysis pane — renderFundamental + HealthScore (creates deep-analysis-group)
+        html += `<div id="subtab-${esc(ticker)}-deep" class="ticker-subtab-content${'deep' === savedTab ? ' active' : ''}">`;
         if (data._fundamental_analysis && typeof AnalyticsRenderer !== 'undefined' && typeof AnalyticsRenderer.renderFundamental === 'function') {
             html += AnalyticsRenderer.renderFundamental(data._fundamental_analysis);
         }
-
-        html += '<div class="metrics-grid">';
-
-        for (const [groupName, keywords] of Object.entries(groups)) {
-            const groupMetrics = {};
-            
-            for (const [key, value] of Object.entries(data)) {
-                // Skip internal fields, errors, and metadata
-                if (key === 'error' || key === 'Ticker' || key === 'Data Timestamp' || key === '_fundamental_analysis') continue;
-                
-                const keyLower = key.toLowerCase();
-                const matchesKeyword = keywords.some(kw => keyLower.includes(kw.toLowerCase()));
-                
-                if (matchesKeyword) {
-                    groupMetrics[key] = value;
-                }
-            }
-
-            if (Object.keys(groupMetrics).length > 0) {
-                html += '<div class="metric-group">';
-                html += `<h4>${this.escapeHtml(groupName)}</h4>`;
-                
-                for (const [key, value] of Object.entries(groupMetrics)) {
-                    html += '<div class="metric-item">';
-                    const cleanKey = this.escapeHtml(key.replace(/\s*\(Enhanced\)\s*$/i, ''));
-                    html += `<span class="metric-label">${cleanKey}</span>`;
-                    html += `<span class="metric-value">${Utils.formatValue(value)}</span>`;
-                    html += '</div>';
-                }
-                
-                html += '</div>';
-            }
-        }
-
-        html += '</div>'; // closes metrics-grid
-
-        // Phase 13: append deep-analysis-group
         if (typeof HealthScore !== 'undefined') {
             const hs = HealthScore.computeGrade(data, ticker);
             html += hs.html;
         }
+        html += '</div>'; // subtab-deep
+
+        html += '</div>'; // ticker-subtabs
+        html += '</div>'; // ticker-content
 
         div.innerHTML = html;
-        // Phase 14: inject earnings quality into existing deep-analysis-group
+
         if (typeof EarningsQuality !== 'undefined') {
             EarningsQuality.renderIntoGroup(ticker, data, div);
         }
-        // Phase 15: inject DCF valuation into existing deep-analysis-group
         if (typeof DCFValuation !== 'undefined') {
             DCFValuation.renderIntoGroup(ticker, data, div);
         }
-        // Phase 16: inject peer comparison into existing deep-analysis-group
         if (typeof PeerComparison !== 'undefined') {
             PeerComparison.renderIntoGroup(ticker, data, div);
         }
         return div;
+    },
+
+    /**
+     * Switch active sub-tab for a specific ticker card (Phase 28)
+     * Ticker-scoped: multiple open cards do not interfere with each other.
+     */
+    switchSubTab(ticker, tabName) {
+        document.querySelectorAll(`[id^="subtab-${ticker}-"]`).forEach(function(el) {
+            el.classList.remove('active');
+        });
+        document.querySelectorAll(`.ticker-subtab-btn[data-ticker="${ticker}"]`).forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+        var pane = document.getElementById('subtab-' + ticker + '-' + tabName);
+        if (pane) pane.classList.add('active');
+        var btn = document.querySelector(`.ticker-subtab-btn[data-ticker="${ticker}"][data-tab="${tabName}"]`);
+        if (btn) btn.classList.add('active');
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('subtab-' + ticker, tabName);
+        }
+        if (tabName === 'overview' && typeof PriceChart !== 'undefined') {
+            PriceChart.fetchIfNeeded(ticker, '3mo');
+        }
     },
 
     /**
@@ -306,19 +374,23 @@ const DisplayManager = {
     },
 
     /**
-     * Toggle ticker collapse/expand
+     * Toggle ticker collapse/expand; restores persisted sub-tab on expand (Phase 28)
      */
     toggleTicker(contentId) {
         const content = document.getElementById(contentId);
         const header = content?.previousElementSibling;
-        
+
         if (!content || !header) return;
-        
+
         const isCollapsed = content.classList.contains('collapsed');
-        
+
         if (isCollapsed) {
             content.classList.remove('collapsed');
             header.classList.remove('collapsed');
+            // Restore persisted sub-tab and trigger price chart
+            var ticker = contentId.replace('ticker-content-', '');
+            var savedTab = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('subtab-' + ticker)) || 'overview';
+            DisplayManager.switchSubTab(ticker, savedTab);
         } else {
             content.classList.add('collapsed');
             header.classList.add('collapsed');

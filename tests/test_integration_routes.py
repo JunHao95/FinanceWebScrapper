@@ -206,7 +206,9 @@ class TestScrapeRoute:
 class TestSendEmail:
 
     def test_happy_path(self, client):
-        with patch("webapp.send_consolidated_report", return_value=True):
+        with patch("webapp.send_consolidated_report", return_value=True), patch.dict(
+            "webapp.config", {"email_allowlist": []}, clear=False
+        ), patch.dict("os.environ", {"EMAIL_ALLOWLIST": ""}, clear=False):
             resp = client.post(
                 "/api/send-email",
                 json={
@@ -221,14 +223,17 @@ class TestSendEmail:
         assert data["success"] is True
 
     def test_missing_email_returns_400(self, client):
-        resp = client.post(
-            "/api/send-email",
-            json={
-                "tickers": ["AAPL"],
-                "data": {},
-                "cnn_data": {},
-            },
-        )
+        with patch.dict(
+            "webapp.config", {"email_allowlist": []}, clear=False
+        ), patch.dict("os.environ", {"EMAIL_ALLOWLIST": ""}, clear=False):
+            resp = client.post(
+                "/api/send-email",
+                json={
+                    "tickers": ["AAPL"],
+                    "data": {},
+                    "cnn_data": {},
+                },
+            )
         assert resp.status_code == 400
         data = resp.get_json()
         assert data["success"] is False
