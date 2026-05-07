@@ -136,6 +136,22 @@ const DisplayManager = {
 
         const self = this;
 
+        const METRIC_TOOLTIPS = {
+            'p/e ratio':        'Price-to-Earnings: share price divided by EPS. Lower = potentially cheaper.',
+            'forward p/e':      'Forward P/E uses estimated next-year earnings.',
+            'p/b ratio':        'Price-to-Book: share price vs. net assets. < 1.5 may indicate undervaluation.',
+            'p/s ratio':        'Price-to-Sales: market cap divided by revenue.',
+            'peg ratio':        'P/E relative to growth rate. < 1 may indicate undervalued given growth.',
+            'ev/ebitda':        'Enterprise Value / EBITDA. Lower values suggest cheaper valuation.',
+            'roe':              'Return on Equity: net income as % of shareholder equity. > 15% is strong.',
+            'roa':              'Return on Assets: net income as % of total assets. > 5% is efficient.',
+            'roic':             'Return on Invested Capital. > 10% is strong.',
+            'profit margin':    'Net income as % of revenue.',
+            'operating margin': 'Operating income as % of revenue before interest/taxes.',
+            'debt/equity':      'Total debt / shareholder equity. > 2 = high leverage.',
+            'current ratio':    'Current assets / current liabilities. > 2 healthy; < 1 = liquidity risk.'
+        };
+
         function buildPaneMetrics(tabName) {
             const groupNamesList = tabGroupNames[tabName] || [];
             let paneHtml = '<div class="metrics-grid">';
@@ -156,8 +172,14 @@ const DisplayManager = {
                     for (const [key, value] of Object.entries(groupMetrics)) {
                         paneHtml += '<div class="metric-item">';
                         const cleanKey = self.escapeHtml(key.replace(/\s*\(Enhanced\)\s*$/i, ''));
-                        paneHtml += `<span class="metric-label">${cleanKey}</span>`;
-                        paneHtml += `<span class="metric-value">${Utils.formatValue(value)}</span>`;
+                        const keyLc = cleanKey.toLowerCase();
+                        const tooltipText = METRIC_TOOLTIPS[keyLc] || '';
+                        const tooltipAttr = tooltipText ? ` data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"` : '';
+                        paneHtml += `<span class="metric-label"${tooltipAttr}>${cleanKey}</span>`;
+                        const numericVal = (typeof Utils.parseNumeric === 'function') ? Utils.parseNumeric(value) : null;
+                        const colorClass = (typeof Utils.colorCodeMetric === 'function') ? Utils.colorCodeMetric(key, numericVal) : '';
+                        const colorAttr = colorClass ? ` class="metric-value ${colorClass}"` : ' class="metric-value"';
+                        paneHtml += `<span${colorAttr}>${Utils.formatValue(value)}</span>`;
                         paneHtml += '</div>';
                     }
                     paneHtml += '</div>'; // metric-group
@@ -244,6 +266,9 @@ const DisplayManager = {
         }
         if (typeof PeerComparison !== 'undefined') {
             PeerComparison.renderIntoGroup(ticker, data, div);
+        }
+        if (typeof PriceChart !== 'undefined') {
+            PriceChart.initCard(ticker, data);
         }
         return div;
     },

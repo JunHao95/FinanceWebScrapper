@@ -88,6 +88,46 @@ const Utils = {
         if (alertContainer) {
             alertContainer.innerHTML = '';
         }
+    },
+
+    colorCodeMetric: function(key, value) {
+        if (value === null || value === undefined || isNaN(value)) return '';
+        var k = key.toLowerCase();
+        var rules = [
+            { match: ['p/e ratio', 'forward p/e'],
+              green: function(v) { return v < 15; }, red: function(v) { return v > 30; } },
+            { match: ['p/b ratio'],
+              green: function(v) { return v < 1.5; }, red: function(v) { return v > 4; } },
+            { match: ['p/s ratio'],
+              green: function(v) { return v < 2; }, red: function(v) { return v > 8; } },
+            { match: ['peg ratio'],
+              green: function(v) { return v < 1; }, red: function(v) { return v > 2; } },
+            { match: ['ev/ebitda'],
+              green: function(v) { return v < 10; }, red: function(v) { return v > 25; } },
+            { match: ['roe'],
+              green: function(v) { return v > 15; }, red: function(v) { return v < 0; } },
+            { match: ['roa'],
+              green: function(v) { return v > 5; }, red: function(v) { return v < 0; } },
+            { match: ['roic'],
+              green: function(v) { return v > 10; }, red: function(v) { return v < 0; } },
+            { match: ['profit margin'],
+              green: function(v) { return v > 10; }, red: function(v) { return v < 0; } },
+            { match: ['operating margin'],
+              green: function(v) { return v > 10; }, red: function(v) { return v < 0; } },
+            { match: ['debt/equity', 'debt to equity'],
+              green: function(v) { return v < 0.5; }, red: function(v) { return v > 2; } },
+            { match: ['current ratio'],
+              green: function(v) { return v > 2; }, red: function(v) { return v < 1; } }
+        ];
+        for (var i = 0; i < rules.length; i++) {
+            var r = rules[i];
+            if (r.match.some(function(m) { return k.indexOf(m) !== -1; })) {
+                if (r.green(value)) return 'metric-value-good';
+                if (r.red(value))   return 'metric-value-bad';
+                return '';
+            }
+        }
+        return '';
     }
 };
 

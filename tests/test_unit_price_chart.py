@@ -3,10 +3,9 @@ Unit tests for Phase 28 price chart helpers.
 
 TestPeriodMap       — pure data, passes immediately
 TestAnalystRangeBar — tests recommendationKey extraction in yahoo_scraper.py
-TestColorCoding     — stubs, xfail until color_code_metric exists
+TestColorCoding     — exercises src.analytics.price_chart.color_code_metric
 """
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 PERIOD_MAP = {"1mo": 30, "3mo": 90, "6mo": 180, "1y": 365}
@@ -72,43 +71,36 @@ class TestAnalystRangeBar:
 
 
 class TestColorCoding:
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_pe_green(self):
         from src.analytics.price_chart import color_code_metric
 
         assert color_code_metric("P/E Ratio", 12) == "metric-value-good"
 
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_pe_red(self):
         from src.analytics.price_chart import color_code_metric
 
         assert color_code_metric("P/E Ratio", 35) == "metric-value-bad"
 
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_pe_neutral(self):
         from src.analytics.price_chart import color_code_metric
 
         assert color_code_metric("P/E Ratio", 20) == ""
 
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_roe_green(self):
         from src.analytics.price_chart import color_code_metric
 
         assert color_code_metric("ROE", 20) == "metric-value-good"
 
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_roe_red(self):
         from src.analytics.price_chart import color_code_metric
 
         assert color_code_metric("ROE", -5) == "metric-value-bad"
 
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_debt_equity_red(self):
         from src.analytics.price_chart import color_code_metric
 
         assert color_code_metric("Debt/Equity", 3) == "metric-value-bad"
 
-    @pytest.mark.xfail(reason="color_code_metric not yet implemented", strict=False)
     def test_unknown_metric_neutral(self):
         from src.analytics.price_chart import color_code_metric
 

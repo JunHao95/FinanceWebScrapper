@@ -1737,3 +1737,25 @@ body.results-loaded .skeleton-preview {
 .metric-label[data-tooltip]:hover::after {
     display: block;
 }
+
+/* ============================================================
+   Phase 28: Analyst range bar + price chart period toggle
+   ============================================================ */
+.analyst-bar-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.analyst-bar-title { font-size: 0.85rem; color: #a6adc8; }
+.analyst-badge { font-size: 0.78rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.rec-buy  { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid #a6e3a1; }
+.rec-hold { background: rgba(249,226,175,0.15); color: #f9e2af; border: 1px solid #f9e2af; }
+.rec-sell { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid #f38ba8; }
+.analyst-bar-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.analyst-bar-label { font-size: 0.78rem; color: #6c7086; min-width: 50px; }
+.analyst-bar-track { flex: 1; height: 6px; background: #313244; border-radius: 3px; position: relative; }
+.analyst-bar-mean  { position: absolute; top: -3px; width: 2px; height: 12px; background: #cdd6f4; border-radius: 1px; transform: translateX(-50%); }
+.analyst-bar-dot   { position: absolute; top: -5px; width: 16px; height: 16px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #1e1e2e; }
+.dot-upside    { background: #a6e3a1; }
+.dot-overvalued { background: #f38ba8; }
+.analyst-bar-caption { font-size: 0.78rem; color: #6c7086; }
+.pc-period-nav { display: flex; gap: 4px; margin-bottom: 6px; }
+.pc-period-btn { background: #313244; border: 1px solid #45475a; color: #a6adc8; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.82rem; font-family: inherit; }
+.pc-period-btn.active { background: #45475a; color: #cdd6f4; border-color: #89b4fa; }
+.pc-error { color: #f38ba8; font-size: 0.82rem; padding: 8px 0; }

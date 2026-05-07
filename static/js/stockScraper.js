@@ -185,6 +185,7 @@ const StockScraper = {
         if (typeof PeerComparison !== 'undefined')  PeerComparison.clearSession();
         if (typeof TradingIndicators !== 'undefined') TradingIndicators.clearSession();
         if (typeof MLSignals !== 'undefined') MLSignals.clearSession();
+        if (typeof PriceChart !== 'undefined') PriceChart.clearSession();
 
         // Clear ticker results
         const tickerResultsDiv = document.getElementById('tickerResults');
