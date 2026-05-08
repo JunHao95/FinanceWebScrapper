@@ -64,7 +64,7 @@ const StockScraper = {
             }
         } else {
             // Advanced collapsed: use all free sources as defaults
-            sources = ['yahoo', 'finviz', 'google', 'technical'];
+            sources = ['yahoo', 'finviz', 'google', 'technical', 'enhanced_sentiment'];
         }
 
         // Get portfolio allocation

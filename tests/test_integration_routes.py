@@ -197,6 +197,25 @@ class TestScrapeRoute:
         data = resp.get_json()
         assert data["success"] is False
 
+    def test_enhanced_sentiment_source_accepted(self, client):
+        mock_cnn = MagicMock()
+        mock_cnn.scrape_data.return_value = {"fear_greed": 50}
+        sentiment_data = {
+            "Overall Sentiment Score (Enhanced)": "0.120",
+            "Overall Sentiment Label (Enhanced)": "Positive",
+        }
+        with patch("webapp.CNNFearGreedScraper", return_value=mock_cnn), patch(
+            "webapp.run_scrapers_for_ticker", return_value=sentiment_data
+        ):
+            resp = client.post(
+                "/api/scrape",
+                json={"tickers": ["AAPL"], "sources": ["enhanced_sentiment"]},
+            )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data.get("success") is True
+        assert "Overall Sentiment Score (Enhanced)" in data["data"]["AAPL"]
+
 
 # ---------------------------------------------------------------------------
 # POST /api/send-email
