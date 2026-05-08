@@ -149,7 +149,27 @@ const DisplayManager = {
             'profit margin':    'Net income as % of revenue.',
             'operating margin': 'Operating income as % of revenue before interest/taxes.',
             'debt/equity':      'Total debt / shareholder equity. > 2 = high leverage.',
-            'current ratio':    'Current assets / current liabilities. > 2 healthy; < 1 = liquidity risk.'
+            'current ratio':    'Current assets / current liabilities. > 2 healthy; < 1 = liquidity risk.',
+            // Sentiment
+            'overall sentiment score':  'VADER compound score aggregated across news + Reddit. Range: -1 to +1. > 0.15 = positive, < -0.15 = negative, in between = neutral. Financial text rarely hits extremes, so ±0.15 is the meaningful signal threshold.',
+            'overall sentiment label':  'Categorical label derived from the combined sentiment score: Positive (> 0.15), Negative (< -0.15), or Neutral.',
+            'sentiment confidence':     'How much news and Reddit sentiment agree, weighted by data volume. Range 0–1. ≥ 0.7 = high, 0.4–0.7 = moderate, < 0.4 = low.',
+            'active data sources':      'Number of sources (Google Trends, News RSS, Reddit, Topic Analysis) that successfully returned data this run. Max 4.',
+            'finbert news score':       'FinBERT model confidence (0–1) for the predicted sentiment label on news text. Higher = more certain the label is correct.',
+            'news sentiment score':     'VADER compound score averaged across all analyzed news articles. Range: -1 to +1. > 0.15 = positive, < -0.15 = negative.',
+            'news articles analyzed':   'Total news articles fetched from RSS feeds and matched to this ticker.',
+            'positive news articles':   'Articles where VADER compound score > 0.05.',
+            'negative news articles':   'Articles where VADER compound score < -0.05.',
+            'reddit sentiment score':   'VADER compound score averaged across analyzed Reddit posts. Range: -1 to +1. > 0.15 = positive, < -0.15 = negative.',
+            'reddit posts analyzed':    'Total Reddit posts fetched from finance subreddits (stocks, WSB, ValueInvesting, etc.).',
+            'positive reddit posts':    'Reddit posts where VADER compound score > 0.05.',
+            'reddit avg score':         'Average Reddit upvote score of analyzed posts. Higher = more community engagement.',
+            'reddit avg comments':      'Average number of comments on analyzed Reddit posts.',
+            'google trends interest':   'Google Trends search interest 0–100 for this ticker. 100 = peak popularity; relative to the timeframe.',
+            'avg interest':             'Average Google Trends interest over the selected timeframe (default: last 3 months).',
+            'trends direction':         'Whether current search interest is above (Increasing) or below (Decreasing) the timeframe average.',
+            'document similarity':      'Average cosine similarity (0–1) between all analyzed articles/posts using TF-IDF + LSA. High = topics tightly clustered; low = diverse coverage.',
+            'top topic':                'Top keywords from NMF topic modelling across combined news and Reddit text for this ticker.',
         };
 
         function buildPaneMetrics(tabName) {
@@ -181,7 +201,10 @@ const DisplayManager = {
                         const numericVal = (typeof Utils.parseNumeric === 'function') ? Utils.parseNumeric(value) : null;
                         const colorClass = (typeof Utils.colorCodeMetric === 'function') ? Utils.colorCodeMetric(key, numericVal) : '';
                         const colorAttr = colorClass ? ` class="metric-value ${colorClass}"` : ' class="metric-value"';
-                        paneHtml += `<span${colorAttr}>${Utils.formatValue(value)}</span>`;
+                        const interp = (tabName === 'sentiment' && typeof Utils.interpretSentiment === 'function')
+                            ? Utils.interpretSentiment(keyLc, numericVal) : null;
+                        const interpHtml = interp ? ` <span class="sentiment-badge ${interp.cls}">${interp.text}</span>` : '';
+                        paneHtml += `<span${colorAttr}>${Utils.formatValue(value)}${interpHtml}</span>`;
                         paneHtml += '</div>';
                     }
                     paneHtml += '</div>'; // metric-group

@@ -90,6 +90,38 @@ const Utils = {
         }
     },
 
+    interpretSentiment: function(keyLc, value) {
+        if (value === null || value === undefined || isNaN(value)) return null;
+        if (keyLc.includes('overall sentiment score') || keyLc.includes('news sentiment score') || keyLc.includes('reddit sentiment score')) {
+            if (value > 0.5)   return { text: 'Strong Positive', cls: 'sentiment-badge-pos' };
+            if (value > 0.15)  return { text: 'Positive',        cls: 'sentiment-badge-pos' };
+            if (value < -0.5)  return { text: 'Strong Negative', cls: 'sentiment-badge-neg' };
+            if (value < -0.15) return { text: 'Negative',        cls: 'sentiment-badge-neg' };
+            return { text: 'Neutral', cls: 'sentiment-badge-neu' };
+        }
+        if (keyLc.includes('sentiment confidence')) {
+            if (value >= 0.7) return { text: 'High',     cls: 'sentiment-badge-pos' };
+            if (value >= 0.4) return { text: 'Moderate', cls: 'sentiment-badge-neu' };
+            return { text: 'Low', cls: 'sentiment-badge-neg' };
+        }
+        if (keyLc.includes('finbert')) {
+            if (value >= 0.8) return { text: 'High conf.',     cls: 'sentiment-badge-pos' };
+            if (value >= 0.5) return { text: 'Medium conf.', cls: 'sentiment-badge-neu' };
+            return { text: 'Low conf.', cls: 'sentiment-badge-neg' };
+        }
+        if (keyLc.includes('document similarity')) {
+            if (value >= 0.7) return { text: 'Clustered Topics', cls: 'sentiment-badge-neu' };
+            if (value >= 0.35)return { text: 'Mixed Topics',     cls: 'sentiment-badge-neu' };
+            return { text: 'Diverse Topics', cls: 'sentiment-badge-neu' };
+        }
+        if (keyLc.includes('google trends interest')) {
+            if (value >= 70) return { text: 'High Interest',   cls: 'sentiment-badge-pos' };
+            if (value >= 30) return { text: 'Moderate',        cls: 'sentiment-badge-neu' };
+            return { text: 'Low Interest', cls: 'sentiment-badge-neg' };
+        }
+        return null;
+    },
+
     colorCodeMetric: function(key, value) {
         if (value === null || value === undefined || isNaN(value)) return '';
         var k = key.toLowerCase();
@@ -117,7 +149,13 @@ const Utils = {
             { match: ['debt/equity', 'debt to equity'],
               green: function(v) { return v < 0.5; }, red: function(v) { return v > 2; } },
             { match: ['current ratio'],
-              green: function(v) { return v > 2; }, red: function(v) { return v < 1; } }
+              green: function(v) { return v > 2; }, red: function(v) { return v < 1; } },
+            { match: ['overall sentiment score', 'news sentiment score', 'reddit sentiment score'],
+              green: function(v) { return v > 0.15; }, red: function(v) { return v < -0.15; } },
+            { match: ['sentiment confidence'],
+              green: function(v) { return v >= 0.7; }, red: function(v) { return v < 0.4; } },
+            { match: ['finbert news score'],
+              green: function(v) { return v >= 0.8; }, red: function(v) { return v < 0.5; } }
         ];
         for (var i = 0; i < rules.length; i++) {
             var r = rules[i];

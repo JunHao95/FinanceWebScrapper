@@ -1710,6 +1710,21 @@ body.results-loaded .skeleton-preview {
     font-weight: 600;
 }
 
+/* Sentiment interpretation badges */
+.sentiment-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.70rem;
+    font-weight: 600;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+.sentiment-badge-pos { background: rgba(166, 227, 161, 0.18); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.35); }
+.sentiment-badge-neg { background: rgba(243, 139, 168, 0.18); color: #f38ba8; border: 1px solid rgba(243,139,168,0.35); }
+.sentiment-badge-neu { background: rgba(137, 180, 250, 0.18); color: #89b4fa; border: 1px solid rgba(137,180,250,0.35); }
+
 /* Phase 28: Metric tooltips */
 .metric-label[data-tooltip] {
     position: relative;
