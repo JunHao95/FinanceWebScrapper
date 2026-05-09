@@ -69,7 +69,8 @@
             section.innerHTML =
                 '<h3 style="margin-bottom:8px;">PCA Portfolio Decomposition</h3>' +
                 '<div id="ml-pca-scree" style="width:100%;height:300px;"></div>' +
-                '<div id="ml-pca-heatmap" style="width:100%;height:300px;margin-top:12px;"></div>';
+                '<div id="ml-pca-heatmap" style="width:100%;height:300px;margin-top:12px;"></div>' +
+                '<div id="ml-pca-var" style="margin-top:12px;"></div>';
             if (typeof Plotly !== 'undefined') {
                 if (result.scree_traces && result.scree_traces.length) {
                     Plotly.newPlot('ml-pca-scree', result.scree_traces, result.layout || {}, { staticPlot: true, responsive: true });
@@ -77,6 +78,25 @@
                 if (result.heatmap_traces && result.heatmap_traces.length) {
                     Plotly.newPlot('ml-pca-heatmap', result.heatmap_traces, result.layout || {}, { staticPlot: true, responsive: true });
                 }
+            }
+            if (result.portfolio_var) {
+                var pv = result.portfolio_var;
+                var varHtml = '<h4 style="color:#cdd6f4;margin-bottom:8px;">Portfolio VaR — Equal Weight, 1-Day</h4>' +
+                    '<table style="width:100%;border-collapse:collapse;color:#cdd6f4;font-size:13px;">' +
+                    '<tr><td style="padding:4px 8px;color:#7f849c;">Daily Std Dev</td><td style="padding:4px 8px;">' + pv.port_daily_std_pct.toFixed(2) + '%</td></tr>' +
+                    '<tr><td style="padding:4px 8px;color:#7f849c;">Parametric VaR 99%</td><td style="padding:4px 8px;color:#e74c3c;">' + pv.var_99_1d_pct.toFixed(2) + '%</td></tr>' +
+                    '<tr><td style="padding:4px 8px;color:#7f849c;">Parametric VaR 95%</td><td style="padding:4px 8px;color:#f39c12;">' + pv.var_95_1d_pct.toFixed(2) + '%</td></tr>' +
+                    '<tr><td style="padding:4px 8px;color:#7f849c;">Historical VaR 99%</td><td style="padding:4px 8px;color:#e74c3c;">' + pv.hist_var_99_1d_pct.toFixed(2) + '%</td></tr>' +
+                    '<tr><td style="padding:4px 8px;color:#7f849c;">Historical VaR 95%</td><td style="padding:4px 8px;color:#f39c12;">' + pv.hist_var_95_1d_pct.toFixed(2) + '%</td></tr>' +
+                    '</table>';
+                if (pv.pc_contributions && pv.pc_contributions.length) {
+                    varHtml += '<p style="font-size:12px;color:#7f849c;margin-top:8px;">PC Variance Attribution: ' +
+                        pv.pc_contributions.map(function (pc) {
+                            return pc.name + ' ' + pc.variance_share_pct + '%';
+                        }).join(' | ') + '</p>';
+                }
+                var varContainer = document.getElementById('ml-pca-var');
+                if (varContainer) { varContainer.innerHTML = varHtml; }
             }
         }).catch(function (err) {
             section.innerHTML = '<p style="color:#e74c3c;">PCA error: ' + err.toString() + '</p>';
