@@ -212,7 +212,7 @@ class NewsCollector:
                 "total_articles": len(sentiment_results),
                 "vader_avg_sentiment": np.mean(vader_scores) if vader_scores else 0,
                 "finbert_avg_sentiment": (
-                    np.mean(finbert_scores) if finbert_scores else 0
+                    np.mean(finbert_scores) if finbert_scores else None
                 ),
                 "positive_articles": len(
                     [r for r in sentiment_results if r.get("vader_compound", 0) > 0.05]
@@ -232,7 +232,7 @@ class NewsCollector:
             overall_sentiment = {
                 "total_articles": 0,
                 "vader_avg_sentiment": 0,
-                "finbert_avg_sentiment": 0,
+                "finbert_avg_sentiment": None,
                 "positive_articles": 0,
                 "negative_articles": 0,
                 "neutral_articles": 0,
