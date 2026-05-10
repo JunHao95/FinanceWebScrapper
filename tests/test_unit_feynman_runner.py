@@ -34,14 +34,14 @@ def _wait_job(fr, job_id, retries=20, delay=0.05):
 
 
 # ---------------------------------------------------------------------------
-# run_feynman_async — happy path
+# run_feynman_async — OpenAI path (simulating Render environment)
 # ---------------------------------------------------------------------------
 
 
 def test_run_feynman_async_happy_path():
     import src.analytics.feynman_runner as fr
 
-    with patch(
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
         "src.analytics.feynman_runner.openai.OpenAI",
         return_value=_mock_client("## RF Literature\n\nSome content."),
     ):
@@ -64,7 +64,9 @@ def test_run_feynman_async_with_signals_enriches_query():
     mock_client.chat.completions.create.side_effect = fake_create
 
     signals = {"signal": "Bullish", "confidence": 0.73, "top_feature": "Ret120"}
-    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
+        "src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client
+    ):
         job_id = fr.run_feynman_async("direction", "AAPL", signals)
         status = _wait_job(fr, job_id)
 
@@ -82,7 +84,7 @@ def test_run_feynman_async_with_signals_enriches_query():
 def test_run_synthesis_async_happy_path():
     import src.analytics.feynman_runner as fr
 
-    with patch(
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
         "src.analytics.feynman_runner.openai.OpenAI",
         return_value=_mock_client("## Thesis\n\n### Bull Case\nStrong momentum."),
     ):
@@ -116,7 +118,9 @@ def test_run_synthesis_async_includes_all_signals_in_query():
         "credit": {"p_distress": 0.45},
         "lstm": {"signal": "Bearish", "confidence": 0.60},
     }
-    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
+        "src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client
+    ):
         job_id = fr.run_synthesis_async("MSFT", signals)
         _wait_job(fr, job_id)
 
@@ -135,7 +139,7 @@ def test_run_synthesis_async_includes_all_signals_in_query():
 def test_run_pca_interpret_async_happy_path():
     import src.analytics.feynman_runner as fr
 
-    with patch(
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
         "src.analytics.feynman_runner.openai.OpenAI",
         return_value=_mock_client(
             "## Portfolio Risk Interpretation\n\n### Concentration\nHigh."
@@ -161,7 +165,7 @@ def test_run_pca_interpret_async_happy_path():
 
 
 # ---------------------------------------------------------------------------
-# Error paths
+# Error paths — OpenAI mode
 # ---------------------------------------------------------------------------
 
 
@@ -170,7 +174,9 @@ def test_run_feynman_async_api_error():
 
     mock_client = MagicMock()
     mock_client.chat.completions.create.side_effect = Exception("connection error")
-    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
+        "src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client
+    ):
         job_id = fr.run_feynman_async("direction", "AAPL")
         status = _wait_job(fr, job_id)
     assert status["status"] == "error"
@@ -180,7 +186,7 @@ def test_run_feynman_async_api_error():
 def test_empty_output_guard():
     import src.analytics.feynman_runner as fr
 
-    with patch(
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
         "src.analytics.feynman_runner.openai.OpenAI", return_value=_mock_client("")
     ):
         job_id = fr.run_feynman_async("direction", "AAPL")
@@ -197,7 +203,9 @@ def test_auth_error_returns_helpful_message():
     mock_client.chat.completions.create.side_effect = _openai.AuthenticationError(
         "invalid key", response=MagicMock(), body={}
     )
-    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
+        "src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client
+    ):
         job_id = fr.run_feynman_async("direction", "AAPL")
         status = _wait_job(fr, job_id)
     assert status["status"] == "error"
@@ -205,20 +213,122 @@ def test_auth_error_returns_helpful_message():
 
 
 # ---------------------------------------------------------------------------
-# FEYNMAN_AVAILABLE
+# Subprocess path (local mode)
 # ---------------------------------------------------------------------------
 
 
-def test_feynman_available_reflects_env_var():
+def test_subprocess_happy_path():
     import src.analytics.feynman_runner as fr
 
-    with patch.dict(os.environ, {}, clear=True):
-        os.environ.pop("OPENAI_API_KEY", None)
+    mock_proc = MagicMock()
+    mock_proc.stdout = "## RF Literature\n\nSome content."
+    mock_proc.stderr = ""
+
+    with patch("src.analytics.feynman_runner._USE_OPENAI", False), patch(
+        "src.analytics.feynman_runner.subprocess.run", return_value=mock_proc
+    ):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        status = _wait_job(fr, job_id)
+
+    assert status["status"] == "done"
+    assert "RF Literature" in status["result"]
+
+
+def test_subprocess_empty_output():
+    import src.analytics.feynman_runner as fr
+
+    mock_proc = MagicMock()
+    mock_proc.stdout = "   "
+    mock_proc.stderr = ""
+
+    with patch("src.analytics.feynman_runner._USE_OPENAI", False), patch(
+        "src.analytics.feynman_runner.subprocess.run", return_value=mock_proc
+    ):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        status = _wait_job(fr, job_id)
+
+    assert status["status"] == "error"
+    assert "feynman" in status["error"].lower()
+
+
+def test_subprocess_timeout():
+    import subprocess
+    import src.analytics.feynman_runner as fr
+
+    with patch("src.analytics.feynman_runner._USE_OPENAI", False), patch(
+        "src.analytics.feynman_runner.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="feynman", timeout=120),
+    ):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        status = _wait_job(fr, job_id)
+
+    assert status["status"] == "error"
+    assert "timeout" in status["error"]
+
+
+def test_subprocess_strips_ansi():
+    import src.analytics.feynman_runner as fr
+
+    mock_proc = MagicMock()
+    mock_proc.stdout = "\x1b[32m## RF Literature\x1b[0m\n\nContent."
+    mock_proc.stderr = ""
+
+    with patch("src.analytics.feynman_runner._USE_OPENAI", False), patch(
+        "src.analytics.feynman_runner.subprocess.run", return_value=mock_proc
+    ):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        status = _wait_job(fr, job_id)
+
+    assert status["status"] == "done"
+    assert "\x1b" not in status["result"]
+
+
+# ---------------------------------------------------------------------------
+# FEYNMAN_AVAILABLE — dual-mode detection
+# ---------------------------------------------------------------------------
+
+
+def test_feynman_available_local_with_cli():
+    import src.analytics.feynman_runner as fr
+
+    with patch.dict(os.environ, {}, clear=True), patch(
+        "shutil.which", return_value="/usr/local/bin/feynman"
+    ):
+        importlib.reload(fr)
+        assert fr.FEYNMAN_AVAILABLE is True
+
+    importlib.reload(fr)  # restore
+
+
+def test_feynman_available_local_without_cli():
+    import src.analytics.feynman_runner as fr
+
+    with patch.dict(os.environ, {}, clear=True), patch(
+        "shutil.which", return_value=None
+    ):
         importlib.reload(fr)
         assert fr.FEYNMAN_AVAILABLE is False
 
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+    importlib.reload(fr)  # restore
+
+
+def test_feynman_available_render_with_key():
+    import src.analytics.feynman_runner as fr
+
+    with patch.dict(
+        os.environ, {"RENDER": "true", "OPENAI_API_KEY": "sk-test"}, clear=True
+    ):
         importlib.reload(fr)
         assert fr.FEYNMAN_AVAILABLE is True
+
+    importlib.reload(fr)  # restore
+
+
+def test_feynman_available_render_without_key():
+    import src.analytics.feynman_runner as fr
+
+    with patch.dict(os.environ, {"RENDER": "true"}, clear=True):
+        importlib.reload(fr)
+        assert fr.FEYNMAN_AVAILABLE is False
 
     importlib.reload(fr)  # restore

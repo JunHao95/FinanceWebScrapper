@@ -807,7 +807,7 @@ For issues, questions, or contributions:
 
 ## Feynman Research Integration (Phase 29)
 
-On-demand AI research powered by OpenAI (`gpt-4o-mini`). Requires `OPENAI_API_KEY` in the environment — set it in Render's env vars for cloud deployment. Features:
+On-demand AI research with **dual-mode execution**: uses the local `feynman` CLI subprocess when running on a developer machine, and switches to OpenAI (`gpt-4o-mini`) automatically when deployed on Render (detected via the `RENDER` env var). Set `OPENAI_API_KEY` in Render's environment variables for cloud deployment. Features:
 
 - **Research This Model** button on each ML section (RF Direction, Market Regime, Credit Risk, LSTM) — generates signal-aware academic literature summaries that include the ticker's current signal values in the prompt.
 - **Synthesise Signals** button at the bottom of each ticker card — combines all four ML signals into a bull/bear thesis paragraph via a single LLM call.

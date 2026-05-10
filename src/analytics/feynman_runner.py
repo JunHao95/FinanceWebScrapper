@@ -1,10 +1,23 @@
 import os
+import re
+import shutil
+import subprocess
 import threading
 import uuid
 
 import openai
 
-FEYNMAN_AVAILABLE = bool(os.getenv("OPENAI_API_KEY"))
+# Render.com sets RENDER=true automatically; use OpenAI API there.
+# Locally, fall back to the feynman CLI subprocess.
+_USE_OPENAI = bool(os.getenv("RENDER"))
+
+FEYNMAN_AVAILABLE = (
+    bool(os.getenv("OPENAI_API_KEY"))
+    if _USE_OPENAI
+    else shutil.which("feynman") is not None
+)
+
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
 _jobs: dict = {}
 
@@ -191,6 +204,13 @@ def run_pca_interpret_async(pca_data: dict) -> str:
 
 
 def _run(job_id: str, query: str, system_prompt: str) -> None:
+    if _USE_OPENAI:
+        _run_openai(job_id, query, system_prompt)
+    else:
+        _run_subprocess(job_id, query)
+
+
+def _run_openai(job_id: str, query: str, system_prompt: str) -> None:
     try:
         client = openai.OpenAI()
         response = client.chat.completions.create(
@@ -217,6 +237,33 @@ def _run(job_id: str, query: str, system_prompt: str) -> None:
             "result": "",
             "error": "Invalid OPENAI_API_KEY — check environment variables.",
         }
+    except Exception as exc:  # noqa: BLE001
+        _jobs[job_id] = {"status": "error", "result": "", "error": str(exc)}
+
+
+def _run_subprocess(job_id: str, query: str) -> None:
+    try:
+        proc = subprocess.run(
+            ["feynman", "--prompt", query],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        stdout = _ANSI_ESCAPE.sub("", proc.stdout)
+        stderr = _ANSI_ESCAPE.sub("", proc.stderr)
+        if not stdout.strip():
+            _jobs[job_id] = {
+                "status": "error",
+                "result": "",
+                "error": (
+                    "feynman returned empty output — check `feynman status`"
+                    " and API key configuration."
+                ),
+            }
+        else:
+            _jobs[job_id] = {"status": "done", "result": stdout, "error": stderr}
+    except subprocess.TimeoutExpired:
+        _jobs[job_id] = {"status": "error", "result": "", "error": "timeout"}
     except Exception as exc:  # noqa: BLE001
         _jobs[job_id] = {"status": "error", "result": "", "error": str(exc)}
 
