@@ -1076,3 +1076,44 @@ class TestPriceHistory:
         assert resp.status_code == 400
         data = resp.get_json()
         assert "error" in data
+
+
+class TestFeynmanRoutes:
+    def test_feynman_research_unavailable(self, client):
+        """POST /api/feynman_research when Feynman not installed → {available: false}."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", False):
+            resp = client.post(
+                "/api/feynman_research",
+                json={"section": "direction", "ticker": "AAPL"},
+                content_type="application/json",
+            )
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert data["available"] is False
+
+    def test_feynman_research_returns_job_id(self, client):
+        """POST /api/feynman_research when available → returns {job_id: ...} immediately."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", True), patch(
+            "src.analytics.feynman_runner.run_feynman_async",
+            return_value="test-uuid-123",
+        ):
+            resp = client.post(
+                "/api/feynman_research",
+                json={"section": "direction", "ticker": "AAPL"},
+                content_type="application/json",
+            )
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert data["job_id"] == "test-uuid-123"
+
+    def test_feynman_status_unknown_job(self, client):
+        """GET /api/feynman_status/<unknown> → {status: error, error: unknown job_id}."""
+        resp = client.get("/api/feynman_status/nonexistent-job-id")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["status"] == "error"
+        assert "unknown job_id" in data.get("error", "")
