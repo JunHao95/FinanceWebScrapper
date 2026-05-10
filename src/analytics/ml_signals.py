@@ -20,6 +20,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 
 try:
@@ -48,6 +49,12 @@ _RATIO_KEYS = [
     "revenue_growth",
     "earnings_growth",
 ]
+
+_RF_PARAM_DIST: dict = {
+    "n_estimators": [25, 50, 75, 100],
+    "max_depth": [3, 4, 5, 6, 7],
+    "min_samples_leaf": [1, 2, 5],
+}
 
 _INSUF_DIRECTION: dict = {
     "insufficient_data": True,
@@ -167,10 +174,17 @@ def compute_ml_direction_signal(ticker: str) -> dict:
     X_train_sc = scaler.fit_transform(X_train)
     X_latest_sc = scaler.transform(X.iloc[[-1]])
 
-    rf = RandomForestClassifier(
-        n_estimators=50, max_depth=5, random_state=42, n_jobs=-1
+    search = RandomizedSearchCV(
+        RandomForestClassifier(random_state=42, n_jobs=-1),
+        _RF_PARAM_DIST,
+        n_iter=10,
+        cv=3,
+        scoring="roc_auc",
+        random_state=42,
+        n_jobs=-1,
     )
-    rf.fit(X_train_sc, y_train.values)
+    search.fit(X_train_sc, y_train.values)
+    rf = search.best_estimator_
 
     proba = rf.predict_proba(X_latest_sc)[0]
     classes = list(rf.classes_)
@@ -200,9 +214,14 @@ def compute_ml_direction_signal(ticker: str) -> dict:
         },
         "xaxis": {"title": "Importance"},
     }
+    best_params = {
+        k: int(v) if isinstance(v, (np.integer,)) else v
+        for k, v in search.best_params_.items()
+    }
     return {
         "signal": signal,
         "confidence": confidence,
+        "best_params": best_params,
         "traces": traces,
         "layout": layout,
     }
@@ -271,11 +290,46 @@ def compute_pca_decomposition(tickers: List[str]) -> dict:
         }
     ]
 
+    # Portfolio VaR (equal-weight), following M2 PCA-factor decomposition
+    port_rets = ret_df.mean(axis=1)
+    port_daily_std = float(port_rets.std())
+    var_99_1d = float(port_daily_std * 2.326)
+    var_95_1d = float(port_daily_std * 1.645)
+    hist_var_99 = float(port_rets.quantile(0.01))
+    hist_var_95 = float(port_rets.quantile(0.05))
+
+    # PC variance attribution on raw (non-standardized) returns — shows how much of
+    # actual portfolio variance each factor drives; orthogonal PCs → additive decomposition
+    pca_raw = PCA(n_components=n_components)
+    pca_raw.fit(ret_df.values)
+    pc_var_shares = [float(v) for v in pca_raw.explained_variance_ratio_]
+    pc_label_names_full = ["Market Factor", "Sector Tilt", "Curvature"]
+    pc_contributions = [
+        {
+            "name": pc_label_names_full[i],
+            "variance_share_pct": round(pc_var_shares[i] * 100, 1),
+            "var_99_contribution_pct": round(
+                var_99_1d * np.sqrt(pc_var_shares[i]) * 100, 4
+            ),
+        }
+        for i in range(n_components)
+    ]
+
+    portfolio_var = {
+        "port_daily_std_pct": round(port_daily_std * 100, 4),
+        "var_99_1d_pct": round(var_99_1d * 100, 4),
+        "var_95_1d_pct": round(var_95_1d * 100, 4),
+        "hist_var_99_1d_pct": round(abs(hist_var_99) * 100, 4),
+        "hist_var_95_1d_pct": round(abs(hist_var_95) * 100, 4),
+        "pc_contributions": pc_contributions,
+    }
+
     return {
         "pca_available": True,
         "variance_explained": evr,
         "scree_traces": scree_traces,
         "heatmap_traces": heatmap_traces,
+        "portfolio_var": portfolio_var,
         "layout": DARK_LAYOUT,
     }
 
@@ -471,6 +525,7 @@ def compute_lstm_direction_signal(ticker: str) -> dict:
         [
             keras.layers.Input(shape=(20, 1)),
             keras.layers.LSTM(64),
+            keras.layers.Dense(32, activation="relu"),
             keras.layers.Dense(1, activation="sigmoid"),
         ]
     )

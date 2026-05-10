@@ -72,6 +72,9 @@ def test_direction_signal_returns_bullish_or_bearish():
     assert result["signal"] in ("Bullish", "Bearish")
     assert 0.0 <= result["confidence"] <= 1.0
     assert "traces" in result
+    assert "best_params" in result
+    assert "n_estimators" in result["best_params"]
+    assert "max_depth" in result["best_params"]
 
 
 @pytest.mark.unit
@@ -114,6 +117,10 @@ def test_pca_multi_ticker_returns_three_pcs():
     assert len(result["variance_explained"]) == 3
     assert "scree_traces" in result
     assert "heatmap_traces" in result
+    assert "portfolio_var" in result
+    pv = result["portfolio_var"]
+    assert pv["var_99_1d_pct"] >= pv["var_95_1d_pct"] >= 0
+    assert len(pv["pc_contributions"]) >= 1
 
 
 # ---------------------------------------------------------------------------

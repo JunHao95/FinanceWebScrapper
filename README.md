@@ -192,6 +192,10 @@ Added `tests/test_unit_ml_signals.py` with 10 unit test stubs covering five upco
 
 Added `src/analytics/ml_signals.py` implementing five ML compute functions: `compute_ml_direction_signal` (Random Forest binary classifier with M1 momentum + M5 technical features), `compute_pca_decomposition` (top-3 PC decomposition of multi-ticker return matrix), `compute_kmeans_regime` (k=4 clustering with HMM side-by-side comparison), `compute_credit_risk_score` (RF ensemble distress scorer with synthetic peer training data), and `compute_lstm_direction_signal` (Keras LSTM(64) direction signal, environment-gated — disabled on Render). All supervised models enforce chronological splits and fit scalers on training data only (anti-leakage from M1 curriculum). All 10 Phase 26-01 unit tests now pass green.
 
+### ML Signals — Gap Fixes (Phase 26 follow-up)
+
+Three curriculum gaps closed: (1) RF direction signal now uses `RandomizedSearchCV` (n_iter=10, cv=3, scoring=roc_auc) over `{n_estimators, max_depth, min_samples_leaf}` per M7 model-selection curriculum — best params returned in the API response; (2) PCA decomposition now computes and displays equal-weight portfolio VaR (parametric 99%/95% and historical 99%/95%) with per-factor variance attribution, applying the M2 formula `VaR = 2.326 × σ_port`; (3) LSTM architecture adds a `Dense(32, relu)` hidden layer between LSTM(64) and the sigmoid output, correcting the sigmoid-in-hidden-layers anti-pattern flagged in M5/M6.
+
 ---
 
 ## 📦 Installation
