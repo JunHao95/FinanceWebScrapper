@@ -5,6 +5,10 @@ Flask Web Application for Stock Financial Metrics Scraper
 import os
 import sys
 import json
+
+# Suppress HuggingFace tokenizer fork warning emitted when subprocess.run is
+# called after tokenizers have been initialised (e.g. FinBERT + feynman CLI).
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 import requests
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file  # noqa: F401
@@ -2665,6 +2669,7 @@ def post_feynman_pca_interpret():
 
 
 @app.route("/api/feynman_status/<job_id>", methods=["GET"])
+@limiter.exempt
 def get_feynman_status(job_id):
     from src.analytics.feynman_runner import get_job_status
 
