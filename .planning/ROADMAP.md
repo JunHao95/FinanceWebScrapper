@@ -126,7 +126,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 11. Responsive Layout & Dashboard Customisation | 0/3 | Not started | - |
 | 26. ML Finance Notebook Integration | 0/6 | Planning complete | - |
 | 27. Codebase Quality, Security, and Reliability Hardening | 0/4 | Not started | - |
-| 29. Feynman Research Integration (POC — RF section) | 1/3 | In Progress|  |
+| 29. Feynman Research Integration (POC — RF section) | 2/3 | In Progress|  |
 
 ---
 
@@ -294,7 +294,7 @@ Plans:
 **Goal:** A "Research This Model" button is live in the RF Direction Signal section of every ML ticker card — clicking it triggers an async Feynman CLI invocation, polls for completion, and renders academic context markdown in a collapsible "Academic Context" panel. The feature is silently hidden when Feynman is not installed (cloud deployments unaffected). This is a proof-of-concept for one ML section only.
 **Requirements**: None (POC phase)
 **Depends on:** Phase 26 (mlSignals.js and ML Signals tab must exist)
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 29-01-PLAN.md — Wave 0 test scaffold: test_unit_feynman_runner.py (5 stubs) + TestFeynmanRoutes class in test_integration_routes.py (wave 1)
