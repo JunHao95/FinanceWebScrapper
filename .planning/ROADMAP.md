@@ -126,6 +126,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 11. Responsive Layout & Dashboard Customisation | 0/3 | Not started | - |
 | 26. ML Finance Notebook Integration | 0/6 | Planning complete | - |
 | 27. Codebase Quality, Security, and Reliability Hardening | 0/4 | Not started | - |
+| 29. Feynman Research Integration (POC — RF section) | 0/3 | Planning complete | - |
 
 ---
 
@@ -288,9 +289,22 @@ Plans:
 - [ ] 28-03-PLAN.md — Frontend structure: createTickerCard sub-tab refactor + styles.css sub-tab + color classes (wave 3)
 - [ ] 28-04-PLAN.md — Frontend behavior: priceChart.js + utils.js colorCodeMetric + wiring + visual checkpoint (wave 4)
 
+### Phase 29: Feynman Research Integration (POC — RF section)
+
+**Goal:** A "Research This Model" button is live in the RF Direction Signal section of every ML ticker card — clicking it triggers an async Feynman CLI invocation, polls for completion, and renders academic context markdown in a collapsible "Academic Context" panel. The feature is silently hidden when Feynman is not installed (cloud deployments unaffected). This is a proof-of-concept for one ML section only.
+**Requirements**: None (POC phase)
+**Depends on:** Phase 26 (mlSignals.js and ML Signals tab must exist)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 29-01-PLAN.md — Wave 0 test scaffold: test_unit_feynman_runner.py (5 stubs) + TestFeynmanRoutes class in test_integration_routes.py (wave 1)
+- [ ] 29-02-PLAN.md — Backend: src/analytics/feynman_runner.py + POST /api/feynman_research + GET /api/feynman_status/<job_id> routes in webapp.py (wave 2)
+- [ ] 29-03-PLAN.md — Frontend: mlSignals.js Feynman helpers + styles.css + visual checkpoint (wave 3)
+
 ---
 
 *Roadmap created: 2026-04-08*
 *Phase 27 added: 2026-05-04 — Codebase Quality, Security, and Reliability Hardening (12 requirements from code review)*
+*Phase 29 added: 2026-05-10 — Feynman Research Integration (POC — RF section), 3 plans planned*
 *Milestone: v2.2 Trading Indicators*
 *Previous milestone: v2.1 (Phases 13–17, all Complete)*
