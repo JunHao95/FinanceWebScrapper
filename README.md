@@ -807,10 +807,18 @@ For issues, questions, or contributions:
 
 ## Feynman Research Integration (Phase 29)
 
-Optional on-demand research sidebar in the ML Signals tab. Requires the `feynman` CLI (`pip install feynman-karpathy`) and API keys (`EXA_API_KEY`, `PERPLEXITY_API_KEY`). Silently hidden when Feynman is not installed — no deploy breakage.
+On-demand AI research powered by OpenAI (`gpt-4o-mini`). Requires `OPENAI_API_KEY` in the environment — set it in Render's env vars for cloud deployment. Features:
 
-- `POST /api/feynman_research` — triggers async research job; returns `{"job_id": "..."}` immediately or `{"available": false}` when CLI absent.
-- `GET /api/feynman_status/<job_id>` — polls job state (`pending`, `done`, `error`) and retrieves full output once complete.
+- **Research This Model** button on each ML section (RF Direction, Market Regime, Credit Risk, LSTM) — generates signal-aware academic literature summaries that include the ticker's current signal values in the prompt.
+- **Synthesise Signals** button at the bottom of each ticker card — combines all four ML signals into a bull/bear thesis paragraph via a single LLM call.
+- **Interpret Portfolio Risk** button in the PCA section — sends actual VaR and PC contribution numbers to the LLM for a plain-English portfolio risk narrative.
+- Results render in collapsible **Academic Context** panels with markdown formatting (headings, tables, lists).
+
+API endpoints:
+- `POST /api/feynman_research` — per-section research job; accepts `{section, ticker, signals}`.
+- `POST /api/feynman_synthesis` — cross-signal thesis job; accepts `{ticker, signals}`.
+- `POST /api/feynman_pca_interpret` — PCA risk narrative job; accepts `{pca_data}`.
+- `GET /api/feynman_status/<job_id>` — polls job state (`pending`, `done`, `error`).
 
 ---
 

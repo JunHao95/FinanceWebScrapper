@@ -2634,7 +2634,33 @@ def post_feynman_research():
     data = request.get_json(force=True) or {}
     section = data.get("section", "direction")
     ticker = data.get("ticker", "")
-    job_id = run_feynman_async(section, ticker)
+    signals = data.get("signals") or None
+    job_id = run_feynman_async(section, ticker, signals)
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/feynman_synthesis", methods=["POST"])
+def post_feynman_synthesis():
+    from src.analytics.feynman_runner import FEYNMAN_AVAILABLE, run_synthesis_async
+
+    if not FEYNMAN_AVAILABLE:
+        return jsonify({"available": False})
+    data = request.get_json(force=True) or {}
+    ticker = data.get("ticker", "")
+    signals = data.get("signals", {})
+    job_id = run_synthesis_async(ticker, signals)
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/feynman_pca_interpret", methods=["POST"])
+def post_feynman_pca_interpret():
+    from src.analytics.feynman_runner import FEYNMAN_AVAILABLE, run_pca_interpret_async
+
+    if not FEYNMAN_AVAILABLE:
+        return jsonify({"available": False})
+    data = request.get_json(force=True) or {}
+    pca_data = data.get("pca_data", {})
+    job_id = run_pca_interpret_async(pca_data)
     return jsonify({"job_id": job_id})
 
 

@@ -16,7 +16,21 @@ _SYSTEM_PROMPT = (
     "Keep the total response under 600 words."
 )
 
-QUERIES = {
+_SYNTHESIS_SYSTEM = (
+    "You are a quantitative analyst. Given ML signal data for a stock, write a "
+    "concise bull/bear thesis (200-300 words) grounded in what the signals show. "
+    "Use markdown: ## Thesis, then ### Bull Case and ### Bear Case sections. "
+    "Be specific about the signal values — do not give generic advice."
+)
+
+_PCA_SYSTEM = (
+    "You are a portfolio risk analyst. Given PCA decomposition and VaR statistics "
+    "for an equity portfolio, write a plain-English risk narrative (200-300 words). "
+    "Use markdown: ## Portfolio Risk Interpretation, then ### Concentration, "
+    "### Tail Risk, ### Implications. Be specific about the numbers provided."
+)
+
+_BASE_QUERIES: dict[str, str] = {
     "direction": (
         "Summarise academic literature on random forest classifiers for equity return"
         " direction prediction. Include known limitations and data-snooping risks."
@@ -42,21 +56,147 @@ QUERIES = {
 }
 
 
-def run_feynman_async(section: str, ticker: str) -> str:
+def _build_research_query(section: str, ticker: str, signals: dict | None) -> str:
+    base = _BASE_QUERIES.get(
+        section, "Summarise ML methods used in quantitative finance."
+    )
+    if not signals:
+        return base
+
+    ctx_parts = [f"Ticker: {ticker}"]
+    if section == "direction":
+        sig = signals.get("signal", "")
+        conf = signals.get("confidence")
+        feat = signals.get("top_feature", "")
+        if sig:
+            ctx_parts.append(
+                f"Current RF signal: {conf:.0%} {sig}" if conf else f"RF signal: {sig}"
+            )
+        if feat:
+            ctx_parts.append(f"Top feature: {feat}")
+    elif section == "regime":
+        hmm = signals.get("hmm")
+        kmeans = signals.get("kmeans")
+        agree = signals.get("agree")
+        if hmm:
+            ctx_parts.append(f"HMM regime: {hmm}")
+        if kmeans:
+            ctx_parts.append(f"K-Means regime: {kmeans}")
+        if agree is not None:
+            ctx_parts.append("Models agree" if agree else "Models diverge")
+    elif section == "credit":
+        pd = signals.get("p_distress")
+        if pd is not None:
+            ctx_parts.append(f"P(distress): {pd:.0%}")
+        factors = signals.get("top_factors", [])
+        if factors:
+            ctx_parts.append(
+                "Top risk factors: " + ", ".join(str(f) for f in factors[:3])
+            )
+    elif section == "lstm":
+        sig = signals.get("signal", "")
+        conf = signals.get("confidence")
+        if sig:
+            ctx_parts.append(
+                f"LSTM signal: {conf:.0%} {sig}" if conf else f"LSTM signal: {sig}"
+            )
+
+    context = ". ".join(ctx_parts)
+    return f"Context for {ticker}: {context}.\n\n{base}"
+
+
+def _build_synthesis_query(ticker: str, signals: dict) -> str:
+    parts = [f"Stock: {ticker}"]
+    d = signals.get("direction")
+    if d:
+        parts.append(
+            f"RF Direction: {d.get('confidence', 0):.0%} {d.get('signal', 'N/A')}"
+        )
+    r = signals.get("regime")
+    if r:
+        agree_str = "agree" if r.get("agree") else "diverge"
+        parts.append(
+            f"Market Regime: HMM={r.get('hmm', 'N/A')}, K-Means={r.get('kmeans', 'N/A')} (models {agree_str})"
+        )
+    c = signals.get("credit")
+    if c is not None:
+        parts.append(f"Credit Risk P(distress)={c.get('p_distress', 0):.0%}")
+    lstm = signals.get("lstm")
+    if lstm:
+        parts.append(
+            f"LSTM Direction: {lstm.get('confidence', 0):.0%} {lstm.get('signal', 'N/A')}"
+        )
+    signal_block = "\n".join(parts)
+    return (
+        f"Given these ML signals:\n{signal_block}\n\n"
+        "Write a concise bull/bear thesis. What do the signals collectively say? "
+        "Where do they agree or conflict? What are the main risks to the thesis?"
+    )
+
+
+def _build_pca_query(pca_data: dict) -> str:
+    std = pca_data.get("port_daily_std_pct", 0)
+    var99 = pca_data.get("var_99_1d_pct", 0)
+    var95 = pca_data.get("var_95_1d_pct", 0)
+    hvar99 = pca_data.get("hist_var_99_1d_pct", 0)
+    contribs = pca_data.get("pc_contributions", [])
+
+    parts = [
+        f"Daily std dev: {std:.2f}%",
+        f"Parametric VaR 99%: {var99:.2f}%",
+        f"Parametric VaR 95%: {var95:.2f}%",
+        f"Historical VaR 99%: {hvar99:.2f}%",
+    ]
+    for pc in contribs[:3]:
+        parts.append(
+            f"{pc.get('name', 'PC')}: {pc.get('variance_share_pct', 0):.1f}% variance share, "
+            f"{pc.get('var_99_contribution_pct', 0):.4f}% VaR contribution"
+        )
+    return (
+        "Portfolio risk statistics (equal-weight, 1-day horizon):\n"
+        + "\n".join(parts)
+        + "\n\nInterpret these numbers for an equity investor. "
+        "Is the concentration risk high? Is the tail risk elevated? What should the investor watch?"
+    )
+
+
+def run_feynman_async(section: str, ticker: str, signals: dict | None = None) -> str:
     job_id = str(uuid.uuid4())
     _jobs[job_id] = {"status": "pending", "result": "", "error": ""}
-    query = QUERIES.get(section, "Summarise ML methods used in quantitative finance.")
-    threading.Thread(target=_run, args=(job_id, query), daemon=True).start()
+    query = _build_research_query(section, ticker, signals)
+    threading.Thread(
+        target=_run, args=(job_id, query, _SYSTEM_PROMPT), daemon=True
+    ).start()
     return job_id
 
 
-def _run(job_id: str, query: str) -> None:
+def run_synthesis_async(ticker: str, signals: dict) -> str:
+    job_id = str(uuid.uuid4())
+    _jobs[job_id] = {"status": "pending", "result": "", "error": ""}
+    query = _build_synthesis_query(ticker, signals)
+    threading.Thread(
+        target=_run, args=(job_id, query, _SYNTHESIS_SYSTEM), daemon=True
+    ).start()
+    return job_id
+
+
+def run_pca_interpret_async(pca_data: dict) -> str:
+    job_id = str(uuid.uuid4())
+    _jobs[job_id] = {"status": "pending", "result": "", "error": ""}
+    query = _build_pca_query(pca_data)
+    threading.Thread(
+        target=_run, args=(job_id, query, _PCA_SYSTEM), daemon=True
+    ).start()
+    return job_id
+
+
+def _run(job_id: str, query: str, system_prompt: str) -> None:
     try:
         client = openai.OpenAI()
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": query},
             ],
             max_tokens=1200,

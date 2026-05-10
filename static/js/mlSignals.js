@@ -3,6 +3,7 @@
 
     var _sessionCache = {};
     var _activeIntervals = [];
+    var _tickerSignals = {};
 
     function clearSession() {
         Object.keys(_sessionCache).forEach(function (k) { delete _sessionCache[k]; });
@@ -160,7 +161,10 @@
                 }
 
                 var varContainer = document.getElementById('ml-pca-var');
-                if (varContainer) { varContainer.innerHTML = varHtml; }
+                if (varContainer) {
+                    varContainer.innerHTML = varHtml;
+                    if (pv) { _addPcaInterpretButton(varContainer, pv); }
+                }
             }
         }).catch(function (err) {
             section.innerHTML = '<p style="color:#e74c3c;">PCA error: ' + err.toString() + '</p>';
@@ -256,13 +260,44 @@
             }
         }
 
-        // Inject Feynman research button into RF Direction Signal section (first .ml-section)
-        if (!dirData.insufficient_data) {
-            var rfSection = card.querySelector('.ml-section');
-            if (rfSection) {
-                _addResearchButton(rfSection, ticker, 'direction');
+        // Store signals for synthesis
+        _tickerSignals[ticker] = {
+            direction: dirData.insufficient_data ? null : {
+                signal: dirData.signal,
+                confidence: dirData.confidence
+            },
+            regime: {
+                hmm: regData.hmm_regime,
+                kmeans: regData.current_regime,
+                agree: regData.models_agree
+            },
+            credit: credData.degenerate_labels || credData.insufficient_data ? null : {
+                p_distress: credData.p_distress,
+                top_factors: (credData.top_factors || []).slice(0, 3).map(function (f) {
+                    return typeof f === 'object' ? f.name : f;
+                })
+            },
+            lstm: lstmData.lstm_available === false ? null : {
+                signal: lstmData.signal,
+                confidence: lstmData.confidence
             }
-        }
+        };
+
+        // Inject Feynman research button per section
+        var mlSections = card.querySelectorAll('.ml-section');
+        var sectionKeys = ['direction', 'regime', 'credit', 'lstm'];
+        mlSections.forEach(function (sec, i) {
+            var key = sectionKeys[i];
+            if (!key) return;
+            if (key === 'direction' && dirData.insufficient_data) return;
+            if (key === 'credit' && (credData.degenerate_labels || credData.insufficient_data)) return;
+            if (key === 'lstm' && lstmData.lstm_available === false) return;
+            var sigs = (_tickerSignals[ticker] || {})[key];
+            _addResearchButton(sec, ticker, key, sigs);
+        });
+
+        // Synthesis button at card bottom
+        _addSynthesisButton(card, ticker);
     }
 
     // ---- Feynman Research helpers ----
@@ -417,7 +452,8 @@
         sectionEl.appendChild(errEl);
     }
 
-    function _pollResearchJob(jobId, btn, sectionEl) {
+    function _pollResearchJob(jobId, btn, sectionEl, resetText) {
+        var label = resetText || 'Research This Model';
         var interval = setInterval(function () {
             fetch('/api/feynman_status/' + jobId)
                 .then(function (r) { return r.json(); })
@@ -425,13 +461,13 @@
                     if (d.status === 'done') {
                         clearInterval(interval);
                         _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
-                        btn.textContent = 'Research This Model';
+                        btn.textContent = label;
                         btn.disabled = false;
                         _renderResearchPanel(sectionEl, d.result);
                     } else if (d.status === 'error') {
                         clearInterval(interval);
                         _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
-                        btn.textContent = 'Research This Model';
+                        btn.textContent = label;
                         btn.disabled = false;
                         _renderResearchError(sectionEl, d.error || 'Unknown error');
                     }
@@ -439,20 +475,25 @@
                 .catch(function () {
                     clearInterval(interval);
                     _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
-                    btn.textContent = 'Research This Model';
+                    btn.textContent = label;
                     btn.disabled = false;
                 });
         }, 5000);
         _activeIntervals.push(interval);
     }
 
-    function _startResearch(btn, sectionEl, ticker, section) {
+    function _startResearch(btn, sectionEl, ticker, section, signals, endpoint, loadingText, resetText) {
         btn.disabled = true;
-        btn.textContent = 'Searching academic papers…';
-        fetch('/api/feynman_research', {
+        btn.textContent = loadingText || 'Searching academic papers…';
+        var body = endpoint === '/api/feynman_synthesis'
+            ? { ticker: ticker, signals: signals }
+            : endpoint === '/api/feynman_pca_interpret'
+            ? { pca_data: signals }
+            : { section: section, ticker: ticker, signals: signals };
+        fetch(endpoint || '/api/feynman_research', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ section: section, ticker: ticker })
+            body: JSON.stringify(body)
         })
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -461,19 +502,52 @@
                     btn.disabled = true;
                     return;
                 }
-                _pollResearchJob(d.job_id, btn, sectionEl);
+                _pollResearchJob(d.job_id, btn, sectionEl, resetText);
             })
             .catch(function () {
-                btn.textContent = 'Research This Model';
+                btn.textContent = resetText || 'Research This Model';
                 btn.disabled = false;
             });
     }
 
-    function _addResearchButton(sectionEl, ticker, section) {
+    function _pollResearchJobExt(jobId, btn, sectionEl, resetText) {
+        return _pollResearchJob(jobId, btn, sectionEl, resetText);
+    }
+
+    function _addResearchButton(sectionEl, ticker, section, signals) {
         var btn = document.createElement('button');
         btn.textContent = 'Research This Model';
         btn.className = 'feynman-research-btn';
-        btn.onclick = function () { _startResearch(btn, sectionEl, ticker, section); };
+        btn.onclick = function () {
+            _startResearch(btn, sectionEl, ticker, section, signals || null,
+                '/api/feynman_research', 'Searching academic papers…', 'Research This Model');
+        };
+        sectionEl.appendChild(btn);
+    }
+
+    function _addSynthesisButton(cardEl, ticker) {
+        var wrap = document.createElement('div');
+        wrap.className = 'feynman-synthesis-wrap';
+        var btn = document.createElement('button');
+        btn.textContent = 'Synthesise Signals';
+        btn.className = 'feynman-synthesis-btn';
+        btn.onclick = function () {
+            var sigs = _tickerSignals[ticker] || {};
+            _startResearch(btn, wrap, ticker, null, sigs,
+                '/api/feynman_synthesis', 'Synthesising signals…', 'Synthesise Signals');
+        };
+        wrap.appendChild(btn);
+        cardEl.appendChild(wrap);
+    }
+
+    function _addPcaInterpretButton(sectionEl, pcaData) {
+        var btn = document.createElement('button');
+        btn.textContent = 'Interpret Portfolio Risk';
+        btn.className = 'feynman-research-btn';
+        btn.onclick = function () {
+            _startResearch(btn, sectionEl, null, null, pcaData,
+                '/api/feynman_pca_interpret', 'Interpreting risk…', 'Interpret Portfolio Risk');
+        };
         sectionEl.appendChild(btn);
     }
 

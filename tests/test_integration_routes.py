@@ -1117,3 +1117,73 @@ class TestFeynmanRoutes:
         data = resp.get_json()
         assert data["status"] == "error"
         assert "unknown job_id" in data.get("error", "")
+
+    def test_feynman_research_passes_signals_to_runner(self, client):
+        """POST /api/feynman_research with signals → runner receives signals kwarg."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", True), patch(
+            "src.analytics.feynman_runner.run_feynman_async",
+            return_value="job-sig-123",
+        ) as mock_run:
+            signals = {"signal": "Bullish", "confidence": 0.73}
+            resp = client.post(
+                "/api/feynman_research",
+                json={"section": "direction", "ticker": "AAPL", "signals": signals},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["job_id"] == "job-sig-123"
+            mock_run.assert_called_once_with("direction", "AAPL", signals)
+
+    def test_feynman_synthesis_returns_job_id(self, client):
+        """POST /api/feynman_synthesis → {job_id: ...}."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", True), patch(
+            "src.analytics.feynman_runner.run_synthesis_async",
+            return_value="synth-uuid-456",
+        ):
+            resp = client.post(
+                "/api/feynman_synthesis",
+                json={
+                    "ticker": "AAPL",
+                    "signals": {"direction": {"signal": "Bullish", "confidence": 0.73}},
+                },
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["job_id"] == "synth-uuid-456"
+
+    def test_feynman_synthesis_unavailable(self, client):
+        """POST /api/feynman_synthesis when unavailable → {available: false}."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", False):
+            resp = client.post(
+                "/api/feynman_synthesis", json={"ticker": "AAPL", "signals": {}}
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["available"] is False
+
+    def test_feynman_pca_interpret_returns_job_id(self, client):
+        """POST /api/feynman_pca_interpret → {job_id: ...}."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", True), patch(
+            "src.analytics.feynman_runner.run_pca_interpret_async",
+            return_value="pca-uuid-789",
+        ):
+            resp = client.post(
+                "/api/feynman_pca_interpret",
+                json={"pca_data": {"port_daily_std_pct": 1.8, "var_99_1d_pct": 4.2}},
+            )
+            assert resp.status_code == 200
+            assert resp.get_json()["job_id"] == "pca-uuid-789"
+
+    def test_feynman_pca_interpret_unavailable(self, client):
+        """POST /api/feynman_pca_interpret when unavailable → {available: false}."""
+        from unittest.mock import patch
+
+        with patch("src.analytics.feynman_runner.FEYNMAN_AVAILABLE", False):
+            resp = client.post("/api/feynman_pca_interpret", json={"pca_data": {}})
+            assert resp.status_code == 200
+            assert resp.get_json()["available"] is False
