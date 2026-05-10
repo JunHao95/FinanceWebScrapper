@@ -1,13 +1,20 @@
-import re
-import shutil
-import subprocess
+import os
 import threading
 import uuid
 
-FEYNMAN_AVAILABLE = shutil.which("feynman") is not None
+import openai
 
-_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+FEYNMAN_AVAILABLE = bool(os.getenv("OPENAI_API_KEY"))
+
 _jobs: dict = {}
+
+_SYSTEM_PROMPT = (
+    "You are a research assistant that summarises academic literature concisely. "
+    "Format your response in markdown: use ## for the title, ### for sections, "
+    "a pipe table for key papers (columns: #, Paper, Key Finding), "
+    "bullet points for consensus findings, and numbered lists for limitations. "
+    "Keep the total response under 600 words."
+)
 
 QUERIES = {
     "direction": (
@@ -18,35 +25,21 @@ QUERIES = {
     "pca": (
         "Summarise academic literature on PCA factor decomposition for equity portfolio"
         " risk attribution. Include limitations of linear factor models."
+        " Cite 3-5 papers."
     ),
     "regime": (
         "Summarise literature on K-Means and HMM market regime detection in equities."
-        " Compare the two approaches."
+        " Compare the two approaches. Cite 3-5 papers."
     ),
     "credit": (
         "Summarise literature on ML-based corporate credit risk scoring. Include"
-        " limitations of training on synthetic distress labels."
+        " limitations of training on synthetic distress labels. Cite 3-5 papers."
     ),
     "lstm": (
         "Summarise academic literature on LSTM models for stock return direction"
-        " prediction. Include known pitfalls and leakage risks."
+        " prediction. Include known pitfalls and leakage risks. Cite 3-5 papers."
     ),
 }
-
-
-_PREAMBLE_RE = re.compile(r"^.*?(?=^#{1,3} )", re.MULTILINE | re.DOTALL)
-
-
-def _strip_ansi(text: str) -> str:
-    return _ANSI_ESCAPE.sub("", text)
-
-
-def _strip_preamble(text: str) -> str:
-    """Remove CLI preamble lines before the first markdown heading."""
-    m = _PREAMBLE_RE.match(text)
-    if m and m.end() > 0:
-        return text[m.end() :]
-    return text
 
 
 def run_feynman_async(section: str, ticker: str) -> str:
@@ -59,27 +52,31 @@ def run_feynman_async(section: str, ticker: str) -> str:
 
 def _run(job_id: str, query: str) -> None:
     try:
-        proc = subprocess.run(
-            ["feynman", "--prompt", query],
-            capture_output=True,
-            text=True,
-            timeout=120,
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": query},
+            ],
+            max_tokens=1200,
+            timeout=90,
         )
-        stdout = _strip_preamble(_strip_ansi(proc.stdout))
-        stderr = _strip_ansi(proc.stderr)
-        if not stdout.strip():
+        result = response.choices[0].message.content or ""
+        if not result.strip():
             _jobs[job_id] = {
                 "status": "error",
                 "result": "",
-                "error": (
-                    "Feynman returned empty output — check `feynman status`"
-                    " and API key configuration."
-                ),
+                "error": "OpenAI returned empty response.",
             }
         else:
-            _jobs[job_id] = {"status": "done", "result": stdout, "error": stderr}
-    except subprocess.TimeoutExpired:
-        _jobs[job_id] = {"status": "error", "result": "", "error": "timeout"}
+            _jobs[job_id] = {"status": "done", "result": result, "error": ""}
+    except openai.AuthenticationError:
+        _jobs[job_id] = {
+            "status": "error",
+            "result": "",
+            "error": "Invalid OPENAI_API_KEY — check environment variables.",
+        }
     except Exception as exc:  # noqa: BLE001
         _jobs[job_id] = {"status": "error", "result": "", "error": str(exc)}
 

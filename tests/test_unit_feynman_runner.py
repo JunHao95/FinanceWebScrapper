@@ -1,3 +1,4 @@
+import os
 import time
 import importlib
 from unittest.mock import MagicMock, patch
@@ -6,13 +7,26 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
+def _make_openai_response(content: str):
+    msg = MagicMock()
+    msg.content = content
+    choice = MagicMock()
+    choice.message = msg
+    resp = MagicMock()
+    resp.choices = [choice]
+    return resp
+
+
 def test_run_feynman_async_happy_path():
     import src.analytics.feynman_runner as fr
 
-    mock_proc = MagicMock()
-    mock_proc.stdout = "# Random Forests in Finance\n\nSome content."
-    mock_proc.stderr = ""
-    with patch("src.analytics.feynman_runner.subprocess.run", return_value=mock_proc):
+    mock_resp = _make_openai_response(
+        "## Random Forests in Finance\n\n### Core Idea\nSome content."
+    )
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = mock_resp
+
+    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
         job_id = fr.run_feynman_async("direction", "AAPL")
         status = None
         for _ in range(20):
@@ -25,13 +39,12 @@ def test_run_feynman_async_happy_path():
 
 
 def test_run_feynman_async_timeout():
-    import subprocess
     import src.analytics.feynman_runner as fr
 
-    with patch(
-        "src.analytics.feynman_runner.subprocess.run",
-        side_effect=subprocess.TimeoutExpired(["feynman"], 120),
-    ):
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = Exception("timeout")
+
+    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
         job_id = fr.run_feynman_async("direction", "AAPL")
         status = None
         for _ in range(20):
@@ -40,16 +53,17 @@ def test_run_feynman_async_timeout():
                 break
             time.sleep(0.05)
     assert status["status"] == "error"
-    assert status["error"] == "timeout"
+    assert "timeout" in status["error"].lower()
 
 
 def test_empty_output_guard():
     import src.analytics.feynman_runner as fr
 
-    mock_proc = MagicMock()
-    mock_proc.stdout = ""
-    mock_proc.stderr = "auth error"
-    with patch("src.analytics.feynman_runner.subprocess.run", return_value=mock_proc):
+    mock_resp = _make_openai_response("")
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.return_value = mock_resp
+
+    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
         job_id = fr.run_feynman_async("direction", "AAPL")
         status = None
         for _ in range(20):
@@ -58,21 +72,40 @@ def test_empty_output_guard():
                 break
             time.sleep(0.05)
     assert status["status"] == "error"
-    assert "empty output" in status["error"].lower()
+    assert "empty" in status["error"].lower()
 
 
-def test_ansi_stripping():
+def test_auth_error_returns_helpful_message():
+    import openai as _openai
     import src.analytics.feynman_runner as fr
 
-    assert fr._strip_ansi("\x1b[38;2;127;187;179mHello\x1b[0m") == "Hello"
-    assert fr._strip_ansi("\x1b[1;32mBold Green\x1b[0m") == "Bold Green"
-    assert fr._strip_ansi("No ANSI") == "No ANSI"
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = _openai.AuthenticationError(
+        "invalid key", response=MagicMock(), body={}
+    )
+
+    with patch("src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        status = None
+        for _ in range(20):
+            status = fr.get_job_status(job_id)
+            if status["status"] != "pending":
+                break
+            time.sleep(0.05)
+    assert status["status"] == "error"
+    assert "OPENAI_API_KEY" in status["error"]
 
 
-def test_feynman_available_false():
+def test_feynman_available_reflects_env_var():
     import src.analytics.feynman_runner as fr
 
-    with patch("shutil.which", return_value=None):
+    with patch.dict(os.environ, {}, clear=True):
+        os.environ.pop("OPENAI_API_KEY", None)
         importlib.reload(fr)
         assert fr.FEYNMAN_AVAILABLE is False
-    importlib.reload(fr)  # restore after test
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}):
+        importlib.reload(fr)
+        assert fr.FEYNMAN_AVAILABLE is True
+
+    importlib.reload(fr)  # restore
