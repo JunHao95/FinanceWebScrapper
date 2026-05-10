@@ -247,7 +247,7 @@ def _run_subprocess(job_id: str, query: str) -> None:
             ["feynman", "--prompt", query],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,
         )
         stdout = _ANSI_ESCAPE.sub("", proc.stdout)
         stderr = _ANSI_ESCAPE.sub("", proc.stderr)

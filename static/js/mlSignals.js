@@ -440,7 +440,7 @@
     function _renderResearchError(sectionEl, errorText) {
         var isTimeout = errorText === 'timeout';
         var msg = isTimeout
-            ? 'Research timed out — Feynman took longer than 2 minutes.'
+            ? 'Research timed out — Feynman took longer than 5 minutes.'
             : ('Research error: ' + _escHtml(errorText));
         var existing = sectionEl.querySelector('.feynman-error');
         if (existing) existing.remove();
@@ -454,7 +454,24 @@
 
     function _pollResearchJob(jobId, btn, sectionEl, resetText) {
         var label = resetText || 'Research This Model';
+        var elapsed = 0;
+        var maxPolls = 60; // 5 min cap (60 × 5s)
+        var polls = 0;
+
         var interval = setInterval(function () {
+            elapsed += 5;
+            polls += 1;
+            btn.textContent = 'Searching… (' + elapsed + 's)';
+
+            if (polls >= maxPolls) {
+                clearInterval(interval);
+                _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
+                btn.textContent = label;
+                btn.disabled = false;
+                _renderResearchError(sectionEl, 'timeout');
+                return;
+            }
+
             fetch('/api/feynman_status/' + jobId)
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
