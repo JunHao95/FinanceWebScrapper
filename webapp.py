@@ -2625,6 +2625,26 @@ def internal_error(error):
     return jsonify({"success": False, "error": "Internal server error"}), 500
 
 
+@app.route("/api/feynman_research", methods=["POST"])
+def post_feynman_research():
+    from src.analytics.feynman_runner import FEYNMAN_AVAILABLE, run_feynman_async
+
+    if not FEYNMAN_AVAILABLE:
+        return jsonify({"available": False})
+    data = request.get_json(force=True) or {}
+    section = data.get("section", "direction")
+    ticker = data.get("ticker", "")
+    job_id = run_feynman_async(section, ticker)
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/feynman_status/<job_id>", methods=["GET"])
+def get_feynman_status(job_id):
+    from src.analytics.feynman_runner import get_job_status
+
+    return jsonify(get_job_status(job_id))
+
+
 if __name__ == "__main__":
     # Get port from environment or use default
     port = int(os.environ.get("PORT", 5173))

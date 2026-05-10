@@ -805,5 +805,14 @@ For issues, questions, or contributions:
 
 ---
 
+## Feynman Research Integration (Phase 29)
+
+Optional on-demand research sidebar in the ML Signals tab. Requires the `feynman` CLI (`pip install feynman-karpathy`) and API keys (`EXA_API_KEY`, `PERPLEXITY_API_KEY`). Silently hidden when Feynman is not installed — no deploy breakage.
+
+- `POST /api/feynman_research` — triggers async research job; returns `{"job_id": "..."}` immediately or `{"available": false}` when CLI absent.
+- `GET /api/feynman_status/<job_id>` — polls job state (`pending`, `done`, `error`) and retrieves full output once complete.
+
+---
+
 **Happy Analyzing! 📈💹**
 
