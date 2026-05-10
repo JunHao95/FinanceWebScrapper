@@ -34,8 +34,19 @@ QUERIES = {
 }
 
 
+_PREAMBLE_RE = re.compile(r"^.*?(?=^#{1,3} )", re.MULTILINE | re.DOTALL)
+
+
 def _strip_ansi(text: str) -> str:
     return _ANSI_ESCAPE.sub("", text)
+
+
+def _strip_preamble(text: str) -> str:
+    """Remove CLI preamble lines before the first markdown heading."""
+    m = _PREAMBLE_RE.match(text)
+    if m and m.end() > 0:
+        return text[m.end() :]
+    return text
 
 
 def run_feynman_async(section: str, ticker: str) -> str:
@@ -54,7 +65,7 @@ def _run(job_id: str, query: str) -> None:
             text=True,
             timeout=120,
         )
-        stdout = _strip_ansi(proc.stdout)
+        stdout = _strip_preamble(_strip_ansi(proc.stdout))
         stderr = _strip_ansi(proc.stderr)
         if not stdout.strip():
             _jobs[job_id] = {

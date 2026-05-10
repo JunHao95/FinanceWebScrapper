@@ -1853,3 +1853,53 @@ details[open] .feynman-panel-summary::before {
 .feynman-panel-body cite {
     color: #585b70;
 }
+
+/* Feynman markdown table */
+.feynman-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88em;
+    margin: 10px 0;
+    color: #cdd6f4;
+}
+.feynman-table th {
+    background: #313244;
+    color: #89b4fa;
+    padding: 6px 10px;
+    text-align: left;
+    border: 1px solid #45475a;
+    font-weight: 600;
+}
+.feynman-table td {
+    padding: 5px 10px;
+    border: 1px solid #313244;
+    vertical-align: top;
+    line-height: 1.5;
+}
+.feynman-table tr:nth-child(even) td {
+    background: #1e1e2e;
+}
+.feynman-panel-body h3,
+.feynman-panel-body h4,
+.feynman-panel-body h5 {
+    color: #89b4fa;
+    margin: 12px 0 4px;
+    font-size: 1em;
+}
+.feynman-panel-body hr {
+    border: none;
+    border-top: 1px solid #313244;
+    margin: 10px 0;
+}
+.feynman-panel-body ul,
+.feynman-panel-body ol {
+    margin: 4px 0 8px 18px;
+    padding: 0;
+}
+.feynman-panel-body li {
+    margin-bottom: 3px;
+    line-height: 1.5;
+}
+.feynman-panel-body p {
+    margin: 4px 0 8px;
+}
