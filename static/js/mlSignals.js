@@ -2,9 +2,12 @@
     'use strict';
 
     var _sessionCache = {};
+    var _activeIntervals = [];
 
     function clearSession() {
         Object.keys(_sessionCache).forEach(function (k) { delete _sessionCache[k]; });
+        _activeIntervals.forEach(function (id) { clearInterval(id); });
+        _activeIntervals = [];
     }
 
     function _createTickerShell(ticker) {
@@ -252,6 +255,119 @@
                 Plotly.newPlot('ml-lstm-chart-' + ticker, lstmData.loss_curve_traces, lstmData.layout || {}, { staticPlot: true, responsive: true });
             }
         }
+
+        // Inject Feynman research button into RF Direction Signal section (first .ml-section)
+        if (!dirData.insufficient_data) {
+            var rfSection = card.querySelector('.ml-section');
+            if (rfSection) {
+                _addResearchButton(rfSection, ticker, 'direction');
+            }
+        }
+    }
+
+    // ---- Feynman Research helpers ----
+
+    function _escHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function _renderMarkdown(text) {
+        return text
+            .replace(/```(\w*)\n?([\s\S]*?)```/g, function (_, lang, code) {
+                return '<pre><code>' + _escHtml(code.trim()) + '</code></pre>';
+            })
+            .replace(/`([^`]+)`/g, function (_, c) { return '<code>' + _escHtml(c) + '</code>'; })
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+            .replace(/\n{2,}/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+    }
+
+    function _renderResearchPanel(sectionEl, markdownText) {
+        var existing = sectionEl.querySelector('.feynman-panel');
+        if (existing) existing.remove();
+        var panel = document.createElement('details');
+        panel.className = 'feynman-panel';
+        panel.innerHTML =
+            '<summary class="feynman-panel-summary">Academic Context</summary>' +
+            '<div class="feynman-panel-body"><p>' + _renderMarkdown(markdownText) + '</p></div>';
+        sectionEl.appendChild(panel);
+    }
+
+    function _renderResearchError(sectionEl, errorText) {
+        var isTimeout = errorText === 'timeout';
+        var msg = isTimeout
+            ? 'Research timed out — Feynman took longer than 2 minutes.'
+            : ('Research error: ' + _escHtml(errorText));
+        var existing = sectionEl.querySelector('.feynman-error');
+        if (existing) existing.remove();
+        var errEl = document.createElement('p');
+        errEl.className = 'feynman-error';
+        errEl.style.color = '#e74c3c';
+        errEl.style.fontSize = '0.85em';
+        errEl.textContent = msg;
+        sectionEl.appendChild(errEl);
+    }
+
+    function _pollResearchJob(jobId, btn, sectionEl) {
+        var interval = setInterval(function () {
+            fetch('/api/feynman_status/' + jobId)
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d.status === 'done') {
+                        clearInterval(interval);
+                        _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
+                        btn.textContent = 'Research This Model';
+                        btn.disabled = false;
+                        _renderResearchPanel(sectionEl, d.result);
+                    } else if (d.status === 'error') {
+                        clearInterval(interval);
+                        _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
+                        btn.textContent = 'Research This Model';
+                        btn.disabled = false;
+                        _renderResearchError(sectionEl, d.error || 'Unknown error');
+                    }
+                })
+                .catch(function () {
+                    clearInterval(interval);
+                    _activeIntervals = _activeIntervals.filter(function (id) { return id !== interval; });
+                    btn.textContent = 'Research This Model';
+                    btn.disabled = false;
+                });
+        }, 5000);
+        _activeIntervals.push(interval);
+    }
+
+    function _startResearch(btn, sectionEl, ticker, section) {
+        btn.disabled = true;
+        btn.textContent = 'Searching academic papers…';
+        fetch('/api/feynman_research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section: section, ticker: ticker })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.available === false) {
+                    btn.textContent = 'Research unavailable';
+                    btn.disabled = true;
+                    return;
+                }
+                _pollResearchJob(d.job_id, btn, sectionEl);
+            })
+            .catch(function () {
+                btn.textContent = 'Research This Model';
+                btn.disabled = false;
+            });
+    }
+
+    function _addResearchButton(sectionEl, ticker, section) {
+        var btn = document.createElement('button');
+        btn.textContent = 'Research This Model';
+        btn.className = 'feynman-research-btn';
+        btn.onclick = function () { _startResearch(btn, sectionEl, ticker, section); };
+        sectionEl.appendChild(btn);
     }
 
     function _renderError(ticker, message) {

@@ -1782,3 +1782,74 @@ body.results-loaded .skeleton-preview {
     padding: 20px 0;
     text-align: center;
 }
+
+/* ---- Phase 29: Feynman Research Integration ---- */
+.feynman-research-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 5px 12px;
+    background: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.feynman-research-btn:hover:not(:disabled) {
+    background: #45475a;
+}
+.feynman-research-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.feynman-panel {
+    margin-top: 10px;
+    background: #1e1e2e;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.feynman-panel-summary {
+    padding: 8px 12px;
+    color: #cdd6f4;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+.feynman-panel-summary::-webkit-details-marker {
+    display: none;
+}
+.feynman-panel-summary::before {
+    content: '\25B6\00A0';
+    font-size: 0.75em;
+    color: #585b70;
+}
+details[open] .feynman-panel-summary::before {
+    content: '\25BC\00A0';
+}
+.feynman-panel-body {
+    padding: 10px 14px;
+    color: #cdd6f4;
+    font-size: 0.9em;
+    line-height: 1.6;
+    border-top: 1px solid #313244;
+}
+.feynman-panel-body pre {
+    background: #313244;
+    padding: 8px 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85em;
+}
+.feynman-panel-body code {
+    background: #313244;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.88em;
+}
+.feynman-panel-body small,
+.feynman-panel-body cite {
+    color: #585b70;
+}
