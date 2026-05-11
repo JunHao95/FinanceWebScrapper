@@ -807,7 +807,11 @@ For issues, questions, or contributions:
 
 ## Feynman Research Integration (Phase 29)
 
-On-demand AI research with **dual-mode execution**: uses the local `feynman` CLI subprocess when running on a developer machine, and switches to OpenAI (`gpt-4o-mini`) automatically when deployed on Render (detected via the `RENDER` env var). Set `OPENAI_API_KEY` in Render's environment variables for cloud deployment. Features:
+On-demand AI research with **dual-mode execution**: uses the local `feynman` CLI subprocess when running on a developer machine, and switches to OpenAI (`gpt-4o`) automatically when deployed on Render (detected via the `RENDER` env var). Set `OPENAI_API_KEY` in Render's environment variables for cloud deployment.
+
+The LLM prompts enforce structured output with mandatory sections and hard rules: citations are prefixed `⚠️ UNVERIFIED`, PCA outputs include a **VaR Contribution Reconciliation** section explaining any sum-vs-total discrepancy as a methodological mismatch (not factor correlation), and synthesis outputs require a **Signal Agreement Table** with per-claim confidence tiers (`[COMPUTED]`, `[INFERRED]`, `[SPECULATIVE]`). After running analysis the app defaults to the **ML Signals** tab.
+
+Features:
 
 - **Research This Model** button on each ML section (RF Direction, Market Regime, Credit Risk, LSTM) — generates signal-aware academic literature summaries that include the ticker's current signal values in the prompt.
 - **Synthesise Signals** button at the bottom of each ticker card — combines all four ML signals into a bull/bear thesis paragraph via a single LLM call.

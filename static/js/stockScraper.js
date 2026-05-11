@@ -247,8 +247,8 @@ const StockScraper = {
             }
         }
         
-        // Switch to Auto Analysis tab so auto-run results are immediately visible
-        TabManager.switchTab('autoanalysis');
+        // Switch to ML Signals tab so auto-run results are immediately visible
+        TabManager.switchTab('mlsignals');
 
         const autoanalysisCountEl = document.getElementById('autoanalysisCount');
         if (autoanalysisCountEl) {

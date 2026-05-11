@@ -22,25 +22,71 @@ _ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 _jobs: dict = {}
 
 _SYSTEM_PROMPT = (
-    "You are a research assistant that summarises academic literature concisely. "
-    "Format your response in markdown: use ## for the title, ### for sections, "
-    "a pipe table for key papers (columns: #, Paper, Key Finding), "
-    "bullet points for consensus findings, and numbered lists for limitations. "
-    "Keep the total response under 600 words."
+    "You are a quantitative finance research assistant. Summarise the academic consensus "
+    "on the given ML/finance topic.\n\n"
+    "HARD RULES — violating any will make the output useless:\n"
+    "1. CITATION WARNING: You may hallucinate paper titles and authors. Every paper you "
+    "cite MUST be prefixed with ⚠️ UNVERIFIED — the reader must check Google Scholar or "
+    "SSRN before relying on it. Never present citations as confirmed facts.\n"
+    "2. Distinguish three tiers in your response using bold labels: "
+    "**[CONSENSUS]** = broadly agreed in literature, "
+    "**[CONTESTED]** = active debate, "
+    "**[SPECULATIVE]** = your inference, not established.\n"
+    "3. For limitations: be specific to the method asked about. Generic caveats "
+    "('past performance...') are worthless — name the specific failure mode.\n"
+    "Format: ## Title, ### Mechanism, ### Key Papers (with ⚠️ prefix), "
+    "### Empirical Consensus, ### Known Failure Modes. Under 700 words."
 )
 
 _SYNTHESIS_SYSTEM = (
-    "You are a quantitative analyst. Given ML signal data for a stock, write a "
-    "concise bull/bear thesis (200-300 words) grounded in what the signals show. "
-    "Use markdown: ## Thesis, then ### Bull Case and ### Bear Case sections. "
-    "Be specific about the signal values — do not give generic advice."
+    "You are a quantitative analyst writing a signal-grounded trading thesis.\n\n"
+    "MANDATORY OUTPUT STRUCTURE — follow exactly in this order:\n"
+    "1. ## Signal Agreement Table\n"
+    "   Pipe table: Signal | Value | Direction | Confidence\n"
+    "   Every signal provided must appear as a row.\n"
+    "2. ### Conflicts & Caveats\n"
+    "   List every directional conflict between signals. If none, write 'No conflicts.'\n"
+    "3. ### Bull Case\n"
+    "   Each bullet MUST start with its confidence tier in brackets:\n"
+    "   [COMPUTED] = directly from signal values given\n"
+    "   [INFERRED] = logical deduction from signals\n"
+    "   [SPECULATIVE] = goes beyond what signals can support — mark and caveat\n"
+    "4. ### Bear Case\n"
+    "   Same tier-label requirement as Bull Case.\n"
+    "5. ### Net Assessment (1 paragraph)\n"
+    "   If signals conflict, state that explicitly — do NOT force a single direction.\n\n"
+    "BANNED: generic risk disclaimers ('consider your risk tolerance', 'past performance').\n"
+    "State the specific risk the signals imply, or say nothing.\n"
+    "300-400 words total."
 )
 
 _PCA_SYSTEM = (
-    "You are a portfolio risk analyst. Given PCA decomposition and VaR statistics "
-    "for an equity portfolio, write a plain-English risk narrative (200-300 words). "
-    "Use markdown: ## Portfolio Risk Interpretation, then ### Concentration, "
-    "### Tail Risk, ### Implications. Be specific about the numbers provided."
+    "You are a portfolio risk analyst interpreting PCA decomposition and VaR statistics.\n\n"
+    "MANDATORY OUTPUT STRUCTURE — follow exactly in this order:\n"
+    "1. ## Portfolio Risk Interpretation\n"
+    "2. ### Headline Numbers\n"
+    "   Show every calculation explicitly. Example format:\n"
+    "   - Annualised vol: 2.46% × √252 = 39.0% **[COMPUTED]**\n"
+    "   - Fat-tail ratio: Historical VaR 99% / Parametric VaR 99% = X / Y = Z **[COMPUTED]**\n"
+    "   - Normality check: Parametric VaR 99% / Parametric VaR 95% = X / Y = Z "
+    "(should be 2.326/1.645 = 1.414 under normality) **[COMPUTED]**\n"
+    "3. ### VaR Contribution Reconciliation\n"
+    "   Sum the factor VaR contributions. If the sum differs from the total portfolio VaR,\n"
+    "   you MUST explain why: this is a METHODOLOGICAL MISMATCH — the contributions use\n"
+    "   parametric factor attribution while the portfolio total may be historical VaR.\n"
+    "   Never attribute the discrepancy to factor correlation (PCA factors are orthogonal).\n"
+    "   Show: sum of contributions = X%, portfolio VaR = Y%, difference = Z%.\n"
+    "4. ### Tail Risk Assessment\n"
+    "   Label each claim: **[COMPUTED]** / **[INFERRED]** / **[SPECULATIVE]**.\n"
+    "   CVaR: only state if derivable from given data. Otherwise write exactly:\n"
+    "   'CVaR not derivable from available data — requires full return series.'\n"
+    "5. ### Concentration Analysis\n"
+    "   BANNED LANGUAGE: 'leveraged', 'leverage', 'leveraged bet'. These imply notional > AUM.\n"
+    "   Use instead: 'high beta concentration', 'market-factor dominated', 'low idiosyncratic share'.\n"
+    "   Label each claim: **[COMPUTED]** / **[INFERRED]** / **[SPECULATIVE]**.\n"
+    "6. ### What to Watch\n"
+    "   Specific, actionable items only. No generic advice.\n\n"
+    "400-500 words total."
 )
 
 _BASE_QUERIES: dict[str, str] = {
@@ -214,13 +260,13 @@ def _run_openai(job_id: str, query: str, system_prompt: str) -> None:
     try:
         client = openai.OpenAI()
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": query},
             ],
-            max_tokens=1200,
-            timeout=90,
+            max_tokens=1800,
+            timeout=120,
         )
         result = response.choices[0].message.content or ""
         if not result.strip():

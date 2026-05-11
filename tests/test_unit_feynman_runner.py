@@ -332,3 +332,108 @@ def test_feynman_available_render_without_key():
         assert fr.FEYNMAN_AVAILABLE is False
 
     importlib.reload(fr)  # restore
+
+
+# ---------------------------------------------------------------------------
+# System prompt integrity — verify hard constraints present
+# ---------------------------------------------------------------------------
+
+
+def test_research_system_prompt_requires_citation_warning():
+    import src.analytics.feynman_runner as fr
+
+    assert "UNVERIFIED" in fr._SYSTEM_PROMPT
+    assert "CONSENSUS" in fr._SYSTEM_PROMPT
+    assert "CONTESTED" in fr._SYSTEM_PROMPT
+
+
+def test_pca_system_prompt_forbids_correlation_claim():
+    import src.analytics.feynman_runner as fr
+
+    assert "orthogonal" in fr._PCA_SYSTEM.lower()
+    assert "methodological" in fr._PCA_SYSTEM.lower()
+
+
+def test_pca_system_prompt_bans_leverage_language():
+    import src.analytics.feynman_runner as fr
+
+    # Prompt must contain the ban instruction, not use the word as a claim
+    assert "BANNED LANGUAGE" in fr._PCA_SYSTEM
+    assert (
+        "leveraged bet" in fr._PCA_SYSTEM.lower()
+        or "leveraged'" in fr._PCA_SYSTEM.lower()
+    )
+
+
+def test_pca_system_prompt_requires_var_reconciliation_section():
+    import src.analytics.feynman_runner as fr
+
+    assert "VaR Contribution Reconciliation" in fr._PCA_SYSTEM
+    assert "METHODOLOGICAL MISMATCH" in fr._PCA_SYSTEM
+
+
+def test_pca_system_prompt_requires_confidence_labels():
+    import src.analytics.feynman_runner as fr
+
+    assert "[COMPUTED]" in fr._PCA_SYSTEM
+    assert "[INFERRED]" in fr._PCA_SYSTEM
+    assert "[SPECULATIVE]" in fr._PCA_SYSTEM
+
+
+def test_synthesis_system_prompt_requires_signal_table():
+    import src.analytics.feynman_runner as fr
+
+    assert "Signal Agreement Table" in fr._SYNTHESIS_SYSTEM
+    assert "[COMPUTED]" in fr._SYNTHESIS_SYSTEM
+    assert "[INFERRED]" in fr._SYNTHESIS_SYSTEM
+    assert "[SPECULATIVE]" in fr._SYNTHESIS_SYSTEM
+
+
+def test_synthesis_system_prompt_requires_mandatory_structure():
+    import src.analytics.feynman_runner as fr
+
+    assert "MANDATORY OUTPUT STRUCTURE" in fr._SYNTHESIS_SYSTEM
+    assert "Conflicts & Caveats" in fr._SYNTHESIS_SYSTEM
+    assert "Net Assessment" in fr._SYNTHESIS_SYSTEM
+
+
+def test_openai_uses_gpt4o_model():
+    import src.analytics.feynman_runner as fr
+
+    captured = {}
+
+    def fake_create(**kwargs):
+        captured["model"] = kwargs.get("model")
+        return _make_openai_response("## Result\n\nContent.")
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = fake_create
+
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
+        "src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client
+    ):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        _wait_job(fr, job_id)
+
+    assert captured["model"] == "gpt-4o"
+
+
+def test_openai_max_tokens_increased():
+    import src.analytics.feynman_runner as fr
+
+    captured = {}
+
+    def fake_create(**kwargs):
+        captured["max_tokens"] = kwargs.get("max_tokens")
+        return _make_openai_response("## Result\n\nContent.")
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = fake_create
+
+    with patch("src.analytics.feynman_runner._USE_OPENAI", True), patch(
+        "src.analytics.feynman_runner.openai.OpenAI", return_value=mock_client
+    ):
+        job_id = fr.run_feynman_async("direction", "AAPL")
+        _wait_job(fr, job_id)
+
+    assert captured["max_tokens"] >= 1500
