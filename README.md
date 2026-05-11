@@ -811,6 +811,8 @@ On-demand AI research with **dual-mode execution**: uses the local `feynman` CLI
 
 The LLM prompts enforce structured output with mandatory sections and hard rules: citations are prefixed `⚠️ UNVERIFIED`, PCA outputs include a **VaR Contribution Reconciliation** section explaining any sum-vs-total discrepancy as a methodological mismatch (not factor correlation), and synthesis outputs require a **Signal Agreement Table** with per-claim confidence tiers (`[COMPUTED]`, `[INFERRED]`, `[SPECULATIVE]`). After running analysis the app defaults to the **ML Signals** tab.
 
+**Bug fix**: K-Means `Ranging` regime was incorrectly mapped to `Bull` in the binary agreement check, causing "Models agree: Bull" to appear even when the market was ranging sideways. `Ranging` now maps to `None` (inconclusive); the UI shows a grey "Regime inconclusive" badge instead of a false bullish agreement signal.
+
 Features:
 
 - **Research This Model** button on each ML section (RF Direction, Market Regime, Credit Risk, LSTM) — generates signal-aware academic literature summaries that include the ticker's current signal values in the prompt.

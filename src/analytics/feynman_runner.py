@@ -173,7 +173,14 @@ def _build_synthesis_query(ticker: str, signals: dict) -> str:
         )
     r = signals.get("regime")
     if r:
-        agree_str = "agree" if r.get("agree") else "diverge"
+        _agree = r.get("agree")
+        agree_str = (
+            "agree"
+            if _agree is True
+            else (
+                "inconclusive — K-Means shows Ranging" if _agree is None else "diverge"
+            )
+        )
         parts.append(
             f"Market Regime: HMM={r.get('hmm', 'N/A')}, K-Means={r.get('kmeans', 'N/A')} (models {agree_str})"
         )

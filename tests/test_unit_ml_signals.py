@@ -231,3 +231,63 @@ def test_lstm_returns_valid_signal_locally():
 
     assert result["lstm_available"] is True
     assert result["signal"] in ("Bullish", "Bearish")
+
+
+# ---------------------------------------------------------------------------
+# Tests — _KM_TO_BINARY Ranging fix (bug fix/ranging-regime-binary-map)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_km_to_binary_ranging_maps_to_none():
+    """Ranging must not map to Bull — it returns None (inconclusive)."""
+    from src.analytics.ml_signals import _KM_TO_BINARY
+
+    assert _KM_TO_BINARY["Ranging"] is None
+
+
+@pytest.mark.unit
+def test_km_to_binary_bull_bear_volatile_unchanged():
+    from src.analytics.ml_signals import _KM_TO_BINARY
+
+    assert _KM_TO_BINARY["Bull"] == "Bull"
+    assert _KM_TO_BINARY["Bear"] == "Bear"
+    assert _KM_TO_BINARY["Volatile"] == "Bear"
+
+
+@pytest.mark.unit
+def test_kmeans_regime_ranging_sets_models_agree_to_none():
+    """When K-Means current regime is Ranging, models_agree must be None."""
+    if not IMPORT_OK:
+        pytest.skip("ml_signals not yet implemented")
+
+    ohlcv = _make_ohlcv()
+
+    with patch("src.analytics.ml_signals.fetch_ohlcv", return_value=ohlcv), patch(
+        "src.analytics.ml_signals.KMeans"
+    ) as mock_km, patch(
+        "src.analytics.regime_detection.RegimeDetector"
+    ) as mock_hmm_cls:
+        # Force K-Means to label current point as Ranging
+        km_instance = mock_km.return_value
+        n_rows = len(ohlcv) - 19  # rolling(20) drops first 19
+        km_instance.fit_predict.return_value = [0] * n_rows
+        km_instance.cluster_centers_ = [
+            [0.0005, 0.15],  # 0 = Ranging (moderate vol, moderate ret)
+            [0.002, 0.10],  # 1 = Bull
+            [-0.002, 0.10],  # 2 = Bear
+            [0.000, 0.40],  # 3 = Volatile
+        ]
+        # Force _label_clusters to assign 0 → Ranging
+        with patch(
+            "src.analytics.ml_signals._label_clusters",
+            return_value={0: "Ranging", 1: "Bull", 2: "Bear", 3: "Volatile"},
+        ):
+            # HMM returns Bull
+            hmm_instance = mock_hmm_cls.return_value
+            hmm_instance.fit.return_value = {"current_regime": "calm"}
+
+            result = compute_kmeans_regime("AAPL")
+
+    assert result["current_regime"] == "Ranging"
+    assert result["models_agree"] is None

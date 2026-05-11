@@ -344,7 +344,7 @@ _REGIME_COLOURS = {
     "Volatile": "#f39c12",
     "Ranging": "#7f849c",
 }
-_KM_TO_BINARY = {"Bull": "Bull", "Bear": "Bear", "Volatile": "Bear", "Ranging": "Bull"}
+_KM_TO_BINARY = {"Bull": "Bull", "Bear": "Bear", "Volatile": "Bear", "Ranging": None}
 
 
 def compute_kmeans_regime(ticker: str) -> dict:
@@ -390,9 +390,10 @@ def compute_kmeans_regime(ticker: str) -> dict:
     except Exception as exc:
         logger.debug("HMM unavailable: %s", exc)
 
+    km_binary = _KM_TO_BINARY.get(current_regime)
     models_agree = (
-        (_KM_TO_BINARY.get(current_regime) == hmm_regime)
-        if hmm_regime is not None
+        (km_binary == hmm_regime)
+        if (hmm_regime is not None and km_binary is not None)
         else None
     )
 

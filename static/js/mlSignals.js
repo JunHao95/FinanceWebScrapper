@@ -200,6 +200,8 @@
             html += ' <small style="color:#2ecc71;">Models agree</small>';
         } else if (regData.models_agree === false) {
             html += ' <small style="color:#f39c12;">Models diverge</small>';
+        } else if (regData.models_agree === null && regData.current_regime === 'Ranging') {
+            html += ' <small style="color:#7f849c;">Regime inconclusive</small>';
         }
         html += '<div id="ml-reg-chart-' + ticker + '" style="width:100%;height:200px;margin-top:10px;"></div>';
         html += '</div>';
