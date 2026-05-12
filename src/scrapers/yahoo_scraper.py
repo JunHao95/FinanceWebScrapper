@@ -225,6 +225,14 @@ class YahooFinanceScraper(BaseScraper):
             if info.get("marketCap"):
                 data["Market Cap (Yahoo)"] = f"{info.get('marketCap'):,.0f}"
 
+            # Currency and exchange metadata (used by frontend for display and DCF defaults)
+            currency = info.get("currency")
+            if currency:
+                data["Currency"] = currency
+            exchange = info.get("exchange") or info.get("exchangeTimezoneName")
+            if exchange:
+                data["Stock Exchange"] = exchange
+
             # Phase 14: Net Income and Total Assets for earnings quality module
             net_income = info.get("netIncomeToCommon", None)
             if net_income:

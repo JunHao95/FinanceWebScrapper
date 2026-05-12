@@ -108,6 +108,22 @@ Plans:
   6. **E2E tests** automate the browser flow: enter a ticker → click Run Analysis → wait for results → verify that the Stocks tab, Analytics tab, Stochastic Models tab, and Trading Indicators tab all render populated content without console errors.
 **Plans**: TBD
 
+### Phase 30: SGX Singapore Stock Integration
+**Goal**: SGX-listed tickers (e.g. `D05.SI`) work end-to-end in the webapp — data fetches correctly via yfinance, currency displays as SGD (`S$`), regression benchmark auto-selects the Straits Times Index (`^STI`), peer comparison shows a clear unavailability message instead of empty output, and DCF defaults to Singapore-appropriate WACC (8%) and growth values — with an exchange-detection utility (`src/utils/exchange_utils.py`) designed as an extension point for future markets.
+**Depends on**: None (parallel to other phases — touches data pipeline and analytics layer only)
+**Requirements**: SGX-01, SGX-02, SGX-03, SGX-04, SGX-05
+**Success Criteria** (what must be TRUE):
+  1. Entering `D05.SI` returns a populated stock card with `Currency: SGD` and at least 15 data fields.
+  2. Regression analysis for `D05.SI` uses `^STI` as the benchmark (not `SPY`).
+  3. Peer comparison panel for `D05.SI` shows "Peer comparison is not available for SGX-listed stocks" — no empty table, no silent failure.
+  4. DCF valuation panel pre-fills WACC at 8% and displays `S$` not `$` for SGD-denominated stocks.
+  5. All existing tests pass; `pytest tests/test_unit_exchange_utils.py` (7 tests) and `pytest tests/test_peer_comparison.py::TestPeersSGXSkip` (4 tests) are GREEN.
+**Plans**: 3 plans (executed as single implementation wave)
+Plans:
+- [x] 30-01-PLAN.md — Exchange utility + Google/Yahoo scraper fixes (wave 1)
+- [x] 30-02-PLAN.md — Analytics corrections: benchmark, peer skip, DCF currency passthrough (wave 2)
+- [x] 30-03-PLAN.md — Frontend: currency symbol, DCF defaults, peer message, tests, README (wave 3)
+
 ---
 
 ## Progress
@@ -127,6 +143,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 26. ML Finance Notebook Integration | 0/6 | Planning complete | - |
 | 27. Codebase Quality, Security, and Reliability Hardening | 0/4 | Not started | - |
 | 29. Feynman Research Integration (POC — RF section) | 2/3 | In Progress|  |
+| 30. SGX Singapore Stock Integration | 3/3 | Complete | 2026-05-12 |
 
 ---
 

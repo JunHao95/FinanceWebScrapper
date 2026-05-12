@@ -4,17 +4,19 @@ Tests for GET /api/peers — Phase 16 peer comparison backend.
 Tests are written TDD-first: they initially fail (RED) because the route
 and get_peer_data() don't exist yet. They turn GREEN after Task 2.
 """
-import pytest
-from unittest.mock import patch, MagicMock
+
+from unittest.mock import patch
 from webapp import app as flask_app
+import pytest
 
 pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
 def client():
-    flask_app.config['TESTING'] = True
+    flask_app.config["TESTING"] = True
     import webapp
+
     webapp._peer_cache.clear()
     webapp._ticker_sector_map.clear()
     with flask_app.test_client() as c:
@@ -77,9 +79,9 @@ class TestPeersCacheHit:
             client.get("/api/peers?ticker=AAPL")
             client.get("/api/peers?ticker=AAPL")
 
-        assert mock_gpd.call_count == 1, (
-            f"Expected 1 call (cache hit on 2nd), got {mock_gpd.call_count}"
-        )
+        assert (
+            mock_gpd.call_count == 1
+        ), f"Expected 1 call (cache hit on 2nd), got {mock_gpd.call_count}"
 
 
 class TestPeersFailureStates:
@@ -90,7 +92,13 @@ class TestPeersFailureStates:
             "sector": "Technology",
             "peers": [],
             "peer_data": [
-                {"ticker": "AAPL", "pe": 28.5, "pb": 5.2, "roe": 25.3, "op_margin": 30.2},
+                {
+                    "ticker": "AAPL",
+                    "pe": 28.5,
+                    "pb": 5.2,
+                    "roe": 25.3,
+                    "op_margin": 30.2,
+                },
             ],
         }
         with patch(
@@ -111,3 +119,36 @@ class TestPeersFailureStates:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "error" in data
+
+
+class TestPeersSGXSkip:
+    """SGX-listed tickers skip Finviz and return available:false."""
+
+    def test_sgx_ticker_returns_available_false(self, client):
+        resp = client.get("/api/peers?ticker=D05.SI")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data.get("available") is False
+        assert "SGX" in data.get("reason", "")
+
+    def test_sgx_ticker_does_not_call_finviz(self, client):
+        with patch(
+            "src.scrapers.finviz_scraper.FinvizScraper.get_peer_data",
+        ) as mock_scrape:
+            client.get("/api/peers?ticker=O39.SI")
+            mock_scrape.assert_not_called()
+
+    def test_sgx_response_contains_ticker(self, client):
+        resp = client.get("/api/peers?ticker=U11.SI")
+        data = resp.get_json()
+        assert data.get("ticker") == "U11.SI"
+
+    def test_us_ticker_does_not_return_available_false(self, client):
+        with patch(
+            "src.scrapers.finviz_scraper.FinvizScraper.get_peer_data",
+            return_value=_make_peer_data(),
+        ):
+            resp = client.get("/api/peers?ticker=AAPL")
+        data = resp.get_json()
+        # US tickers must NOT be short-circuited with available:false
+        assert data.get("available") is not False

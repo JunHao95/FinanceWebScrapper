@@ -48,6 +48,7 @@ from src.scrapers.api_scraper import AlphaVantageAPIScraper, FinhubAPIScraper
 from src.indicators.technical_indicators import TechnicalIndicators
 from src.utils.data_formatter import format_data_as_dataframe  # noqa: F401
 from src.utils.email_utils import send_consolidated_report
+from src.utils.exchange_utils import get_exchange_info
 
 # LAZY IMPORTS: Only import heavy ML libraries when actually needed
 # These imports load torch, transformers (500MB+ in memory)
@@ -606,8 +607,9 @@ def scrape_data():
                         )
 
                     try:
+                        _exch = get_exchange_info(ticker)
                         regression_result = analytics.linear_regression_analysis(
-                            [ticker], benchmark="SPY", days=252
+                            [ticker], benchmark=_exch["benchmark"], days=252
                         )
                         if regression_result and "error" not in regression_result:
                             ticker_analytics["regression"] = regression_result
@@ -2303,6 +2305,16 @@ def get_peers():
     ticker = request.args.get("ticker", "").strip().upper()
     if not ticker:
         return jsonify({"error": "ticker parameter required"})
+    # Finviz only covers US-listed stocks — skip gracefully for non-US tickers.
+    exch_info = get_exchange_info(ticker)
+    if not exch_info["is_us"]:
+        return jsonify(
+            {
+                "available": False,
+                "reason": f"Peer comparison is not available for {exch_info['exchange']}-listed stocks. Finviz covers US exchanges only.",  # noqa: E501
+                "ticker": ticker,
+            }
+        )
     try:
         # Fast path: if we already know this ticker's sector and the cache is warm, skip scrape
         known_sector = _ticker_sector_map.get(ticker)

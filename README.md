@@ -30,14 +30,18 @@ A high-performance Python application for scraping and analyzing financial metri
 - 🚀 **Fast Mode**: 90% speed boost with optimized concurrent processing
 - 📈 **Scalable**: Handles multiple tickers efficiently
 
+### International Stock Support
+- **SGX-listed stocks**: Enter `.SI` tickers (e.g. `D05.SI` for DBS Bank) for full analysis — data via yfinance, currency displayed as SGD (`S$`), regression benchmark auto-set to Straits Times Index (`^STI`), DCF defaults adjusted for Singapore market (WACC 8%).
+- **Extension-ready**: `src/utils/exchange_utils.py` lookup table makes adding further markets (`.HK`, `.L`, `.AX`) a single-entry change.
+
 ### Multi-Source Data Collection
-- **Scrapers**: Yahoo Finance, Finviz, Google Finance
+- **Scrapers**: Yahoo Finance, Finviz, Google Finance (SGX-aware)
 - **APIs**: Alpha Vantage, Finhub (API keys required)
 - **Sentiment**: News, Reddit, Google Trends analysis
 - **Indicators**: RSI, Moving Averages, Bollinger Bands, MACD
 
 ### Advanced Financial Analytics
-- **Linear Regression**: Beta, Alpha analysis vs SPY benchmark (returns-based)
+- **Linear Regression**: Beta, Alpha analysis vs SPY benchmark (US) or `^STI` (SGX); benchmark auto-selected by exchange
 - **Correlation Analysis**: Correlation matrix and diversification metrics
 - **Monte Carlo Simulation**: Value at Risk (VaR) and Expected Shortfall (ES)
 - **PCA Analysis**: Portfolio structure with data standardization (3+ stocks)
