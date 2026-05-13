@@ -223,7 +223,7 @@
     // -------------------------------------------------------------------------
 
     function renderIntoGroup(ticker, data, cardRoot) {
-        const container = document.getElementById('deep-analysis-content-' + ticker);
+        const container = cardRoot.querySelector('[id="deep-analysis-content-' + ticker + '"]');
         if (!container) return;
 
         // Cache data for recalculate

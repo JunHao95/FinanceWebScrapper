@@ -215,7 +215,7 @@
         if (_sessionCache[ticker]) return;
         _sessionCache[ticker] = true;
 
-        var container = document.getElementById('deep-analysis-content-' + ticker);
+        var container = cardRoot.querySelector('[id="deep-analysis-content-' + ticker + '"]');
         if (!container) return;
 
         var section = document.createElement('div');
