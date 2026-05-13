@@ -2453,7 +2453,9 @@ def get_trading_indicators():
         )
 
         df = fetch_ohlcv(ticker, lookback)
+        df = df.dropna(subset=["Open", "High", "Low", "Close"])
         df_365 = fetch_ohlcv(ticker, 365)
+        df_365 = df_365.dropna(subset=["Open", "High", "Low", "Close"])
         results = {
             "volume_profile": compute_volume_profile(df, ticker, lookback),
             "anchored_vwap": compute_anchored_vwap(df_365, ticker, lookback),
@@ -2582,6 +2584,9 @@ def get_price_history():
         from plotly.subplots import make_subplots
 
         df = fetch_ohlcv(ticker, days)
+        df = df.dropna(subset=["Open", "High", "Low", "Close"])
+        if df.empty:
+            return jsonify({"error": "No price data available for this ticker"}), 200
         dates = df.index.strftime("%Y-%m-%d").tolist()
         fig = make_subplots(
             rows=2,
