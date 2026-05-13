@@ -199,6 +199,12 @@ class YahooFinanceScraper(BaseScraper):
                 data["Earnings Growth (Yahoo)"] = (
                     f"{info.get('earningsGrowth')*100:.2f}%"
                 )
+            elif info.get("earningsQuarterlyGrowth") is not None:
+                data["Earnings Growth (Yahoo)"] = (
+                    f"{info.get('earningsQuarterlyGrowth')*100:.2f}%"
+                )
+            if info.get("revenueGrowth") is not None:
+                data["Revenue Growth (Yahoo)"] = f"{info.get('revenueGrowth')*100:.2f}%"
 
             # Financial metrics
             if info.get("grossProfits"):
