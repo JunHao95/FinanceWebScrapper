@@ -48,7 +48,24 @@ class EnhancedSentimentScraper(BaseScraper):
 
         try:
             self.logger.info("Starting enhanced sentiment analysis for %s", ticker)
-            sentiment_data = self.analyzer.get_comprehensive_sentiment_analysis(ticker)
+            company_name = None
+            if "." in ticker:
+                try:
+                    import yfinance as yf
+
+                    info = yf.Ticker(ticker).info
+                    company_name = info.get("longName") or info.get("shortName")
+                    if company_name:
+                        self.logger.info(
+                            "Resolved company name for %s: %s", ticker, company_name
+                        )
+                except Exception as e:
+                    self.logger.debug(
+                        "Could not resolve company name for %s: %s", ticker, e
+                    )
+            sentiment_data = self.analyzer.get_comprehensive_sentiment_analysis(
+                ticker, company_name=company_name
+            )
             formatted_data = {}
 
             # Overall sentiment metrics

@@ -30,14 +30,21 @@ A high-performance Python application for scraping and analyzing financial metri
 - 🚀 **Fast Mode**: 90% speed boost with optimized concurrent processing
 - 📈 **Scalable**: Handles multiple tickers efficiently
 
+### International Stock Support
+- **SGX-listed stocks**: Enter `.SI` tickers (e.g. `D05.SI` for DBS Bank) for full analysis — data via yfinance, currency displayed as SGD (`S$`), regression benchmark auto-set to Straits Times Index (`^STI`), DCF defaults adjusted for Singapore market (WACC 8%).
+- **SGX chart fix**: Price chart NaN rows (intraday SGX incomplete bars) stripped before JSON serialisation — prevents `SyntaxError` blank chart for SGX tickers.
+- **SGX fundamental scores**: `revenueGrowth` and `earningsQuarterlyGrowth` (fallback) now mapped in the Yahoo scraper so SGX bank stocks (e.g. DBS) show real Growth scores instead of 0/10. Financial Health score displays `N/A` (not 0/10) when bank ratios are unavailable.
+- **SGX sentiment**: Company name resolved via `yfinance.longName` for `.SI` tickers and injected into news search terms — DBS Group articles found instead of zero results from literal `d05.si` query.
+- **Extension-ready**: `src/utils/exchange_utils.py` lookup table makes adding further markets (`.HK`, `.L`, `.AX`) a single-entry change.
+
 ### Multi-Source Data Collection
-- **Scrapers**: Yahoo Finance, Finviz, Google Finance
+- **Scrapers**: Yahoo Finance, Finviz, Google Finance (SGX-aware)
 - **APIs**: Alpha Vantage, Finhub (API keys required)
 - **Sentiment**: News, Reddit, Google Trends analysis
 - **Indicators**: RSI, Moving Averages, Bollinger Bands, MACD
 
 ### Advanced Financial Analytics
-- **Linear Regression**: Beta, Alpha analysis vs SPY benchmark (returns-based)
+- **Linear Regression**: Beta, Alpha analysis vs SPY benchmark (US) or `^STI` (SGX); benchmark auto-selected by exchange
 - **Correlation Analysis**: Correlation matrix and diversification metrics
 - **Monte Carlo Simulation**: Value at Risk (VaR) and Expected Shortfall (ES)
 - **PCA Analysis**: Portfolio structure with data standardization (3+ stocks)

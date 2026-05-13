@@ -61,18 +61,21 @@ const AnalyticsRenderer = {
         ];
         
         scores.forEach(({ label, value, icon }) => {
-            // Validate value is a number and greater than 0
-            if (typeof value === 'number' && !isNaN(value) && value >= 0) {
+            html += '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">';
+            html += `<div style="font-size: 1.5rem; margin-bottom: 5px;">${icon}</div>`;
+            html += `<div style="font-weight: bold; margin-bottom: 8px;">${this.escapeHtml(label)}</div>`;
+            if (typeof value === 'number' && !isNaN(value)) {
                 const percentage = (value / 10) * 100;
                 const color = value >= 7 ? '#28a745' : value >= 5 ? '#ffc107' : '#dc3545';
-                html += '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">';
-                html += `<div style="font-size: 1.5rem; margin-bottom: 5px;">${icon}</div>`;
-                html += `<div style="font-weight: bold; margin-bottom: 8px;">${this.escapeHtml(label)}</div>`;
                 html += `<div style="font-size: 1.2rem; font-weight: bold; color: ${color}; margin-bottom: 5px;">${value.toFixed(1)}/10</div>`;
                 html += `<div style="background: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden;">`;
                 html += `<div style="background: ${color}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>`;
-                html += '</div></div>';
+                html += '</div>';
+            } else {
+                html += '<div style="font-size: 1.2rem; font-weight: bold; color: #6c757d; margin-bottom: 5px;">N/A</div>';
+                html += '<div style="font-size: 0.75rem; color: #999;">Not applicable</div>';
             }
+            html += '</div>';
         });
         html += '</div></div>';;
         

@@ -33,6 +33,23 @@
     const _dataCache = {};
 
     // -------------------------------------------------------------------------
+    // Currency helpers
+    // -------------------------------------------------------------------------
+
+    function _getCurrencySymbol(currency) {
+        var map = { SGD: 'S$', USD: '$', GBP: '£', EUR: '€',
+                    HKD: 'HK$', AUD: 'A$', JPY: '¥', CNY: '¥', CAD: 'C$' };
+        return (currency && map[currency.toUpperCase()]) || '$';
+    }
+
+    function _getDefaultsForCurrency(currency) {
+        if (currency && currency.toUpperCase() === 'SGD') {
+            return { wacc: 0.08, g1: 0.07, g2: 0.03 };
+        }
+        return { wacc: 0.10, g1: 0.10, g2: 0.03 };
+    }
+
+    // -------------------------------------------------------------------------
     // Core DCF computation
     // -------------------------------------------------------------------------
 
@@ -105,7 +122,8 @@
     // HTML builder
     // -------------------------------------------------------------------------
 
-    function buildHTML(ticker, result, defaultWacc, defaultG1, defaultG2) {
+    function buildHTML(ticker, result, defaultWacc, defaultG1, defaultG2, currencySymbol) {
+        currencySymbol = currencySymbol || '$';
         if (result.error === 'FCF data missing') {
             return '<div class="dcf-section" style="border-top:1px solid #e8e8e8;margin-top:8px;padding-top:8px;">' +
                 '<div class="metric-item">' +
@@ -128,9 +146,9 @@
         // Header label
         let headerLabel;
         if (result.intrinsicPerShare !== null) {
-            headerLabel = '\uD83D\uDCB0 DCF Value: $' + result.intrinsicPerShare.toFixed(2) + '  \u25BC';
+            headerLabel = '\uD83D\uDCB0 DCF Value: ' + currencySymbol + result.intrinsicPerShare.toFixed(2) + '  \u25BC';
         } else {
-            headerLabel = '\uD83D\uDCB0 DCF Value: ($' + equityTotalB + 'B equity)  \u25BC';
+            headerLabel = '\uD83D\uDCB0 DCF Value: (' + currencySymbol + equityTotalB + 'B equity)  \u25BC';
         }
 
         // Premium / discount badge — single source of truth in named div (BREAK-02 fix)
@@ -154,13 +172,13 @@
             intrinsicRow =
                 '<div class="metric-item">' +
                 '<span class="metric-label">Intrinsic / Share</span>' +
-                '<span class="metric-value" id="dcf-result-' + ticker + '">$' + result.intrinsicPerShare.toFixed(2) + '</span>' +
+                '<span class="metric-value" id="dcf-result-' + ticker + '">' + currencySymbol + result.intrinsicPerShare.toFixed(2) + '</span>' +
                 '</div>';
         } else {
             intrinsicRow =
                 '<div class="metric-item">' +
                 '<span class="metric-label">Intrinsic Equity</span>' +
-                '<span class="metric-value" id="dcf-result-' + ticker + '">$' + equityTotalB + 'B</span>' +
+                '<span class="metric-value" id="dcf-result-' + ticker + '">' + currencySymbol + equityTotalB + 'B</span>' +
                 '</div>';
         }
 
@@ -211,9 +229,12 @@
         // Cache data for recalculate
         _dataCache[ticker] = data;
 
-        const result  = computeValuation(data, 0.10, 0.10, 0.03);
-        const section = document.createElement('div');
-        section.innerHTML = buildHTML(ticker, result, 0.10, 0.10, 0.03);
+        const currency = (data && data['Currency']) || 'USD';
+        const sym      = _getCurrencySymbol(currency);
+        const defaults = _getDefaultsForCurrency(currency);
+        const result   = computeValuation(data, defaults.wacc, defaults.g1, defaults.g2);
+        const section  = document.createElement('div');
+        section.innerHTML = buildHTML(ticker, result, defaults.wacc, defaults.g1, defaults.g2, sym);
         container.appendChild(section);
     }
 
@@ -245,10 +266,11 @@
 
         const equityTotalB = (result.intrinsicEquityTotal / 1e9).toFixed(2);
 
+        const sym = _getCurrencySymbol((data && data['Currency']) || 'USD');
         if (result.intrinsicPerShare !== null) {
-            resEl.textContent = '$' + result.intrinsicPerShare.toFixed(2);
+            resEl.textContent = sym + result.intrinsicPerShare.toFixed(2);
         } else {
-            resEl.textContent = '$' + equityTotalB + 'B';
+            resEl.textContent = sym + equityTotalB + 'B';
         }
 
         // Update premium badge if present

@@ -110,7 +110,9 @@ class NewsCollector:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.sentiment_analyzer = sentiment_analyzer
 
-    def get_news_sentiment(self, ticker: str, num_articles: int = 10) -> Dict[str, Any]:
+    def get_news_sentiment(
+        self, ticker: str, num_articles: int = 10, company_name: str = None
+    ) -> Dict[str, Any]:
         news_data = []
         # Map tickers to company names for better matching
         company_names = {
@@ -124,8 +126,13 @@ class NewsCollector:
             # Add more as needed
         }
         search_terms = [ticker.lower()]
-        if ticker.upper() in company_names:
-            search_terms.append(company_names[ticker.upper()].lower())
+        resolved_name = company_name or company_names.get(ticker.upper())
+        if resolved_name:
+            search_terms.append(resolved_name.lower())
+        if "." in ticker:
+            base = ticker.rsplit(".", 1)[0].lower()
+            if base not in search_terms:
+                search_terms.append(base)
         # Expanded, reliable public news RSS feeds (general and business)
         news_sources = [
             "http://feeds.bbci.co.uk/news/business/rss.xml",  # BBC Business
@@ -611,8 +618,12 @@ class EnhancedSentimentAnalyzer:
     ) -> Dict[str, Any]:
         return self.google_trends_collector.get_google_trends_data(ticker, timeframe)
 
-    def get_news_sentiment(self, ticker: str, num_articles: int = 10) -> Dict[str, Any]:
-        return self.news_collector.get_news_sentiment(ticker, num_articles)
+    def get_news_sentiment(
+        self, ticker: str, num_articles: int = 10, company_name: str = None
+    ) -> Dict[str, Any]:
+        return self.news_collector.get_news_sentiment(
+            ticker, num_articles, company_name=company_name
+        )
 
     def get_reddit_sentiment(
         self, ticker: str, subreddits: List[str] = [], limit: int = 50
@@ -636,7 +647,9 @@ class EnhancedSentimentAnalyzer:
     ) -> Dict[str, Any]:
         return self.topic_analyzer.perform_topic_analysis(texts, n_topics)
 
-    def get_comprehensive_sentiment_analysis(self, ticker: str) -> Dict[str, Any]:
+    def get_comprehensive_sentiment_analysis(
+        self, ticker: str, company_name: str = None
+    ) -> Dict[str, Any]:
         results = {
             "ticker": ticker,
             "analysis_timestamp": datetime.now().isoformat(),
@@ -647,7 +660,7 @@ class EnhancedSentimentAnalyzer:
         self.logger.debug(f"Google Trends data for {ticker}: {trends_data}")
         results["data_sources"]["google_trends"] = trends_data
         self.logger.info(f"Analyzing news sentiment for {ticker}")
-        news_sentiment = self.get_news_sentiment(ticker)
+        news_sentiment = self.get_news_sentiment(ticker, company_name=company_name)
         results["data_sources"]["news_sentiment"] = news_sentiment
         self.logger.info(f"Analyzing Reddit sentiment for {ticker}")
         reddit_sentiment = self.get_reddit_sentiment(ticker)

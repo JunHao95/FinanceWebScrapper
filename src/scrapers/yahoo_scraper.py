@@ -199,6 +199,12 @@ class YahooFinanceScraper(BaseScraper):
                 data["Earnings Growth (Yahoo)"] = (
                     f"{info.get('earningsGrowth')*100:.2f}%"
                 )
+            elif info.get("earningsQuarterlyGrowth") is not None:
+                data["Earnings Growth (Yahoo)"] = (
+                    f"{info.get('earningsQuarterlyGrowth')*100:.2f}%"
+                )
+            if info.get("revenueGrowth") is not None:
+                data["Revenue Growth (Yahoo)"] = f"{info.get('revenueGrowth')*100:.2f}%"
 
             # Financial metrics
             if info.get("grossProfits"):
@@ -224,6 +230,14 @@ class YahooFinanceScraper(BaseScraper):
                 data["Current Price (Yahoo)"] = f"{info.get('currentPrice'):.2f}"
             if info.get("marketCap"):
                 data["Market Cap (Yahoo)"] = f"{info.get('marketCap'):,.0f}"
+
+            # Currency and exchange metadata (used by frontend for display and DCF defaults)
+            currency = info.get("currency")
+            if currency:
+                data["Currency"] = currency
+            exchange = info.get("exchange") or info.get("exchangeTimezoneName")
+            if exchange:
+                data["Stock Exchange"] = exchange
 
             # Phase 14: Net Income and Total Assets for earnings quality module
             net_income = info.get("netIncomeToCommon", None)

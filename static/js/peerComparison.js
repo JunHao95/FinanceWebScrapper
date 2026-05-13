@@ -165,10 +165,24 @@
     // Fetch and render
     // -------------------------------------------------------------------------
 
+    function buildUnavailableHTML(reason) {
+        var msg = reason || 'Peer comparison is not available for this stock.';
+        return '<div class="deep-analysis-section" style="padding:6px 0;opacity:0.7;">' +
+            '<div class="deep-analysis-header" style="padding:6px 0;">' +
+            '<span>Peer Comparison: Unavailable</span>' +
+            '</div>' +
+            '<div style="font-size:12px;color:#718096;padding:4px 0 6px 0;">' + msg + '</div>' +
+            '</div>';
+    }
+
     function _fetchAndRender(ticker, sectionEl) {
         fetch('/api/peers?ticker=' + encodeURIComponent(ticker))
             .then(function (r) { return r.json(); })
             .then(function (resp) {
+                if (resp.available === false) {
+                    sectionEl.innerHTML = buildUnavailableHTML(resp.reason);
+                    return;
+                }
                 if (resp.error || !resp.peer_data || resp.peer_data.length < 2) {
                     sectionEl.innerHTML = buildFailureHTML();
                     return;
