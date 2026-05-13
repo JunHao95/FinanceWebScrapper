@@ -143,7 +143,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 | 26. ML Finance Notebook Integration | 0/6 | Planning complete | - |
 | 27. Codebase Quality, Security, and Reliability Hardening | 0/4 | Not started | - |
 | 29. Feynman Research Integration (POC — RF section) | 2/3 | In Progress|  |
-| 30. SGX Singapore Stock Integration | 3/3 | Complete | 2026-05-12 |
+| 30. SGX Singapore Stock Integration | 0/3 | Planned    |  |
 
 ---
 
@@ -234,7 +234,7 @@ Phases execute in numeric order: 18 → 19 → 20 → 21 → 22 → 23
 **Goal:** The app is functional and presentable at 360px–1024px+ screen widths; per-ticker card sections (Financial Health Score group, Regime Detection block, Portfolio Health Card) have collapse/expand chevron toggles with sessionStorage-backed state. No new features, no backend changes — pure CSS/JS polish.
 **Requirements**: None (standalone UX phase)
 **Depends on:** None (pure frontend — no backend dependency)
-**Plans:** 3 plans
+**Plans:** 0/3 plans executed
 
 Plans:
 - [ ] 11-01-PLAN.md — CSS: expand 768px block, add 480px + 1024px blocks, section-body collapse CSS, table-scroll-wrap (wave 1)
