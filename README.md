@@ -32,6 +32,9 @@ A high-performance Python application for scraping and analyzing financial metri
 
 ### International Stock Support
 - **SGX-listed stocks**: Enter `.SI` tickers (e.g. `D05.SI` for DBS Bank) for full analysis — data via yfinance, currency displayed as SGD (`S$`), regression benchmark auto-set to Straits Times Index (`^STI`), DCF defaults adjusted for Singapore market (WACC 8%).
+- **SGX chart fix**: Price chart NaN rows (intraday SGX incomplete bars) stripped before JSON serialisation — prevents `SyntaxError` blank chart for SGX tickers.
+- **SGX fundamental scores**: `revenueGrowth` and `earningsQuarterlyGrowth` (fallback) now mapped in the Yahoo scraper so SGX bank stocks (e.g. DBS) show real Growth scores instead of 0/10. Financial Health score displays `N/A` (not 0/10) when bank ratios are unavailable.
+- **SGX sentiment**: Company name resolved via `yfinance.longName` for `.SI` tickers and injected into news search terms — DBS Group articles found instead of zero results from literal `d05.si` query.
 - **Extension-ready**: `src/utils/exchange_utils.py` lookup table makes adding further markets (`.HK`, `.L`, `.AX`) a single-entry change.
 
 ### Multi-Source Data Collection
