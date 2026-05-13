@@ -48,14 +48,18 @@ class TestGetNewsSentimentSearchTerms:
     @patch("feedparser.parse")
     @patch("src.sentiment.sentiment_analyzer.make_request")
     def test_base_ticker_added_for_dotted_ticker(self, mock_req, mock_fp):
-        """For D05.SI, 'd05' (base without .SI) must appear in search terms."""
+        """For D05.SI, Google News URL uses company name only (not AND-joined ticker noise).
+        The 'd05' base ticker is retained in search_terms for article-level filtering.
+        """
         mock_req.return_value = MagicMock(content=b"")
         mock_fp.return_value = MagicMock(entries=[])
         nc = _make_news_collector()
         nc.get_news_sentiment("D05.SI", company_name="DBS Group Holdings Ltd")
         urls = [call_args[0][0] for call_args in mock_req.call_args_list]
         google_url = next((u for u in urls if "google.com/rss/search" in u), "")
-        assert "d05" in google_url.lower()
+        # URL must contain company name (not AND-join of all search_terms)
+        assert "dbs" in google_url.lower()
+        assert "d05.si" not in google_url.lower()
 
     @pytest.mark.unit
     @patch("feedparser.parse")
@@ -85,6 +89,24 @@ class TestGetNewsSentimentSearchTerms:
         # The base logic only fires when "." in ticker
         terms_str = google_url.split("?q=")[-1].split("&")[0].lower()
         assert terms_str.count("aapl") <= 1
+
+    @pytest.mark.unit
+    @patch("feedparser.parse")
+    @patch("src.sentiment.sentiment_analyzer.make_request")
+    def test_short_name_variant_added(self, mock_req, mock_fp):
+        """First word of resolved company name must appear in the Google News URL."""
+        mock_req.return_value = MagicMock(content=b"")
+        mock_fp.return_value = MagicMock(entries=[])
+        nc = _make_news_collector()
+        nc.get_news_sentiment("D05.SI", company_name="DBS Group Holdings Ltd")
+        urls = [call_args[0][0] for call_args in mock_req.call_args_list]
+        google_url = next((u for u in urls if "google.com/rss/search" in u), "")
+        assert (
+            "dbs" in google_url.lower()
+        ), "short name 'dbs' must appear in Google News URL"
+        assert (
+            "d05.si" not in google_url.lower()
+        ), "raw ticker must not pollute the Google News query"
 
 
 # ---------------------------------------------------------------------------

@@ -144,7 +144,7 @@
     // -------------------------------------------------------------------------
 
     function renderIntoGroup(ticker, data, cardRoot) {
-        const container = cardRoot.querySelector('#deep-analysis-content-' + ticker);
+        const container = document.getElementById('deep-analysis-content-' + ticker);
         if (!container) return;
 
         const result = computeQuality(data);

@@ -129,6 +129,9 @@ class NewsCollector:
         resolved_name = company_name or company_names.get(ticker.upper())
         if resolved_name:
             search_terms.append(resolved_name.lower())
+            short_name = resolved_name.split()[0].lower()
+            if short_name not in search_terms:
+                search_terms.append(short_name)
         if "." in ticker:
             base = ticker.rsplit(".", 1)[0].lower()
             if base not in search_terms:
@@ -140,7 +143,7 @@ class NewsCollector:
             "https://feeds.a.dj.com/rss/RSSWorldNews.xml",  # WSJ World News
             "https://www.npr.org/rss/rss.php?id=1006",  # NPR Business
             "https://news.google.com/rss/search?q={}&hl=en-US&gl=US&ceid=US:en".format(
-                "+".join(search_terms)
+                (resolved_name or ticker).replace(" ", "+")
             ),  # Google News search for ticker/company
         ]
         failed_feeds = []
