@@ -13,10 +13,13 @@ Chronological split (shuffle=False) enforced in all supervised training paths.
 """
 
 import logging
+import threading
+from datetime import date
 from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from cachetools import TTLCache
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
@@ -34,6 +37,31 @@ except ImportError:
 from src.analytics.trading_indicators import fetch_ohlcv
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# TTL caches — 1-hour TTL, 128 slots per function
+# ---------------------------------------------------------------------------
+_CACHE_LOCK = threading.Lock()
+_rf_cache: TTLCache = TTLCache(maxsize=64, ttl=3600)
+_pca_cache: TTLCache = TTLCache(maxsize=32, ttl=3600)
+_regime_cache: TTLCache = TTLCache(maxsize=64, ttl=3600)
+_credit_cache: TTLCache = TTLCache(maxsize=64, ttl=3600)
+_lstm_cache: TTLCache = TTLCache(maxsize=32, ttl=3600)
+
+
+def _today() -> str:
+    return date.today().isoformat()
+
+
+def clear_ml_caches() -> None:
+    """Clear all ML signal caches. Intended for testing."""
+    with _CACHE_LOCK:
+        _rf_cache.clear()
+        _pca_cache.clear()
+        _regime_cache.clear()
+        _credit_cache.clear()
+        _lstm_cache.clear()
+
 
 DARK_LAYOUT: dict = {
     "paper_bgcolor": "#1e1e2e",
@@ -141,6 +169,12 @@ def _make_sequences(arr: np.ndarray, seq_len: int = 20):
 
 
 def compute_ml_direction_signal(ticker: str) -> dict:
+    cache_key = (ticker.upper(), _today())
+    with _CACHE_LOCK:
+        if cache_key in _rf_cache:
+            logger.debug("RF cache hit: %s", ticker)
+            return _rf_cache[cache_key]
+
     try:
         df = fetch_ohlcv(ticker, days=500)
     except Exception as exc:
@@ -218,13 +252,16 @@ def compute_ml_direction_signal(ticker: str) -> dict:
         k: int(v) if isinstance(v, (np.integer,)) else v
         for k, v in search.best_params_.items()
     }
-    return {
+    result = {
         "signal": signal,
         "confidence": confidence,
         "best_params": best_params,
         "traces": traces,
         "layout": layout,
     }
+    with _CACHE_LOCK:
+        _rf_cache[cache_key] = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +272,12 @@ def compute_ml_direction_signal(ticker: str) -> dict:
 def compute_pca_decomposition(tickers: List[str]) -> dict:
     if len(tickers) < 2:
         return {"pca_available": False, "reason": "single_ticker"}
+
+    cache_key = (frozenset(t.upper() for t in tickers), _today())
+    with _CACHE_LOCK:
+        if cache_key in _pca_cache:
+            logger.debug("PCA cache hit: %s", tickers)
+            return _pca_cache[cache_key]
 
     returns_map: Dict[str, pd.Series] = {}
     for t in tickers:
@@ -324,7 +367,7 @@ def compute_pca_decomposition(tickers: List[str]) -> dict:
         "pc_contributions": pc_contributions,
     }
 
-    return {
+    result = {
         "pca_available": True,
         "variance_explained": evr,
         "scree_traces": scree_traces,
@@ -332,6 +375,9 @@ def compute_pca_decomposition(tickers: List[str]) -> dict:
         "portfolio_var": portfolio_var,
         "layout": DARK_LAYOUT,
     }
+    with _CACHE_LOCK:
+        _pca_cache[cache_key] = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +401,12 @@ def compute_kmeans_regime(ticker: str) -> dict:
         "regime_timeline_traces": [],
         "layout": DARK_LAYOUT,
     }
+    cache_key = (ticker.upper(), _today())
+    with _CACHE_LOCK:
+        if cache_key in _regime_cache:
+            logger.debug("Regime cache hit: %s", ticker)
+            return _regime_cache[cache_key]
+
     try:
         df = fetch_ohlcv(ticker, days=365)
     except Exception as exc:
@@ -412,13 +464,16 @@ def compute_kmeans_regime(ticker: str) -> dict:
         }
     ]
 
-    return {
+    result = {
         "current_regime": current_regime,
         "hmm_regime": hmm_regime,
         "models_agree": models_agree,
         "regime_timeline_traces": regime_timeline_traces,
         "layout": DARK_LAYOUT,
     }
+    with _CACHE_LOCK:
+        _regime_cache[cache_key] = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -430,6 +485,12 @@ def compute_credit_risk_score(ticker: str, ratios: dict) -> dict:
     _CAVEAT = (
         "Model trained on ratio thresholds — indicative only. Not a credit rating."
     )
+
+    cache_key = (ticker.upper(), tuple(sorted(ratios.items())), _today())
+    with _CACHE_LOCK:
+        if cache_key in _credit_cache:
+            logger.debug("Credit cache hit: %s", ticker)
+            return _credit_cache[cache_key]
 
     np.random.seed(42)
     n_synth = 200
@@ -487,7 +548,10 @@ def compute_credit_risk_score(ticker: str, ratios: dict) -> dict:
         for i in top_idx
     ]
 
-    return {"p_distress": p_distress, "top_factors": top_factors, "caveat": _CAVEAT}
+    result = {"p_distress": p_distress, "top_factors": top_factors, "caveat": _CAVEAT}
+    with _CACHE_LOCK:
+        _credit_cache[cache_key] = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -498,6 +562,12 @@ def compute_credit_risk_score(ticker: str, ratios: dict) -> dict:
 def compute_lstm_direction_signal(ticker: str) -> dict:
     if not KERAS_AVAILABLE:
         return {"lstm_available": False}
+
+    cache_key = (ticker.upper(), _today())
+    with _CACHE_LOCK:
+        if cache_key in _lstm_cache:
+            logger.debug("LSTM cache hit: %s", ticker)
+            return _lstm_cache[cache_key]
 
     try:
         df = fetch_ohlcv(ticker, days=500)
@@ -553,10 +623,13 @@ def compute_lstm_direction_signal(ticker: str) -> dict:
         }
     ]
 
-    return {
+    result = {
         "lstm_available": True,
         "signal": signal,
         "confidence": confidence,
         "loss_curve_traces": loss_curve_traces,
         "layout": DARK_LAYOUT,
     }
+    with _CACHE_LOCK:
+        _lstm_cache[cache_key] = result
+    return result

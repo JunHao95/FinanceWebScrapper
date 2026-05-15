@@ -21,6 +21,7 @@ try:
         compute_kmeans_regime,
         compute_credit_risk_score,
         compute_lstm_direction_signal,
+        clear_ml_caches,
     )
 
     try:
@@ -31,6 +32,13 @@ try:
 except Exception:
     IMPORT_OK = False
     KERAS_AVAILABLE_GLOBALLY = False
+    clear_ml_caches = None
+
+
+@pytest.fixture(autouse=True)
+def _clear_caches():
+    if clear_ml_caches is not None:
+        clear_ml_caches()
 
 
 # ---------------------------------------------------------------------------
