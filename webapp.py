@@ -27,6 +27,7 @@ import time
 import traceback  # noqa: F401
 import gc
 from cachetools import TTLCache, LRUCache
+import yfinance as yf
 
 try:
     import openai
@@ -2294,6 +2295,52 @@ _ticker_validation_cache: TTLCache = TTLCache(
 )  # 1-hr TTL, 500 tickers
 _peer_cache: TTLCache = TTLCache(maxsize=30, ttl=1800)  # 30-min TTL, 30 sectors
 _ticker_sector_map: LRUCache = LRUCache(maxsize=200)  # 200 tickers LRU
+
+# Curated SGX sector peer lists — used when Finviz is unavailable for non-US tickers.
+_SGX_SECTOR_PEERS: dict = {
+    "Financial Services": ["D05.SI", "O39.SI", "U11.SI"],  # DBS, OCBC, UOB
+    "Real Estate": [
+        "A17U.SI",
+        "C38U.SI",
+        "N2IU.SI",
+        "ME8U.SI",
+    ],  # Ascendas, CMT, Mapletree Log, MIT
+    "Industrials": ["BN4.SI", "U96.SI", "C07.SI"],  # Keppel, Sembcorp, Jardine C&C
+    "Consumer Cyclical": ["C6L.SI", "S58.SI"],  # SIA, SATS
+    "Communication Services": ["Z74.SI", "T39.SI"],  # Singtel, ST Telemedia
+    "Technology": ["V03.SI", "BVA.SI"],  # Venture, Frencken
+    "Healthcare": ["Q0F.SI", "596.SI"],  # Pacific Healthcare, Raffles Medical
+    "Consumer Defensive": ["F99.SI", "EB5.SI"],  # Sheng Siong, Dairy Farm
+}
+
+
+def _yf_peer_metrics(ticker: str) -> dict:
+    """Fetch pe/pb/roe/op_margin for a single ticker via yfinance."""
+    try:
+        info = yf.Ticker(ticker).info
+        pe = info.get("trailingPE") or info.get("forwardPE")
+        pb = info.get("priceToBook")
+        roe_raw = info.get("returnOnEquity")
+        roe = round(roe_raw * 100, 2) if roe_raw is not None else None
+        op_margin_raw = info.get("operatingMargins")
+        op_margin = round(op_margin_raw * 100, 2) if op_margin_raw is not None else None
+        return {
+            "ticker": ticker,
+            "pe": round(pe, 2) if pe is not None else None,
+            "pb": round(pb, 2) if pb is not None else None,
+            "roe": roe,
+            "op_margin": op_margin,
+        }
+    except Exception:
+        return {
+            "ticker": ticker,
+            "pe": None,
+            "pb": None,
+            "roe": None,
+            "op_margin": None,
+        }
+
+
 _regime_cache: TTLCache = TTLCache(
     maxsize=50, ttl=900
 )  # 15-min TTL, 50 ticker/range combos
@@ -2305,16 +2352,70 @@ def get_peers():
     ticker = request.args.get("ticker", "").strip().upper()
     if not ticker:
         return jsonify({"error": "ticker parameter required"})
-    # Finviz only covers US-listed stocks — skip gracefully for non-US tickers.
     exch_info = get_exchange_info(ticker)
+    # Non-US path: use curated Yahoo Finance-based peer comparison.
     if not exch_info["is_us"]:
-        return jsonify(
-            {
-                "available": False,
-                "reason": f"Peer comparison is not available for {exch_info['exchange']}-listed stocks. Finviz covers US exchanges only.",  # noqa: E501
-                "ticker": ticker,
+        try:
+            info = yf.Ticker(ticker).info
+            sector = info.get("sector", "")
+            peer_tickers = [t for t in _SGX_SECTOR_PEERS.get(sector, []) if t != ticker]
+            if not peer_tickers:
+                return jsonify(
+                    {
+                        "available": False,
+                        "reason": f"No curated peers for {exch_info['exchange']}-listed {sector or 'unknown sector'} stocks.",  # noqa: E501
+                        "ticker": ticker,
+                    }
+                )
+            peer_data = [_yf_peer_metrics(ticker)] + [
+                _yf_peer_metrics(p) for p in peer_tickers
+            ]
+
+            def percentile_rank(rows, field, target):
+                if target is None:
+                    return 50
+                vals = sorted([r[field] for r in rows if r[field] is not None])
+                if len(vals) < 2:
+                    return 50
+                idx = bisect.bisect_left(vals, target)
+                idx = min(idx, len(vals) - 1)
+                return round(100 * idx / (len(vals) - 1))
+
+            ticker_row = next((r for r in peer_data if r["ticker"] == ticker), None)
+            if not ticker_row:
+                return jsonify({"error": "Ticker not found in peer data"})
+
+            percentiles = {
+                "pe": {
+                    "value": ticker_row["pe"],
+                    "rank": percentile_rank(peer_data, "pe", ticker_row["pe"]),
+                },
+                "pb": {
+                    "value": ticker_row["pb"],
+                    "rank": percentile_rank(peer_data, "pb", ticker_row["pb"]),
+                },
+                "roe": {
+                    "value": ticker_row["roe"],
+                    "rank": percentile_rank(peer_data, "roe", ticker_row["roe"]),
+                },
+                "op_margin": {
+                    "value": ticker_row["op_margin"],
+                    "rank": percentile_rank(
+                        peer_data, "op_margin", ticker_row["op_margin"]
+                    ),
+                },  # noqa: E501
             }
-        )
+            return jsonify(
+                {
+                    "sector": sector,
+                    "peers": peer_tickers,
+                    "peer_data": peer_data,
+                    "percentiles": percentiles,
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error in non-US get_peers for {ticker}: {e}")
+            return jsonify({"error": f"Peer data unavailable: {str(e)}"})
     try:
         # Fast path: if we already know this ticker's sector and the cache is warm, skip scrape
         known_sector = _ticker_sector_map.get(ticker)

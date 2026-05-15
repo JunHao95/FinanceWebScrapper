@@ -231,6 +231,23 @@ class YahooFinanceScraper(BaseScraper):
             if info.get("marketCap"):
                 data["Market Cap (Yahoo)"] = f"{info.get('marketCap'):,.0f}"
 
+            # Sector / industry (used by healthScore.js for bank-aware N/A labels)
+            sector = info.get("sector")
+            if sector:
+                data["Sector (Yahoo)"] = sector
+
+            # Dividend data (used by DCF module for DDM fallback when FCF unavailable)
+            div_rate = info.get("trailingAnnualDividendRate") or info.get(
+                "dividendRate"
+            )
+            if div_rate:
+                data["Dividend Rate (Yahoo)"] = f"{div_rate:.4f}"
+            div_yield = info.get("trailingAnnualDividendYield") or info.get(
+                "dividendYield"
+            )
+            if div_yield:
+                data["Dividend Yield (Yahoo)"] = f"{div_yield * 100:.2f}%"
+
             # Currency and exchange metadata (used by frontend for display and DCF defaults)
             currency = info.get("currency")
             if currency:

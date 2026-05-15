@@ -78,8 +78,19 @@
             fcfSource = yfFcf !== null ? 'Yahoo' : null;
         }
 
-        // 2. Guard: missing / zero FCF
+        // 2. Guard: missing / zero FCF — attempt DDM fallback using dividend data
         if (fcf0 === null || fcf0 === 0) {
+            const divRate     = extractMetric(data, ['Dividend Rate']);
+            const currentPrice = extractMetric(data, ['Current Price (Yahoo)', 'Current Price']);
+            if (divRate !== null && divRate > 0 && wacc > g2) {
+                // Gordon Growth DDM: V = D1 / (r - g)
+                const d1              = divRate * (1 + g2);
+                const intrinsicPerShare = d1 / (wacc - g2);
+                const premium = (currentPrice !== null && currentPrice !== 0)
+                    ? (currentPrice - intrinsicPerShare) / intrinsicPerShare * 100
+                    : null;
+                return { intrinsicEquityTotal: null, intrinsicPerShare, premium, fcfSource: 'DDM (Yahoo dividends)', isDDM: true };
+            }
             return { error: 'FCF data missing', fcfSource: null };
         }
 
@@ -127,7 +138,7 @@
         if (result.error === 'FCF data missing') {
             return '<div class="dcf-section" style="border-top:1px solid #e8e8e8;margin-top:8px;padding-top:8px;">' +
                 '<div class="metric-item">' +
-                '<span class="badge badge-warning">DCF unavailable \u2014 FCF data missing</span>' +
+                '<span class="badge badge-warning">DCF unavailable \u2014 FCF &amp; dividend data missing</span>' +
                 '</div>' +
                 '</div>';
         }
@@ -141,12 +152,13 @@
                 '</div>';
         }
 
-        const equityTotalB = (result.intrinsicEquityTotal / 1e9).toFixed(2);
+        const valuationLabel = result.isDDM ? 'DDM Value' : 'DCF Value';
+        const equityTotalB = result.intrinsicEquityTotal !== null ? (result.intrinsicEquityTotal / 1e9).toFixed(2) : null;
 
         // Header label
         let headerLabel;
         if (result.intrinsicPerShare !== null) {
-            headerLabel = '\uD83D\uDCB0 DCF Value: ' + currencySymbol + result.intrinsicPerShare.toFixed(2) + '  \u25BC';
+            headerLabel = '\uD83D\uDCB0 ' + valuationLabel + ': ' + currencySymbol + result.intrinsicPerShare.toFixed(2) + '  \u25BC';
         } else {
             headerLabel = '\uD83D\uDCB0 DCF Value: (' + currencySymbol + equityTotalB + 'B equity)  \u25BC';
         }
@@ -186,8 +198,9 @@
         const g1Pct   = (defaultG1 * 100).toFixed(1);
         const g2Pct   = (defaultG2 * 100).toFixed(1);
 
+        const sourceLabel = result.isDDM ? 'Model: ' : 'FCF source: ';
         const fcfNote = result.fcfSource
-            ? '<div class="metric-item"><span class="metric-label" style="color:#999;font-size:11px;">FCF source: ' + result.fcfSource + '</span></div>'
+            ? '<div class="metric-item"><span class="metric-label" style="color:#999;font-size:11px;">' + sourceLabel + result.fcfSource + '</span></div>'
             : '';
 
         return '<div class="dcf-section" style="border-top:1px solid #e8e8e8;margin-top:8px;padding-top:8px;">' +
@@ -264,13 +277,11 @@
             return;
         }
 
-        const equityTotalB = (result.intrinsicEquityTotal / 1e9).toFixed(2);
-
         const sym = _getCurrencySymbol((data && data['Currency']) || 'USD');
         if (result.intrinsicPerShare !== null) {
             resEl.textContent = sym + result.intrinsicPerShare.toFixed(2);
-        } else {
-            resEl.textContent = sym + equityTotalB + 'B';
+        } else if (result.intrinsicEquityTotal !== null) {
+            resEl.textContent = sym + (result.intrinsicEquityTotal / 1e9).toFixed(2) + 'B';
         }
 
         // Update premium badge if present

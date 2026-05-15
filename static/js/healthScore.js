@@ -40,11 +40,16 @@
     // Sub-scorers
     // ---------------------------------------------------------------------------
 
+    function _isBankSector(data) {
+        const sector = (data && data['Sector (Yahoo)']) || '';
+        return /financial|bank|insurance/i.test(sector);
+    }
+
     function scoreLiquidity(data) {
         const currentRatio = extractMetric(data, ['Current Ratio']);
         const quickRatio = extractMetric(data, ['Quick Ratio']);
         if (currentRatio === null && quickRatio === null) {
-            return { name: 'Liquidity', letter: null, numericScore: null, rawValues: {}, missing: true };
+            return { name: 'Liquidity', letter: null, numericScore: null, rawValues: {}, missing: true, isBankSector: _isBankSector(data) };
         }
         let score = 2; // C baseline
         if (currentRatio !== null) {
@@ -69,7 +74,7 @@
     function scoreLeverage(data) {
         const debtEquity = extractMetric(data, ['Debt to Equity', 'D/E', 'Debt/Equity', 'Debt-to-Equity', 'Total Debt/Equity']);
         if (debtEquity === null) {
-            return { name: 'Leverage', letter: null, numericScore: null, rawValues: {}, missing: true };
+            return { name: 'Leverage', letter: null, numericScore: null, rawValues: {}, missing: true, isBankSector: _isBankSector(data) };
         }
         let score;
         if (debtEquity < 0.5) score = 4;
@@ -183,16 +188,19 @@
     }
 
     function buildSubScoreRow(subScore) {
-        const { name, letter, missing, rawValues } = subScore;
+        const { name, letter, missing, rawValues, isBankSector } = subScore;
         const cls = letter ? gradeClass(letter) : 'badge-warning';
         const badge = letter
             ? `<span class="badge ${cls}">${letter}</span>`
             : '<span style="color:#999;">N/A</span>';
         const rawStr = formatRawValues(rawValues || {});
-        const label = `${name}${missing ? ' ⚠' : ''}`;
+        const bankNote = (!letter && missing && isBankSector)
+            ? '<span style="color:#aaa;font-size:11px;margin-left:4px;">— bank sector</span>'
+            : '';
+        const label = `${name}${missing && !isBankSector ? ' ⚠' : ''}`;
         return `<div class="metric-item">` +
             `<span class="metric-label">${label}</span>` +
-            `<span class="metric-value">${badge}${rawStr}</span>` +
+            `<span class="metric-value">${badge}${rawStr}${bankNote}</span>` +
             `</div>`;
     }
 

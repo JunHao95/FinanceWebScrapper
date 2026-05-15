@@ -121,34 +121,66 @@ class TestPeersFailureStates:
         assert "error" in data
 
 
-class TestPeersSGXSkip:
-    """SGX-listed tickers skip Finviz and return available:false."""
+def _make_yf_info(sector="Financial Services"):
+    """Minimal yfinance info dict for mocking."""
+    return {
+        "sector": sector,
+        "trailingPE": 10.5,
+        "priceToBook": 1.2,
+        "returnOnEquity": 0.14,
+        "operatingMargins": 0.45,
+    }
 
-    def test_sgx_ticker_returns_available_false(self, client):
-        resp = client.get("/api/peers?ticker=D05.SI")
+
+def _make_yf_ticker_mock(info_dict):
+    """Return a mock object that mimics yf.Ticker(t).info."""
+    from unittest.mock import MagicMock
+
+    mock_ticker = MagicMock()
+    mock_ticker.info = info_dict
+    return mock_ticker
+
+
+class TestPeersSGXYahoo:
+    """SGX-listed tickers skip Finviz and use Yahoo Finance peer comparison."""
+
+    def test_sgx_ticker_returns_peer_data_shape(self, client):
+        """Known sector → should return sector/peers/percentiles."""
+        with patch(
+            "webapp.yf.Ticker", return_value=_make_yf_ticker_mock(_make_yf_info())
+        ):
+            resp = client.get("/api/peers?ticker=D05.SI")
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data.get("available") is False
-        assert "SGX" in data.get("reason", "")
+        assert "sector" in data
+        assert "peers" in data
+        assert "percentiles" in data
 
     def test_sgx_ticker_does_not_call_finviz(self, client):
+        """Finviz must never be called for SGX tickers."""
         with patch(
-            "src.scrapers.finviz_scraper.FinvizScraper.get_peer_data",
+            "webapp.yf.Ticker", return_value=_make_yf_ticker_mock(_make_yf_info())
+        ), patch(
+            "src.scrapers.finviz_scraper.FinvizScraper.get_peer_data"
         ) as mock_scrape:
             client.get("/api/peers?ticker=O39.SI")
             mock_scrape.assert_not_called()
 
-    def test_sgx_response_contains_ticker(self, client):
-        resp = client.get("/api/peers?ticker=U11.SI")
+    def test_sgx_unknown_sector_returns_available_false(self, client):
+        """Sector not in curated map → available: false with explanation."""
+        unknown_info = _make_yf_info(sector="Unknown Niche Sector")
+        with patch("webapp.yf.Ticker", return_value=_make_yf_ticker_mock(unknown_info)):
+            resp = client.get("/api/peers?ticker=X99.SI")
         data = resp.get_json()
-        assert data.get("ticker") == "U11.SI"
+        assert data.get("available") is False
+        assert "No curated peers" in data.get("reason", "")
 
-    def test_us_ticker_does_not_return_available_false(self, client):
+    def test_us_ticker_does_not_use_yf_peer_path(self, client):
+        """US tickers must still go through Finviz, not Yahoo peer path."""
         with patch(
             "src.scrapers.finviz_scraper.FinvizScraper.get_peer_data",
             return_value=_make_peer_data(),
         ):
             resp = client.get("/api/peers?ticker=AAPL")
         data = resp.get_json()
-        # US tickers must NOT be short-circuited with available:false
         assert data.get("available") is not False

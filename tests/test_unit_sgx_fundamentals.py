@@ -84,6 +84,39 @@ class TestYahooScraperGrowthFields:
         )
         assert "Earnings Growth (Yahoo)" not in data
 
+    @pytest.mark.unit
+    def test_sector_mapped(self):
+        """sector='Financial Services' -> 'Sector (Yahoo)': 'Financial Services'."""
+        data = self._run_scrape({"sector": "Financial Services", "longName": "DBS"})
+        assert data.get("Sector (Yahoo)") == "Financial Services"
+
+    @pytest.mark.unit
+    def test_sector_absent_when_none(self):
+        """sector=None -> 'Sector (Yahoo)' not added."""
+        data = self._run_scrape({"sector": None, "longName": "DBS"})
+        assert "Sector (Yahoo)" not in data
+
+    @pytest.mark.unit
+    def test_dividend_rate_mapped(self):
+        """trailingAnnualDividendRate=2.16 -> 'Dividend Rate (Yahoo)': '2.1600'."""
+        data = self._run_scrape({"trailingAnnualDividendRate": 2.16, "longName": "DBS"})
+        assert data.get("Dividend Rate (Yahoo)") == "2.1600"
+
+    @pytest.mark.unit
+    def test_dividend_yield_mapped(self):
+        """trailingAnnualDividendYield=0.06 -> 'Dividend Yield (Yahoo)': '6.00%'."""
+        data = self._run_scrape(
+            {"trailingAnnualDividendYield": 0.06, "longName": "DBS"}
+        )
+        assert data.get("Dividend Yield (Yahoo)") == "6.00%"
+
+    @pytest.mark.unit
+    def test_dividend_rate_absent_when_none(self):
+        """No dividend data -> keys absent from output."""
+        data = self._run_scrape({"longName": "DBS"})
+        assert "Dividend Rate (Yahoo)" not in data
+        assert "Dividend Yield (Yahoo)" not in data
+
 
 # ---------------------------------------------------------------------------
 # financial_analytics — health score default None for banks
