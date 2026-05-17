@@ -1187,3 +1187,94 @@ class TestFeynmanRoutes:
             resp = client.post("/api/feynman_pca_interpret", json={"pca_data": {}})
             assert resp.status_code == 200
             assert resp.get_json()["available"] is False
+
+
+# ---------------------------------------------------------------------------
+# Phase 31 — POST /api/export-sheets integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestExportSheets:
+    """Integration tests for POST /api/export-sheets (Phase 31)."""
+
+    _EXPORT_PAYLOAD = {
+        "tickers": ["AAPL", "MSFT"],
+        "data": {
+            "AAPL": {"Price": "175.00", "RSI": "55.2"},
+            "MSFT": {"Price": "420.00", "RSI": None},
+        },
+    }
+
+    def test_export_sheets_success(self, client):
+        """Valid payload → 200 + {success: true, rows_added: 2}."""
+        from unittest.mock import patch
+
+        with patch(
+            "src.utils.sheets_utils.export_tickers_to_sheets", return_value=2
+        ), patch("os.path.exists", return_value=True), patch.dict(
+            "os.environ",
+            {
+                "GOOGLE_SHEETS_CREDENTIALS_PATH": "/fake/creds.json",
+                "GOOGLE_SHEETS_SPREADSHEET_ID": "fake-id",
+            },
+        ):
+            resp = client.post("/api/export-sheets", json=self._EXPORT_PAYLOAD)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["rows_added"] == 2
+
+    def test_export_sheets_no_body(self, client):
+        """No JSON body → 400."""
+        resp = client.post(
+            "/api/export-sheets", content_type="application/json", data=None
+        )
+        assert resp.status_code == 400
+
+    def test_export_sheets_empty_tickers(self, client):
+        """Empty tickers list → 400."""
+        resp = client.post("/api/export-sheets", json={"tickers": [], "data": {}})
+        assert resp.status_code == 400
+
+    def test_export_sheets_no_creds(self, client):
+        """Missing credentials → 500 + {success: false, error includes message}."""
+        from unittest.mock import patch
+
+        with patch(
+            "src.utils.sheets_utils.export_tickers_to_sheets",
+            side_effect=FileNotFoundError("Credentials file not found"),
+        ):
+            resp = client.post("/api/export-sheets", json=self._EXPORT_PAYLOAD)
+        assert resp.status_code == 500
+        data = resp.get_json()
+        assert data["success"] is False
+
+    def test_export_sheets_not_found(self, client):
+        """Spreadsheet not found → 500 + {success: false}."""
+        from unittest.mock import patch
+
+        try:
+            import gspread
+
+            exc = gspread.exceptions.SpreadsheetNotFound()
+        except ImportError:
+            pytest.skip("gspread not installed")
+        with patch("src.utils.sheets_utils.export_tickers_to_sheets", side_effect=exc):
+            resp = client.post("/api/export-sheets", json=self._EXPORT_PAYLOAD)
+        assert resp.status_code == 500
+        data = resp.get_json()
+        assert data["success"] is False
+
+    def test_export_sheets_api_error(self, client):
+        """Unexpected error → 4xx or 5xx + {success: false}."""
+        from unittest.mock import patch
+
+        with patch(
+            "src.utils.sheets_utils.export_tickers_to_sheets",
+            side_effect=ValueError("Sheets API error"),
+        ):
+            resp = client.post("/api/export-sheets", json=self._EXPORT_PAYLOAD)
+        assert resp.status_code in (400, 500)
+        data = resp.get_json()
+        assert data["success"] is False
