@@ -357,9 +357,36 @@ const StockScraper = {
             if (btn) btn.disabled = true;
             Utils.showAlert('Exporting to Google Sheets...', 'info');
 
+            // Deep-copy so we don't mutate AppState.currentData
+            const enrichedData = JSON.parse(JSON.stringify(AppState.currentData));
+
+            // Merge frontend-computed values that never reach the backend scraper
+            AppState.currentTickers.forEach(ticker => {
+                const ctx = window.pageContext &&
+                            window.pageContext.tickerData &&
+                            window.pageContext.tickerData[ticker];
+                if (!ctx || !enrichedData[ticker]) return;
+
+                if (ctx.healthScore && ctx.healthScore.grade != null) {
+                    enrichedData[ticker]['Health Score'] = ctx.healthScore.grade;
+                }
+                if (ctx.earningsQuality && ctx.earningsQuality.label != null) {
+                    enrichedData[ticker]['Earnings Quality Flag'] = ctx.earningsQuality.label;
+                }
+                if (ctx.peerComparison &&
+                    ctx.peerComparison.percentiles &&
+                    ctx.peerComparison.percentiles.pe &&
+                    ctx.peerComparison.percentiles.pe.rank != null) {
+                    enrichedData[ticker]['Peer P/E Percentile'] = ctx.peerComparison.percentiles.pe.rank;
+                }
+                if (ctx.dcfValuation && ctx.dcfValuation.intrinsicValue != null) {
+                    enrichedData[ticker]['DCF Intrinsic Value'] = ctx.dcfValuation.intrinsicValue;
+                }
+            });
+
             const exportData = {
                 tickers: AppState.currentTickers,
-                data: AppState.currentData
+                data: enrichedData
             };
 
             const result = await API.exportSheets(exportData);
