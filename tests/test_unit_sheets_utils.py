@@ -18,6 +18,7 @@ from src.utils.sheets_utils import (  # noqa: E402
     _classify_ticker,
     _extract_fields,
     _append_below_existing,
+    _upsert_rows,
     _build_row_us,
     _build_row_sg,
     _build_row_hk,
@@ -253,6 +254,67 @@ def test_append_below_existing_anchors_to_next_row():
 
 
 # ---------------------------------------------------------------------------
+# _upsert_rows — upsert behavior
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_upsert_updates_existing_ticker():
+    """Ticker already in sheet → batch_update in-place, no append."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [
+        ["h1", "h2", "Ticker"],
+        ["", "", "AAPL", "100.0"],
+    ]
+    _upsert_rows(ws, [["", "", "AAPL", "150.0"]], ticker_col_idx=2)
+    ws.batch_update.assert_called_once()
+    ws.update.assert_not_called()
+
+
+@pytest.mark.unit
+def test_upsert_updates_correct_row_number():
+    """batch_update range must point at the row containing the ticker."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [
+        ["h1", "h2", "Ticker"],
+        ["", "", "AAPL", "100.0"],
+        ["", "", "MSFT", "300.0"],
+    ]
+    _upsert_rows(ws, [["", "", "MSFT", "350.0"]], ticker_col_idx=2)
+    call_data = ws.batch_update.call_args[0][0]
+    assert call_data[0]["range"] == "A3"
+
+
+@pytest.mark.unit
+def test_upsert_appends_new_ticker():
+    """Ticker not in sheet → append via update, no batch_update."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [["h1", "h2", "Ticker"]]
+    _upsert_rows(ws, [["", "", "TSLA", "400.0"]], ticker_col_idx=2)
+    ws.update.assert_called_once()
+    assert ws.update.call_args[0][0] == "A2"
+    ws.batch_update.assert_not_called()
+
+
+@pytest.mark.unit
+def test_upsert_mixed_existing_and_new():
+    """Existing ticker updated in-place; new ticker appended."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [
+        ["h1", "h2", "Ticker"],
+        ["", "", "AAPL", "100.0"],
+    ]
+    _upsert_rows(
+        ws,
+        [["", "", "AAPL", "150.0"], ["", "", "TSLA", "400.0"]],
+        ticker_col_idx=2,
+    )
+    ws.batch_update.assert_called_once()
+    ws.update.assert_called_once()
+    assert ws.update.call_args[0][0] == "A3"
+
+
+# ---------------------------------------------------------------------------
 # get_sheets_client
 # ---------------------------------------------------------------------------
 
@@ -405,3 +467,41 @@ def test_empty_tickers():
     assert result == 0
     for ws in worksheets.values():
         assert ws.update.call_count == 0
+
+
+@pytest.mark.unit
+def test_export_updates_existing_ticker_in_us_tab():
+    """AAPL already in US tab → batch_update called, no append (update not called)."""
+    mock_gc, worksheets, _ = _make_mock_gc()
+    # Ticker at col C (index 2) in row 2
+    worksheets[_TAB_US].get_all_values.return_value = [
+        ["h1", "h2", "Ticker"],
+        ["", "", "AAPL", "100.0"],
+    ]
+    with patch("gspread.service_account", return_value=mock_gc), patch.dict(
+        "os.environ", _ENV
+    ), patch("os.path.exists", return_value=True):
+        result = export_tickers_to_sheets(["AAPL"], {"AAPL": {"Price": "175.00"}})
+    assert result == 1
+    worksheets[_TAB_US].batch_update.assert_called_once()
+    worksheets[_TAB_US].update.assert_not_called()
+
+
+@pytest.mark.unit
+def test_export_upsert_mixed_new_and_existing():
+    """AAPL exists (update) + MSFT new (append) → both batch_update and update called."""
+    mock_gc, worksheets, _ = _make_mock_gc()
+    worksheets[_TAB_US].get_all_values.return_value = [
+        ["h1", "h2", "Ticker"],
+        ["", "", "AAPL", "100.0"],
+    ]
+    with patch("gspread.service_account", return_value=mock_gc), patch.dict(
+        "os.environ", _ENV
+    ), patch("os.path.exists", return_value=True):
+        result = export_tickers_to_sheets(
+            ["AAPL", "MSFT"],
+            {"AAPL": {"Price": "175.00"}, "MSFT": {"Price": "400.00"}},
+        )
+    assert result == 2
+    worksheets[_TAB_US].batch_update.assert_called_once()
+    worksheets[_TAB_US].update.assert_called_once()

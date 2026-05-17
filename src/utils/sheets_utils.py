@@ -408,6 +408,48 @@ ROW_LENGTHS = {
     _TAB_OTHERS: 20,
 }
 
+# Column index (0-based) that holds the ticker symbol in each tab
+_TICKER_COL = {
+    _TAB_US: 2,  # C: Google Quote
+    _TAB_SG: 2,  # C: Google Quote
+    _TAB_HK: 2,  # C: Google Quote
+    _TAB_OTHERS: 1,  # B: Ticker
+}
+
+
+def _upsert_rows(ws, rows, ticker_col_idx):
+    """Upsert rows: update existing ticker row in-place, else append."""
+    existing = ws.get_all_values()
+    ticker_row_map = {}
+    for i, row in enumerate(existing, start=1):
+        if len(row) > ticker_col_idx:
+            cell_val = row[ticker_col_idx].strip().upper()
+            if cell_val:
+                ticker_row_map[cell_val] = i
+
+    batch_updates = []
+    new_rows = []
+    for row in rows:
+        ticker_in_row = (
+            str(row[ticker_col_idx]).strip().upper()
+            if len(row) > ticker_col_idx
+            else ""
+        )
+        if ticker_in_row and ticker_in_row in ticker_row_map:
+            batch_updates.append(
+                {"range": f"A{ticker_row_map[ticker_in_row]}", "values": [row]}
+            )
+        else:
+            new_rows.append(row)
+
+    if batch_updates:
+        ws.batch_update(batch_updates, value_input_option=ValueInputOption.user_entered)
+    if new_rows:
+        next_row = len(existing) + 1
+        ws.update(
+            f"A{next_row}", new_rows, value_input_option=ValueInputOption.user_entered
+        )
+
 
 def export_tickers_to_sheets(tickers, data):
     """Export stock data for *tickers* to the configured Google Spreadsheet.
@@ -418,12 +460,15 @@ def export_tickers_to_sheets(tickers, data):
       - Suffix .HK     → "HK Stock"
       - Everything else → "Others Stock" (auto-created if absent)
 
+    If a ticker already exists in the tab (matched by ticker column), its row
+    is updated in-place. Otherwise a new row is appended.
+
     Args:
         tickers: list of ticker strings (e.g. ["AAPL", "D05.SI"])
         data: dict mapping ticker → dict of field_name → value
 
     Returns:
-        int: total number of rows appended across all tabs
+        int: total number of rows upserted across all tabs
 
     Raises:
         ValueError: if GOOGLE_SHEETS_SPREADSHEET_ID is not set
@@ -454,9 +499,9 @@ def export_tickers_to_sheets(tickers, data):
     total = 0
     for tab_name, rows in buckets.items():
         ws = _get_or_create_worksheet(sh, tab_name)
-        _append_below_existing(ws, rows)
+        _upsert_rows(ws, rows, _TICKER_COL[tab_name])
         logger.info(
-            "Appended %d rows to tab '%s' in sheet %s",
+            "Upserted %d rows to tab '%s' in sheet %s",
             len(rows),
             tab_name,
             spreadsheet_id,
