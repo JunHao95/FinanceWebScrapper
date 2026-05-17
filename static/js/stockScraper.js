@@ -150,6 +150,12 @@ const StockScraper = {
 
                 this.displayResults(result);
                 Utils.showAlert('Data scraped successfully!', 'success');
+
+                // Enable Export to Sheets button after scrape — only if credentials are configured
+                const sheetsBtn = document.getElementById('exportSheetsBtn');
+                if (sheetsBtn && !sheetsBtn.dataset.sheetsUnconfigured) {
+                    sheetsBtn.disabled = false;
+                }
             } else {
                 Utils.showAlert('Error: ' + result.error, 'error');
             }
@@ -333,6 +339,44 @@ const StockScraper = {
             }
         } catch (error) {
             Utils.showAlert('Failed to send email: ' + error.message, 'error');
+        }
+    },
+
+    /**
+     * Export stock data to Google Sheets
+     */
+    async exportSheets() {
+        if (!AppState.currentData) {
+            Utils.showAlert('No data to export. Please analyze stocks first.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('exportSheetsBtn');
+
+        try {
+            if (btn) btn.disabled = true;
+            Utils.showAlert('Exporting to Google Sheets...', 'info');
+
+            const exportData = {
+                tickers: AppState.currentTickers,
+                data: AppState.currentData
+            };
+
+            const result = await API.exportSheets(exportData);
+
+            if (result.success) {
+                Utils.showAlert(`Exported ${result.rows_added} tickers to Google Sheets ✓`, 'success');
+            } else {
+                Utils.showAlert('Google Sheets export failed: ' + result.error, 'error');
+            }
+        } catch (error) {
+            Utils.showAlert('Google Sheets export failed: ' + error.message, 'error');
+        } finally {
+            // Re-enable only if credentials are configured.
+            // If data-sheets-unconfigured is present, credentials are absent — leave disabled.
+            if (btn && !btn.dataset.sheetsUnconfigured) {
+                btn.disabled = false;
+            }
         }
     }
 };
