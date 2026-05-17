@@ -358,6 +358,10 @@ The web app will start on `http://localhost:5173`
    - Add CC/BCC recipients if needed
    - Click "📨 Send Email Report"
 
+7. **Export to Sheets** (Optional — see Google Sheets Setup below)
+   - After scraping, click "📊 Export to Sheets"
+   - Data appends to your configured Google Sheet
+
 ### CLI Mode (For Automation & Scripting)
 
 #### Basic Usage
@@ -515,6 +519,75 @@ Render.com free tier spins down after 15 minutes of inactivity. We've implemente
 - Ping the `/health` endpoint (`https://finance-web-scrapper.onrender.com/health`) every 5-10 minutes
 - Completely free and prevents the server from spinning down
 - **Note:** The included `keep_alive.py` script is now deprecated in favor of this zero-maintenance solution.
+
+---
+
+## Google Sheets Setup
+
+The "Export to Sheets" feature lets you append scraped stock data directly to a Google Sheet you own. This is a local-only feature — not available on the Render deployment.
+
+### Prerequisites
+
+- A Google account with access to Google Sheets
+- Python dependency: `gspread==6.2.1` and `google-auth==2.52.0` (already in `requirements.txt`)
+
+### Step-by-Step Setup
+
+**1. Create a Google Cloud project and enable the Sheets API**
+- Go to [Google Cloud Console](https://console.cloud.google.com/)
+- Create a new project (or use an existing one)
+- Navigate to "APIs & Services" → "Enable APIs and Services"
+- Search for "Google Sheets API" and click Enable
+
+**2. Create a service account and download credentials**
+- In the Cloud Console, go to "APIs & Services" → "Credentials"
+- Click "Create Credentials" → "Service Account"
+- Give it a name (e.g. `finance-scraper-sheets`)
+- Click "Done"
+- Click on the service account email → "Keys" tab → "Add Key" → "Create new key" → JSON
+- Download the JSON file and note the path (e.g. `/Users/yourname/credentials.json`)
+
+**3. Share your Google Sheet with the service account**
+- Create or open the target Google Sheet in your browser
+- Click "Share" (top right)
+- Copy the service account email (found in the downloaded JSON under `client_email`)
+- Paste it into the Share dialog and grant **Editor** access
+- Click "Send"
+
+**4. Configure your `.env` file**
+- Open `.env` (copy from `.env.example` if not created yet)
+- Copy the Spreadsheet ID from your Sheet's URL — it is the long alphanumeric string between `/d/` and `/edit`:
+  ```
+  https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms/edit
+  Spreadsheet ID: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
+  ```
+- Add to `.env`:
+  ```
+  GOOGLE_SHEETS_CREDENTIALS_PATH=/absolute/path/to/your/credentials.json
+  GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id_here
+  ```
+
+**5. Add a header row to your Sheet (first time only)**
+- In row 1 of your Google Sheet, add these column headers in order:
+  `Export Date | Ticker | Price | P/E | Forward P/E | P/B | EPS | RSI | MA10 Signal | MA20 Signal | MA50 Signal | Sentiment Score | Revenue | Profit Margin | Operating Margin | Debt/Equity | Health Score | Earnings Quality Flag | DCF Intrinsic Value | Peer P/E Percentile`
+- Subsequent exports append data rows below the header automatically.
+
+### Usage
+
+1. Start the webapp: `python webapp.py`
+2. Scrape one or more tickers using the Stock Analysis tab
+3. Click **"📊 Export to Sheets"** — the button appears next to the Email Report form
+4. A success message shows how many tickers were exported
+5. Each export appends new rows — filter by Export Date in Sheets to track history
+
+### Troubleshooting
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "Spreadsheet not found or not shared" | Service account not shared with your Sheet | Share the Sheet with the service account email as Editor |
+| "Credentials file not found" | Path in GOOGLE_SHEETS_CREDENTIALS_PATH is wrong | Check the path exists: `ls $GOOGLE_SHEETS_CREDENTIALS_PATH` |
+| "GOOGLE_SHEETS_CREDENTIALS_PATH is not set" | Missing `.env` entry | Add the env var to `.env` |
+| Button shows "Configure credentials" tooltip | Both env vars not set | Complete Step 4 above |
 
 ---
 
