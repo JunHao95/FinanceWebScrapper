@@ -105,6 +105,7 @@ A high-performance Python application for scraping and analyzing financial metri
 ### Output & Reporting
 - Multiple formats: CSV, Excel, Text reports
 - Email reports with HTML formatting
+- Google Sheets export via `POST /api/export-sheets` — writes up to 20 columns of stock data to a service-account-authenticated spreadsheet
 - Summary comparison reports
 - Interactive web visualizations
 

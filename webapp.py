@@ -342,10 +342,17 @@ def run_scrapers_for_ticker(ticker, sources=["all"], alpha_key=None, finhub_key=
     return results
 
 
+def is_sheets_configured():
+    """Return True if Google Sheets credentials and spreadsheet ID are configured."""
+    creds_path = os.environ.get("GOOGLE_SHEETS_CREDENTIALS_PATH", "").strip()
+    spreadsheet_id = os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", "").strip()
+    return bool(creds_path and spreadsheet_id and os.path.exists(creds_path))
+
+
 @app.route("/")
 def index():
     """Render the main page"""
-    return render_template("index.html")
+    return render_template("index.html", sheets_configured=is_sheets_configured())
 
 
 @app.route("/api/fundamental-analysis", methods=["POST"])
@@ -2792,6 +2799,63 @@ def get_feynman_status(job_id):
     from src.analytics.feynman_runner import get_job_status
 
     return jsonify(get_job_status(job_id))
+
+
+@app.route("/api/export-sheets", methods=["POST"])
+def export_to_sheets():
+    """
+    API endpoint to export stock data to Google Sheets.
+
+    Expected JSON payload:
+    {
+        "tickers": ["AAPL", "MSFT"],
+        "data": {"AAPL": {...}, "MSFT": {...}}
+    }
+
+    Returns:
+        JSON response: {"success": true, "rows_added": N} or {"success": false, "error": "..."}
+    """
+    from src.utils.sheets_utils import export_tickers_to_sheets
+    from gspread.exceptions import APIError, SpreadsheetNotFound
+
+    try:
+        payload = request.get_json(silent=True)
+        if not payload:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        tickers = payload.get("tickers", [])
+        data = payload.get("data", {})
+
+        if not tickers:
+            return jsonify({"success": False, "error": "No tickers provided"}), 400
+
+        rows_added = export_tickers_to_sheets(tickers, data)
+        return jsonify({"success": True, "rows_added": rows_added})
+
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    except SpreadsheetNotFound:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": "Spreadsheet not found or not shared with service account",
+                }
+            ),
+            500,
+        )
+    except APIError as e:
+        try:
+            msg = e.response.json().get("error", {}).get("message", str(e))
+        except Exception:
+            msg = str(e)
+        return (
+            jsonify({"success": False, "error": f"Google Sheets API error: {msg}"}),
+            500,
+        )
+    except Exception as e:
+        logger.error(f"Error in export_to_sheets: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":

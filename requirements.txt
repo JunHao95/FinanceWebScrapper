@@ -38,6 +38,10 @@ scipy==1.17.1
 matplotlib==3.10.8  # For potential future visualization features
 seaborn==0.13.2  # For potential future visualization features
 
+# Google Sheets export
+gspread==6.2.1
+google-auth==2.52.0
+
 # Hosting on Render
 gunicorn==21.2.0
 openai==1.77.0
