@@ -19,6 +19,7 @@ from src.utils.sheets_utils import (  # noqa: E402
     _extract_fields,
     _append_below_existing,
     _upsert_rows,
+    _ensure_scraper_headers,
     _build_row_us,
     _build_row_sg,
     _build_row_hk,
@@ -28,6 +29,7 @@ from src.utils.sheets_utils import (  # noqa: E402
     _TAB_SG,
     _TAB_HK,
     _TAB_OTHERS,
+    _SCRAPER_HEADERS,
 )
 
 
@@ -330,6 +332,60 @@ def test_upsert_mixed_existing_and_new():
 
 
 # ---------------------------------------------------------------------------
+# _ensure_scraper_headers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_ensure_scraper_headers_writes_missing_headers():
+    """All scraper header cells empty → batch_update called with all headers."""
+    ws = MagicMock()
+    ws.row_values.return_value = []  # row 1 completely empty
+    _ensure_scraper_headers(ws, _TAB_US)
+    ws.batch_update.assert_called_once()
+    written = ws.batch_update.call_args[0][0]
+    assert len(written) == len(_SCRAPER_HEADERS[_TAB_US])
+    # First header should be Export Date at AH (col 33 → "AH")
+    assert written[0]["range"] == "AH1"
+    assert written[0]["values"] == [["Export Date"]]
+
+
+@pytest.mark.unit
+def test_ensure_scraper_headers_skips_populated_cells():
+    """Cells already populated must not be overwritten."""
+    ws = MagicMock()
+    # Provide a row long enough with content at col 33 (AH)
+    row1 = [""] * 48
+    row1[33] = "Existing Header"
+    ws.row_values.return_value = row1
+    _ensure_scraper_headers(ws, _TAB_US)
+    written = ws.batch_update.call_args[0][0]
+    ranges = [r["range"] for r in written]
+    assert "AH1" not in ranges  # col 33 was populated — skip it
+
+
+@pytest.mark.unit
+def test_ensure_scraper_headers_noop_for_others_tab():
+    """Others tab owns its full schema — _ensure_scraper_headers must be a no-op."""
+    ws = MagicMock()
+    _ensure_scraper_headers(ws, _TAB_OTHERS)
+    ws.batch_update.assert_not_called()
+    ws.row_values.assert_not_called()
+
+
+@pytest.mark.unit
+def test_export_writes_scraper_headers_for_us_tab():
+    """export_tickers_to_sheets must call _ensure_scraper_headers (via row_values) per tab."""
+    mock_gc, worksheets, _ = _make_mock_gc()
+    with patch("gspread.service_account", return_value=mock_gc), patch.dict(
+        "os.environ", _ENV
+    ), patch("os.path.exists", return_value=True):
+        export_tickers_to_sheets(["AAPL"], {"AAPL": {"Price": "175.00"}})
+    # row_values(1) must have been called on the US tab worksheet
+    worksheets[_TAB_US].row_values.assert_called_once_with(1)
+
+
+# ---------------------------------------------------------------------------
 # get_sheets_client
 # ---------------------------------------------------------------------------
 
@@ -362,6 +418,7 @@ def test_missing_creds_file():
 def _make_mock_ws():
     ws = MagicMock()
     ws.get_all_values.return_value = [["header row"]]
+    ws.row_values.return_value = []  # no scraper headers present by default
     return ws
 
 
@@ -486,13 +543,15 @@ def test_empty_tickers():
 
 @pytest.mark.unit
 def test_export_updates_existing_ticker_in_us_tab():
-    """AAPL already in US tab → batch_update called, no append (update not called)."""
+    """AAPL already in US tab → upsert batch_update called, no append (update not called)."""
     mock_gc, worksheets, _ = _make_mock_gc()
     # Ticker at col C (index 2) in row 2
     worksheets[_TAB_US].get_all_values.return_value = [
         ["h1", "h2", "Ticker"],
         ["", "", "AAPL", "100.0"],
     ]
+    # Pre-populate row 1 so _ensure_scraper_headers writes nothing extra
+    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 48
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
@@ -504,12 +563,14 @@ def test_export_updates_existing_ticker_in_us_tab():
 
 @pytest.mark.unit
 def test_export_upsert_mixed_new_and_existing():
-    """AAPL exists (update) + MSFT new (append) → both batch_update and update called."""
+    """AAPL exists (update) + MSFT new (append) → batch_update for upsert, update for append."""
     mock_gc, worksheets, _ = _make_mock_gc()
     worksheets[_TAB_US].get_all_values.return_value = [
         ["h1", "h2", "Ticker"],
         ["", "", "AAPL", "100.0"],
     ]
+    # Pre-populate row 1 so _ensure_scraper_headers writes nothing extra
+    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 48
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):

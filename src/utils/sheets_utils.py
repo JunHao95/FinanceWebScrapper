@@ -416,6 +416,63 @@ _TICKER_COL = {
     _TAB_OTHERS: 1,  # B: Ticker
 }
 
+# (col_index, header_label) pairs for scraper-added columns in pre-existing tabs.
+# Others tab is excluded — it owns its full schema via COLUMN_HEADERS.
+_SCRAPER_HEADERS = {
+    _TAB_US: [
+        (33, "Export Date"),
+        (34, "Fwd P/E"),
+        (35, "P/B"),
+        (36, "RSI"),
+        (37, "MA10 Signal"),
+        (38, "MA20 Signal"),
+        (39, "MA50 Signal"),
+        (40, "Sentiment Score"),
+        (41, "Revenue"),
+        (42, "Profit Margin"),
+        (43, "Operating Margin"),
+        (44, "Debt/Equity"),
+        (45, "Health Score"),
+        (46, "Earnings Quality Flag"),
+        (47, "Peer P/E Percentile"),
+    ],
+    _TAB_SG: [
+        (29, "Export Date"),
+        (30, "EPS"),
+        (31, "RSI"),
+        (32, "MA10 Signal"),
+        (33, "MA20 Signal"),
+        (34, "MA50 Signal"),
+        (35, "Sentiment Score"),
+        (36, "Revenue"),
+        (37, "Profit Margin"),
+        (38, "Operating Margin"),
+        (39, "Debt/Equity"),
+        (40, "Health Score"),
+        (41, "Earnings Quality Flag"),
+        (42, "DCF Intrinsic Value"),
+        (43, "Peer P/E Percentile"),
+    ],
+    _TAB_HK: [
+        (27, "Export Date"),
+        (28, "EPS"),
+        (29, "P/E"),
+        (30, "RSI"),
+        (31, "MA10 Signal"),
+        (32, "MA20 Signal"),
+        (33, "MA50 Signal"),
+        (34, "Sentiment Score"),
+        (35, "Revenue"),
+        (36, "Profit Margin"),
+        (37, "Operating Margin"),
+        (38, "Debt/Equity"),
+        (39, "Health Score"),
+        (40, "Earnings Quality Flag"),
+        (41, "DCF Intrinsic Value"),
+        (42, "Peer P/E Percentile"),
+    ],
+}
+
 
 def _col_index_to_letter(idx):
     """Convert 0-based column index to A1 column letter (e.g. 0→A, 26→AA)."""
@@ -425,6 +482,23 @@ def _col_index_to_letter(idx):
         n, rem = divmod(n - 1, 26)
         result = chr(65 + rem) + result
     return result
+
+
+def _ensure_scraper_headers(ws, tab_name):
+    """Write column headers for scraper-added columns in row 1 if the cells are empty."""
+    header_specs = _SCRAPER_HEADERS.get(tab_name)
+    if not header_specs:
+        return
+    row1 = ws.row_values(1)
+    updates = []
+    for col_idx, label in header_specs:
+        existing = row1[col_idx] if col_idx < len(row1) else ""
+        if not existing:
+            updates.append(
+                {"range": f"{_col_index_to_letter(col_idx)}1", "values": [[label]]}
+            )
+    if updates:
+        ws.batch_update(updates, value_input_option=ValueInputOption.user_entered)
 
 
 def _upsert_rows(ws, rows, ticker_col_idx):
@@ -520,6 +594,7 @@ def export_tickers_to_sheets(tickers, data):
     total = 0
     for tab_name, rows in buckets.items():
         ws = _get_or_create_worksheet(sh, tab_name)
+        _ensure_scraper_headers(ws, tab_name)
         _upsert_rows(ws, rows, _TICKER_COL[tab_name])
         logger.info(
             "Upserted %d rows to tab '%s' in sheet %s",
