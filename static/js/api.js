@@ -92,6 +92,44 @@ const API = {
     },
 
     /**
+     * Export stock data to Google Sheets
+     */
+    async exportSheets(exportData) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        try {
+            const response = await fetch('/api/export-sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(exportData),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Export failed (${response.status}): ${errorText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Invalid response format from export service');
+            }
+
+            return await response.json();
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Export timed out. Please try again.');
+            }
+            throw error;
+        }
+    },
+
+    /**
      * Calculate option price
      */
     async calculateOptionPrice(params) {

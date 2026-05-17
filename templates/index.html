@@ -288,6 +288,18 @@
                         <button type="submit" class="submit-btn">📧 Send Report</button>
                     </div>
                 </form>
+                <div style="margin-top: 12px;">
+                    <button type="button"
+                            id="exportSheetsBtn"
+                            class="submit-btn"
+                            onclick="StockScraper.exportSheets()"
+                            {% if not sheets_configured %}disabled data-sheets-unconfigured="true" title="Configure Google Sheets credentials in .env to enable"{% endif %}>
+                        📊 Export to Sheets
+                    </button>
+                    {% if not sheets_configured %}
+                    <p style="font-size: 0.8em; color: #888; margin-top: 6px;">Google Sheets not configured. See README for setup.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
         </div>
