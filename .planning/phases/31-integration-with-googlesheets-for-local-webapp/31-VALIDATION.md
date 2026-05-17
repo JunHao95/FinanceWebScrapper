@@ -45,6 +45,11 @@ created: 2026-05-17
 | 31-02-01 | 02 | 2 | POST /api/export-sheets 200 | integration | `pytest tests/test_integration_routes.py::test_export_sheets_success -x` | ❌ W0 | ⬜ pending |
 | 31-02-02 | 02 | 2 | POST /api/export-sheets no creds | integration | `pytest tests/test_integration_routes.py::test_export_sheets_no_creds -x` | ❌ W0 | ⬜ pending |
 | 31-02-03 | 02 | 2 | POST /api/export-sheets SpreadsheetNotFound | integration | `pytest tests/test_integration_routes.py::test_export_sheets_not_found -x` | ❌ W0 | ⬜ pending |
+| 31-03-01 | 03 | 2 | button markup + data-sheets-unconfigured attribute | grep | `grep -n "data-sheets-unconfigured\|📊 Export to Sheets" templates/index.html` | ✅ | ⬜ pending |
+| 31-03-02 | 03 | 2 | API.exportSheets() method in api.js | grep | `grep -n "exportSheets\|export-sheets" static/js/api.js` | ✅ | ⬜ pending |
+| 31-03-03 | 03 | 2 | StockScraper.exportSheets() + sheetsUnconfigured guard | grep | `grep -n "exportSheets\|sheetsUnconfigured" static/js/stockScraper.js` | ✅ | ⬜ pending |
+| 31-03-04 | 03 | 2 | README Google Sheets Setup section | grep | `grep -c "Google Sheets Setup" README.md` | ✅ | ⬜ pending |
+| 31-03-05 | 03 | 2 | human checkpoint — button render + UX flow | manual-only | N/A — covered by Task 4 human checkpoint | N/A | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -65,8 +70,8 @@ created: 2026-05-17
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
 | UI button disabled when creds not configured | UI placement | Browser UI state not easily automatable | Load app without GOOGLE_SHEETS env vars; verify button disabled with tooltip |
-| UI button disabled before scrape | UI guard | Requires browser session state | Load app, verify button disabled; run scrape, verify button enabled |
-| Success alert shown after export | UI feedback | Browser DOM assertion | Click export after scrape; verify green alert with "Exported N tickers" |
+| UI button disabled before scrape, enabled after scrape (when configured) | UI guard | Requires browser session state | Load app, verify button disabled; run scrape, verify button enabled (only when creds configured) |
+| Success alert shown after export with rows count | UI feedback | Browser DOM assertion | Click export after scrape; verify green alert with "Exported N tickers" |
 | Data appears correctly in actual Google Sheet | E2E | Requires real Google API credentials | Configure real creds + sheet ID, run export, verify rows in Sheet |
 
 ---
