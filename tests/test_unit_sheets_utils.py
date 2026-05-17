@@ -273,7 +273,7 @@ def test_upsert_updates_existing_ticker():
 
 @pytest.mark.unit
 def test_upsert_updates_correct_row_number():
-    """batch_update range must point at the row containing the ticker."""
+    """All cell ranges in batch_update must reference the row containing the ticker."""
     ws = MagicMock()
     ws.get_all_values.return_value = [
         ["h1", "h2", "Ticker"],
@@ -282,7 +282,22 @@ def test_upsert_updates_correct_row_number():
     ]
     _upsert_rows(ws, [["", "", "MSFT", "350.0"]], ticker_col_idx=2)
     call_data = ws.batch_update.call_args[0][0]
-    assert call_data[0]["range"] == "A3"
+    assert all(r["range"].endswith("3") for r in call_data)
+
+
+@pytest.mark.unit
+def test_upsert_skips_formula_cells():
+    """Cells that contain a formula (start with '=') must not be overwritten."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [
+        ["h1", "h2", "Ticker", "Formula Col"],
+        ["", "", "AAPL", '=IMPORTDATA("url")'],
+    ]
+    _upsert_rows(ws, [["", "", "AAPL", "ignored"]], ticker_col_idx=2)
+    call_data = ws.batch_update.call_args[0][0]
+    ranges = [r["range"] for r in call_data]
+    # Column D (index 3) holds the formula — must be absent from updates
+    assert not any(r.startswith("D") for r in ranges)
 
 
 @pytest.mark.unit

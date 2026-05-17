@@ -417,9 +417,19 @@ _TICKER_COL = {
 }
 
 
+def _col_index_to_letter(idx):
+    """Convert 0-based column index to A1 column letter (e.g. 0→A, 26→AA)."""
+    result = ""
+    n = idx + 1
+    while n > 0:
+        n, rem = divmod(n - 1, 26)
+        result = chr(65 + rem) + result
+    return result
+
+
 def _upsert_rows(ws, rows, ticker_col_idx):
-    """Upsert rows: update existing ticker row in-place, else append."""
-    existing = ws.get_all_values()
+    """Upsert rows: update existing ticker row in-place (skipping formula cells), else append."""
+    existing = ws.get_all_values(value_render_option="FORMULA")
     ticker_row_map = {}
     for i, row in enumerate(existing, start=1):
         if len(row) > ticker_col_idx:
@@ -436,9 +446,20 @@ def _upsert_rows(ws, rows, ticker_col_idx):
             else ""
         )
         if ticker_in_row and ticker_in_row in ticker_row_map:
-            batch_updates.append(
-                {"range": f"A{ticker_row_map[ticker_in_row]}", "values": [row]}
-            )
+            sheet_row_num = ticker_row_map[ticker_in_row]
+            existing_row = existing[sheet_row_num - 1]
+            for col_idx, new_val in enumerate(row):
+                existing_val = (
+                    existing_row[col_idx] if col_idx < len(existing_row) else ""
+                )
+                if isinstance(existing_val, str) and existing_val.startswith("="):
+                    continue
+                batch_updates.append(
+                    {
+                        "range": f"{_col_index_to_letter(col_idx)}{sheet_row_num}",
+                        "values": [[new_val]],
+                    }
+                )
         else:
             new_rows.append(row)
 
