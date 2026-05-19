@@ -140,7 +140,10 @@ def _get_or_create_worksheet(sh, tab_name):
 def _append_below_existing(ws, rows):
     """Write rows after the last non-empty row, anchored to column A."""
     existing = ws.get_all_values()
-    next_row = len(existing) + 1
+    last_data_row = max(
+        (i for i, r in enumerate(existing, start=1) if any(r)), default=0
+    )
+    next_row = last_data_row + 1
     ws.update(f"A{next_row}", rows, value_input_option=ValueInputOption.user_entered)
 
 
@@ -504,10 +507,19 @@ def _ensure_scraper_headers(ws, tab_name):
 
 
 def _upsert_rows(ws, rows, ticker_col_idx):
-    """Upsert rows: update existing ticker row in-place (skipping formula cells), else append."""
-    existing = ws.get_all_values(value_render_option="FORMULA")
+    """Upsert rows: update existing ticker row in-place (skipping formula cells), else append.
+
+    Uses FORMATTED_VALUE for ticker matching so that =HYPERLINK() cells are
+    matched by their display text rather than the raw formula string.
+    Uses FORMULA render only for per-cell formula-skip detection.
+    """
+    # FORMATTED_VALUE: ticker cells with =HYPERLINK() return display text (e.g. "D05.SI")
+    existing_fmt = ws.get_all_values()
+    # FORMULA: needed to detect formula cells that must not be overwritten
+    existing_fml = ws.get_all_values(value_render_option="FORMULA")
+
     ticker_row_map = {}
-    for i, row in enumerate(existing, start=1):
+    for i, row in enumerate(existing_fmt, start=1):
         if len(row) > ticker_col_idx:
             cell_val = str(row[ticker_col_idx]).strip().upper()
             if cell_val:
@@ -523,7 +535,7 @@ def _upsert_rows(ws, rows, ticker_col_idx):
         )
         if ticker_in_row and ticker_in_row in ticker_row_map:
             sheet_row_num = ticker_row_map[ticker_in_row]
-            existing_row = existing[sheet_row_num - 1]
+            existing_row = existing_fml[sheet_row_num - 1]
             for col_idx, new_val in enumerate(row):
                 existing_val = (
                     existing_row[col_idx] if col_idx < len(existing_row) else ""
@@ -542,7 +554,12 @@ def _upsert_rows(ws, rows, ticker_col_idx):
     if batch_updates:
         ws.batch_update(batch_updates, value_input_option=ValueInputOption.user_entered)
     if new_rows:
-        next_row = len(existing) + 1
+        # Find last row with any content — avoids counting empty rows inside the
+        # sheet's "used range" that would offset the append position.
+        last_data_row = max(
+            (i for i, r in enumerate(existing_fmt, start=1) if any(r)), default=0
+        )
+        next_row = last_data_row + 1
         ws.update(
             f"A{next_row}", new_rows, value_input_option=ValueInputOption.user_entered
         )

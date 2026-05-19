@@ -297,6 +297,43 @@ def test_upsert_handles_numeric_cells_in_existing_rows():
 
 
 @pytest.mark.unit
+def test_upsert_matches_hyperlink_ticker():
+    """Ticker stored as =HYPERLINK() must match via FORMATTED_VALUE display text, not formula."""
+    ws = MagicMock()
+
+    def _side(value_render_option=None):
+        if value_render_option == "FORMULA":
+            return [
+                ["h1", "h2", '=HYPERLINK("u","D05.SI")'],
+                ["", "", '=HYPERLINK("u","O39.SI")', "23.43"],
+            ]
+        return [
+            ["h1", "h2", "D05.SI"],
+            ["", "", "O39.SI", "23.43"],
+        ]
+
+    ws.get_all_values.side_effect = _side
+    _upsert_rows(ws, [["", "", "D05.SI", "62"]], ticker_col_idx=2)
+    ws.batch_update.assert_called_once()
+    ws.update.assert_not_called()
+
+
+@pytest.mark.unit
+def test_upsert_appends_after_last_data_row_skipping_empty_rows():
+    """Empty rows inside the used range must not offset the append position."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [
+        ["h1", "h2", "Ticker"],  # row 1: data
+        [],  # row 2: empty (Google used-range artifact)
+        [],  # row 3: empty
+        [],  # row 4: empty
+    ]
+    _upsert_rows(ws, [["", "", "TSLA", "400.0"]], ticker_col_idx=2)
+    ws.update.assert_called_once()
+    assert ws.update.call_args[0][0] == "A2"
+
+
+@pytest.mark.unit
 def test_upsert_skips_formula_cells():
     """Cells that contain a formula (start with '=') must not be overwritten."""
     ws = MagicMock()
