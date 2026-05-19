@@ -537,6 +537,8 @@ def _upsert_rows(ws, rows, ticker_col_idx):
             sheet_row_num = ticker_row_map[ticker_in_row]
             existing_row = existing_fml[sheet_row_num - 1]
             for col_idx, new_val in enumerate(row):
+                if new_val == "":
+                    continue  # never overwrite existing user data with empty string
                 existing_val = (
                     existing_row[col_idx] if col_idx < len(existing_row) else ""
                 )

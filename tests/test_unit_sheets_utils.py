@@ -334,6 +334,22 @@ def test_upsert_appends_after_last_data_row_skipping_empty_rows():
 
 
 @pytest.mark.unit
+def test_upsert_preserves_existing_data_when_new_val_is_empty():
+    """Empty-string cols in our row must never overwrite existing user data."""
+    ws = MagicMock()
+    ws.get_all_values.return_value = [
+        ["Category", "Name", "Ticker"],
+        ["Growth", "DBS Group", "D05.SI", "62"],
+    ]
+    # Our row has "" for cols 0 (Category) and 1 (Name) — must not wipe them
+    _upsert_rows(ws, [["", "", "D05.SI", "65"]], ticker_col_idx=2)
+    call_data = ws.batch_update.call_args[0][0]
+    ranges = [r["range"] for r in call_data]
+    assert not any(r.startswith("A") for r in ranges)  # col A (Category) preserved
+    assert not any(r.startswith("B") for r in ranges)  # col B (Name) preserved
+
+
+@pytest.mark.unit
 def test_upsert_skips_formula_cells():
     """Cells that contain a formula (start with '=') must not be overwritten."""
     ws = MagicMock()
