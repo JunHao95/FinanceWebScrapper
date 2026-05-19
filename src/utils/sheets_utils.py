@@ -15,13 +15,12 @@ US Stock  (existing cols A-AG, indices 0-32) + scraper extras starting at AH (33
   AP(41)=Revenue, AQ(42)=Profit Margin, AR(43)=Op Margin,
   AS(44)=Debt/Equity, AT(45)=Health Score, AU(46)=EQ Flag, AV(47)=Peer P/E
 
-SG Stock  (existing cols A-AC, indices 0-28) + scraper extras starting at AD (29):
-  C(2)=Google Quote, D(3)=Google Price, E(4)=P/E, F(5)=Yahoo Quote,
-  G(6)=Yahoo Price, X(23)=P/B, Y(24)=Fwd P/E
-  AD(29)=Export Date, AE(30)=EPS, AF(31)=RSI, AG(32)=MA10, AH(33)=MA20,
-  AI(34)=MA50, AJ(35)=Sentiment, AK(36)=Revenue, AL(37)=Profit Margin,
-  AM(38)=Op Margin, AN(39)=Debt/Equity, AO(40)=Health Score,
-  AP(41)=EQ Flag, AQ(42)=DCF, AR(43)=Peer P/E
+SG Stock  (existing cols A-Z, indices 0-25) + scraper extras starting at AA (26):
+  C(2)=Yahoo Quote, D(3)=Yahoo Price, U(20)=P/B, V(21)=Fwd P/E
+  AA(26)=Export Date, AB(27)=EPS, AC(28)=RSI, AD(29)=MA10, AE(30)=MA20,
+  AF(31)=MA50, AG(32)=Sentiment, AH(33)=Revenue, AI(34)=Profit Margin,
+  AJ(35)=Op Margin, AK(36)=Debt/Equity, AL(37)=Health Score,
+  AM(38)=EQ Flag, AN(39)=DCF, AO(40)=Peer P/E
 
 HK Stock  (existing cols A-AA, indices 0-26) + scraper extras starting at AB (27):
   C(2)=Google Quote, D(3)=Google Price, E(4)=Yahoo Quote, F(5)=Yahoo Price,
@@ -77,7 +76,7 @@ _TAB_OTHERS = "Others Stock"
 
 # Column counts for existing tabs (determines where extra scraper cols start)
 _US_EXISTING_COLS = 33  # A-AG
-_SG_EXISTING_COLS = 29  # A-AC
+_SG_EXISTING_COLS = 26  # A-Z
 _HK_EXISTING_COLS = 27  # A-AA
 
 
@@ -297,20 +296,17 @@ def _build_row_us(ticker, f, export_date):
 
 
 def _build_row_sg(ticker, f, export_date):
-    """SG Stock: map to existing A-AC schema, append scraper extras at AD+."""
+    """SG Stock: map to existing A-Z schema, append scraper extras at AA+."""
     price = serialize_value(f["price"])
     row = [""] * _SG_EXISTING_COLS
-    row[2] = ticker  # C: Google Quote
-    row[3] = price  # D: Google Price
-    row[4] = serialize_value(f["pe"])  # E: P/E
-    row[5] = ticker  # F: Yahoo Quote
-    row[6] = price  # G: Yahoo Price
-    row[23] = serialize_value(f["pb"])  # X: P/B
-    row[24] = serialize_value(f["fwd_pe"])  # Y: Fwd P/E
-    # AD(29): Export Date, AE(30): EPS, AF(31): RSI, AG(32): MA10,
-    # AH(33): MA20, AI(34): MA50, AJ(35): Sentiment, AK(36): Revenue,
-    # AL(37): Profit Margin, AM(38): Op Margin, AN(39): Debt/Equity,
-    # AO(40): Health Score, AP(41): EQ Flag, AQ(42): DCF, AR(43): Peer P/E
+    row[2] = ticker  # C: Yahoo Quote
+    row[3] = price  # D: Yahoo Price
+    row[20] = serialize_value(f["pb"])  # U: P/B
+    row[21] = serialize_value(f["fwd_pe"])  # V: Fwd P/E
+    # AA(26): Export Date, AB(27): EPS, AC(28): RSI, AD(29): MA10,
+    # AE(30): MA20, AF(31): MA50, AG(32): Sentiment, AH(33): Revenue,
+    # AI(34): Profit Margin, AJ(35): Op Margin, AK(36): Debt/Equity,
+    # AL(37): Health Score, AM(38): EQ Flag, AN(39): DCF, AO(40): Peer P/E
     row += [
         export_date,
         serialize_value(f["eps"]),
@@ -328,7 +324,7 @@ def _build_row_sg(ticker, f, export_date):
         serialize_value(f["dcf"]),
         serialize_value(f["peer_pe"]),
     ]
-    return row  # 44 cols total
+    return row  # 41 cols total
 
 
 def _build_row_hk(ticker, f, export_date):
@@ -403,7 +399,7 @@ _ROW_BUILDERS = {
 # Expected row lengths per tab (used by tests)
 ROW_LENGTHS = {
     _TAB_US: 48,
-    _TAB_SG: 44,
+    _TAB_SG: 41,
     _TAB_HK: 43,
     _TAB_OTHERS: 20,
 }
@@ -437,21 +433,21 @@ _SCRAPER_HEADERS = {
         (47, "Peer P/E Percentile"),
     ],
     _TAB_SG: [
-        (29, "Export Date"),
-        (30, "EPS"),
-        (31, "RSI"),
-        (32, "MA10 Signal"),
-        (33, "MA20 Signal"),
-        (34, "MA50 Signal"),
-        (35, "Sentiment Score"),
-        (36, "Revenue"),
-        (37, "Profit Margin"),
-        (38, "Operating Margin"),
-        (39, "Debt/Equity"),
-        (40, "Health Score"),
-        (41, "Earnings Quality Flag"),
-        (42, "DCF Intrinsic Value"),
-        (43, "Peer P/E Percentile"),
+        (26, "Export Date"),
+        (27, "EPS"),
+        (28, "RSI"),
+        (29, "MA10 Signal"),
+        (30, "MA20 Signal"),
+        (31, "MA50 Signal"),
+        (32, "Sentiment Score"),
+        (33, "Revenue"),
+        (34, "Profit Margin"),
+        (35, "Operating Margin"),
+        (36, "Debt/Equity"),
+        (37, "Health Score"),
+        (38, "Earnings Quality Flag"),
+        (39, "DCF Intrinsic Value"),
+        (40, "Peer P/E Percentile"),
     ],
     _TAB_HK: [
         (27, "Export Date"),

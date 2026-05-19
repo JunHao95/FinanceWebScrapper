@@ -156,7 +156,7 @@ def test_row_length_us():
 @pytest.mark.unit
 def test_row_length_sg():
     row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 44
+    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 41
 
 
 @pytest.mark.unit
@@ -204,21 +204,15 @@ def test_us_row_export_date_at_ah():
 
 
 @pytest.mark.unit
-def test_sg_row_pe_at_e():
+def test_sg_row_pb_at_u():
     row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-17")
-    assert row[4] == 20.0  # E: P/E
+    assert row[20] == 3.0  # U: P/B
 
 
 @pytest.mark.unit
-def test_sg_row_pb_at_x():
+def test_sg_row_fwd_pe_at_v():
     row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-17")
-    assert row[23] == 3.0  # X: P/B
-
-
-@pytest.mark.unit
-def test_sg_row_fwd_pe_at_y():
-    row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-17")
-    assert row[24] == 18.0  # Y: Fwd P/E
+    assert row[21] == 18.0  # V: Fwd P/E
 
 
 @pytest.mark.unit
@@ -371,7 +365,7 @@ def test_ensure_min_cols_noop_when_wide_enough():
 
 @pytest.mark.unit
 def test_export_resizes_sg_tab_to_min_cols():
-    """export_tickers_to_sheets must resize SG tab to ROW_LENGTHS[_TAB_SG]=44 cols."""
+    """export_tickers_to_sheets must resize SG tab to ROW_LENGTHS[_TAB_SG]=41 cols."""
     mock_gc, worksheets, _ = _make_mock_gc()
     worksheets[_TAB_SG].col_count = 30  # narrow — needs resize
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
