@@ -513,7 +513,7 @@ def _upsert_rows(ws, rows, ticker_col_idx):
     ticker_row_map = {}
     for i, row in enumerate(existing, start=1):
         if len(row) > ticker_col_idx:
-            cell_val = row[ticker_col_idx].strip().upper()
+            cell_val = str(row[ticker_col_idx]).strip().upper()
             if cell_val:
                 ticker_row_map[cell_val] = i
 

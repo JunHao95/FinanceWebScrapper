@@ -289,6 +289,20 @@ def test_upsert_updates_correct_row_number():
 
 
 @pytest.mark.unit
+def test_upsert_handles_numeric_cells_in_existing_rows():
+    """FORMULA render option can return ints/floats; strip() must not crash on them."""
+    ws = MagicMock()
+    # Column A is an int (as returned by Sheets API with FORMULA render option)
+    ws.get_all_values.return_value = [
+        [1, 2, "Ticker"],  # row 1: numeric cells in non-ticker cols
+        [3, 4, "AAPL", 100.0],  # row 2: numeric price cell
+    ]
+    # Should not raise AttributeError: 'int' object has no attribute 'strip'
+    _upsert_rows(ws, [["", "", "AAPL", "150.0"]], ticker_col_idx=2)
+    ws.batch_update.assert_called_once()
+
+
+@pytest.mark.unit
 def test_upsert_skips_formula_cells():
     """Cells that contain a formula (start with '=') must not be overwritten."""
     ws = MagicMock()
