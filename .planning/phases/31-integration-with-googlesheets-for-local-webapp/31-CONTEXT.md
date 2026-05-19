@@ -1,6 +1,7 @@
 # Phase 31: Integration with GoogleSheets for local Webapp — Context
 
 **Gathered:** 2026-05-17
+**Updated:** 2026-05-20
 **Status:** Ready for planning
 
 <domain>
@@ -27,8 +28,49 @@ Out of scope:
   - Sentiment: `Sentiment Score`
   - Fundamentals: `Revenue`, `Profit Margin`, `Operating Margin`, `Debt/Equity`
   - Analytics scores (blank if analysis wasn't run): `Health Score`, `Earnings Quality Flag`, `DCF Intrinsic Value`, `Peer P/E Percentile`
+  - Intelligence columns (new — see detailed decisions below):
+    - `Ticker Summary` — ~100-char rule-based sentence synthesizing price/valuation, technical signal digest, sentiment+health, DCF gap
+    - `Recommended Action` — `Buy` / `Hold` / `Sell` + short rationale (e.g. "Buy — RSI oversold, 3/3 MA bullish, sentiment positive"); blank if no signals available
+    - `Analysis Methods` — comma-separated labels of methods that ran (e.g. `DCF, Health Score, LSTM, RF, RSI/MA, Sentiment`)
+    - `Data Source Credibility` — tier + source list (e.g. `High (Yahoo, Finnhub, Finviz, News)`)
 - Columns always present in the sheet header; cells are empty if a particular score wasn't computed for that ticker
 - Analytics scores section is NOT a separate button — same single export includes all available data
+- Intelligence columns generated server-side in `sheets_utils.py` from existing scraped/analytics data — no new external API calls required
+
+### Recommended Action column
+- **Output tiers:** `Buy` / `Hold` / `Sell`
+- **Format:** Label + short rationale inline, e.g. `"Buy — RSI oversold, 3/3 MA bullish, sentiment positive"`
+- **Signal weights:** Claude's discretion — use all available signals (MA signals, RSI, Sentiment Score, Health Score, DCF gap, ML direction signals) weighted by availability; heavier weight to signals present for the ticker
+- **Missing data:** Leave blank (empty cell) — consistent with how analytics scores handle absent data
+- **Generated server-side** in `sheets_utils.py` from the export payload fields
+
+### Ticker Summary column
+- **Generation:** Rule-based template — fill from scraped fields, no LLM call, no extra API cost
+- **Contents:** price/valuation snapshot (Price, P/E, P/B), technical signal digest (RSI level + MA consensus e.g. "2/3 MAs bullish"), sentiment direction + Health Score grade, DCF gap (above/below intrinsic value)
+- **Target length:** ~100 chars, 1 sentence — dense, fits visible Sheets cell without row-height expansion
+- **Example:** `"P/E 28, RSI 44 neutral, 2/3 MA bullish, Health B+, 8% DCF upside."`
+- **Generated server-side** in `sheets_utils.py`; omit sections whose data is blank
+
+### Analysis Methods column
+- **Source of truth:** Infer from data presence in export payload — no new tracking plumbing needed:
+  - `DCF Intrinsic Value` non-null → `DCF`
+  - `Health Score` non-null → `Health Score`
+  - `Earnings Quality Flag` non-null → `Earnings Quality`
+  - `Peer P/E Percentile` non-null → `Peer Comparison`
+  - `RSI` / MA signals non-null → `RSI/MA`
+  - `Sentiment Score` non-null → `Sentiment`
+  - ML payload `rf_available=True` → `RF`; `lstm_available=True` → `LSTM`
+- **Format:** Comma-separated labels, e.g. `"DCF, Health Score, LSTM, RF, RSI/MA, Sentiment"`
+- **Omit** any method whose data is blank/unavailable for that ticker
+
+### Data Source Credibility column
+- **Tier assignment (pre-fixed):**
+  - `High`: Yahoo Finance, Finnhub, Finviz
+  - `Medium`: News sentiment
+  - `Low`: Reddit sentiment, Google Trends
+- **Composite rule:** Highest tier present among sources that contributed non-null data for this ticker
+- **Format:** `Tier (source1, source2, ...)` — e.g. `"High (Yahoo, Finnhub, News)"` or `"Medium (News, Reddit)"`
+- **Sources detected** from which fields are non-null in the export payload (Yahoo → Price/PE/fundamentals; Finviz → Peer data; Finnhub → supplementary quote; Sentiment → sentiment score + breakdown)
 
 ### Append behavior
 - Each export **appends** new rows to the Sheet (never overwrites)
@@ -78,6 +120,9 @@ Out of scope:
 - Whether to validate the Spreadsheet ID on Flask startup vs at export time
 - Exact column ordering within each category group
 - How to handle the `None`/`null` values from analytics scores when serializing to Sheets cells
+- Signal weights for Recommended Action verdict (use all available signals, heavier weight to those present)
+- Exact thresholds for RSI levels (e.g. oversold < 30, overbought > 70) in summary/verdict logic
+- Column position of the 4 intelligence columns relative to existing schema (append after `Peer P/E Percentile`)
 
 </decisions>
 
