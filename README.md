@@ -105,7 +105,7 @@ A high-performance Python application for scraping and analyzing financial metri
 ### Output & Reporting
 - Multiple formats: CSV, Excel, Text reports
 - Email reports with HTML formatting
-- Google Sheets export via `POST /api/export-sheets` — writes up to 20 columns of stock data to a service-account-authenticated spreadsheet
+- Google Sheets export via `POST /api/export-sheets` — routes tickers to US/SG/HK/Others tabs, auto-expands sheet column count if the grid is too narrow (fixes "exceeds grid limits" error for SG/HK tabs), skips formula cells during upsert, and populates scraper column headers on first export
 - Summary comparison reports
 - Interactive web visualizations
 

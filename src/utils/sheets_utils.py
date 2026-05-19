@@ -484,6 +484,12 @@ def _col_index_to_letter(idx):
     return result
 
 
+def _ensure_min_cols(ws, min_cols):
+    """Expand the worksheet grid to at least min_cols columns if it is too narrow."""
+    if ws.col_count < min_cols:
+        ws.resize(cols=min_cols)
+
+
 def _ensure_scraper_headers(ws, tab_name):
     """Write column headers for scraper-added columns in row 1 if the cells are empty."""
     header_specs = _SCRAPER_HEADERS.get(tab_name)
@@ -594,6 +600,7 @@ def export_tickers_to_sheets(tickers, data):
     total = 0
     for tab_name, rows in buckets.items():
         ws = _get_or_create_worksheet(sh, tab_name)
+        _ensure_min_cols(ws, ROW_LENGTHS.get(tab_name, 20))
         _ensure_scraper_headers(ws, tab_name)
         _upsert_rows(ws, rows, _TICKER_COL[tab_name])
         logger.info(

@@ -19,6 +19,7 @@ from src.utils.sheets_utils import (  # noqa: E402
     _extract_fields,
     _append_below_existing,
     _upsert_rows,
+    _ensure_min_cols,
     _ensure_scraper_headers,
     _build_row_us,
     _build_row_sg,
@@ -332,6 +333,41 @@ def test_upsert_mixed_existing_and_new():
 
 
 # ---------------------------------------------------------------------------
+# _ensure_min_cols
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_ensure_min_cols_resizes_when_too_narrow():
+    """Sheet with fewer columns than needed → ws.resize called."""
+    ws = MagicMock()
+    ws.col_count = 30
+    _ensure_min_cols(ws, 44)
+    ws.resize.assert_called_once_with(cols=44)
+
+
+@pytest.mark.unit
+def test_ensure_min_cols_noop_when_wide_enough():
+    """Sheet already wide enough → ws.resize not called."""
+    ws = MagicMock()
+    ws.col_count = 50
+    _ensure_min_cols(ws, 44)
+    ws.resize.assert_not_called()
+
+
+@pytest.mark.unit
+def test_export_resizes_sg_tab_to_min_cols():
+    """export_tickers_to_sheets must resize SG tab to ROW_LENGTHS[_TAB_SG]=44 cols."""
+    mock_gc, worksheets, _ = _make_mock_gc()
+    worksheets[_TAB_SG].col_count = 30  # narrow — needs resize
+    with patch("gspread.service_account", return_value=mock_gc), patch.dict(
+        "os.environ", _ENV
+    ), patch("os.path.exists", return_value=True):
+        export_tickers_to_sheets(["D05.SI"], {"D05.SI": {"Price": 37.5}})
+    worksheets[_TAB_SG].resize.assert_called_once_with(cols=ROW_LENGTHS[_TAB_SG])
+
+
+# ---------------------------------------------------------------------------
 # _ensure_scraper_headers
 # ---------------------------------------------------------------------------
 
@@ -419,6 +455,7 @@ def _make_mock_ws():
     ws = MagicMock()
     ws.get_all_values.return_value = [["header row"]]
     ws.row_values.return_value = []  # no scraper headers present by default
+    ws.col_count = 30  # simulate a narrow sheet (triggers resize for US/SG/HK tabs)
     return ws
 
 
