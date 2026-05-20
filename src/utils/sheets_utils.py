@@ -13,14 +13,18 @@ US Stock  (existing cols A-AG, indices 0-32) + scraper extras starting at AH (33
   AH(33)=Export Date, AI(34)=Fwd P/E, AJ(35)=P/B, AK(36)=RSI,
   AL(37)=MA10, AM(38)=MA20, AN(39)=MA50, AO(40)=Sentiment,
   AP(41)=Revenue, AQ(42)=Profit Margin, AR(43)=Op Margin,
-  AS(44)=Debt/Equity, AT(45)=Health Score, AU(46)=EQ Flag, AV(47)=Peer P/E
+  AS(44)=Debt/Equity, AT(45)=Health Score, AU(46)=EQ Flag, AV(47)=Peer P/E,
+  AW(48)=Ticker Summary, AX(49)=Recommended Action,
+  AY(50)=Analysis Methods, AZ(51)=Data Source Credibility
 
 SG Stock  (existing cols A-Z, indices 0-25) + scraper extras starting at AA (26):
   C(2)=Yahoo Quote, D(3)=Yahoo Price, U(20)=P/B, V(21)=Fwd P/E
   AA(26)=Export Date, AB(27)=EPS, AC(28)=RSI, AD(29)=MA10, AE(30)=MA20,
   AF(31)=MA50, AG(32)=Sentiment, AH(33)=Revenue, AI(34)=Profit Margin,
   AJ(35)=Op Margin, AK(36)=Debt/Equity, AL(37)=Health Score,
-  AM(38)=EQ Flag, AN(39)=DCF, AO(40)=Peer P/E
+  AM(38)=EQ Flag, AN(39)=DCF, AO(40)=Peer P/E,
+  AP(41)=Ticker Summary, AQ(42)=Recommended Action,
+  AR(43)=Analysis Methods, AS(44)=Data Source Credibility
 
 HK Stock  (existing cols A-AA, indices 0-26) + scraper extras starting at AB (27):
   C(2)=Google Quote, D(3)=Google Price, E(4)=Yahoo Quote, F(5)=Yahoo Price,
@@ -28,9 +32,11 @@ HK Stock  (existing cols A-AA, indices 0-26) + scraper extras starting at AB (27
   AB(27)=Export Date, AC(28)=EPS, AD(29)=P/E, AE(30)=RSI, AF(31)=MA10,
   AG(32)=MA20, AH(33)=MA50, AI(34)=Sentiment, AJ(35)=Revenue,
   AK(36)=Profit Margin, AL(37)=Op Margin, AM(38)=Debt/Equity,
-  AN(39)=Health Score, AO(40)=EQ Flag, AP(41)=DCF, AQ(42)=Peer P/E
+  AN(39)=Health Score, AO(40)=EQ Flag, AP(41)=DCF, AQ(42)=Peer P/E,
+  AR(43)=Ticker Summary, AS(44)=Recommended Action,
+  AT(45)=Analysis Methods, AU(46)=Data Source Credibility
 
-Others Stock  (auto-created, flat 20-column schema)
+Others Stock  (auto-created, flat 24-column schema)
 """
 
 import logging
@@ -67,6 +73,10 @@ COLUMN_HEADERS = [
     "Earnings Quality Flag",
     "DCF Intrinsic Value",
     "Peer P/E Percentile",
+    "Ticker Summary",
+    "Recommended Action",
+    "Analysis Methods",
+    "Data Source Credibility",
 ]
 
 _TAB_US = "US Stock"
@@ -234,6 +244,162 @@ def _extract_fields(ticker_data):
     }
 
 
+def _count_ma_signals(f):
+    """Return (bullish_count, available_count) for the three MA signals."""
+    keys = ("ma10", "ma20", "ma50")
+    available = sum(1 for k in keys if f.get(k) is not None)
+    bullish = sum(
+        1
+        for k in keys
+        if f.get(k) and isinstance(f.get(k), str) and "bullish" in f.get(k, "").lower()
+    )
+    return bullish, available
+
+
+def _rsi_label(rsi_val):
+    try:
+        v = float(rsi_val)
+        if v < 30:
+            return "oversold"
+        if v > 70:
+            return "overbought"
+        return "neutral"
+    except (TypeError, ValueError):
+        return "neutral"
+
+
+def _generate_ticker_summary(f):
+    """~100-char rule-based sentence: P/E, RSI, MA consensus, Health, DCF gap."""
+    parts = []
+    if f.get("pe") is not None:
+        try:
+            parts.append(f"P/E {float(f['pe']):.0f}")
+        except (TypeError, ValueError):
+            pass
+    if f.get("rsi") is not None:
+        try:
+            parts.append(f"RSI {float(f['rsi']):.0f} {_rsi_label(f['rsi'])}")
+        except (TypeError, ValueError):
+            pass
+    bullish, available = _count_ma_signals(f)
+    if available > 0:
+        parts.append(f"{bullish}/{available} MA bullish")
+    if f.get("health") is not None:
+        parts.append(f"Health {f['health']}")
+    if f.get("price") is not None and f.get("dcf") is not None:
+        try:
+            price = float(f["price"])
+            dcf = float(f["dcf"])
+            if price > 0:
+                gap_pct = (dcf - price) / price * 100
+                direction = "upside" if gap_pct >= 0 else "downside"
+                parts.append(f"{abs(gap_pct):.0f}% DCF {direction}")
+        except (TypeError, ValueError):
+            pass
+    return (", ".join(parts) + ".") if parts else ""
+
+
+def _generate_recommended_action(f):
+    """Buy/Hold/Sell + rationale from available signals; blank if no signals."""
+    bullish = []
+    bearish = []
+    if f.get("rsi") is not None:
+        try:
+            rsi = float(f["rsi"])
+            if rsi < 30:
+                bullish.append("RSI oversold")
+            elif rsi > 70:
+                bearish.append("RSI overbought")
+        except (TypeError, ValueError):
+            pass
+    b_count, avail = _count_ma_signals(f)
+    bear_count = avail - b_count
+    if avail > 0:
+        if b_count >= 2 and b_count > bear_count:
+            bullish.append(f"{b_count}/{avail} MA bullish")
+        elif bear_count >= 2 and bear_count > b_count:
+            bearish.append(f"{bear_count}/{avail} MA bearish")
+    if f.get("sentiment") is not None:
+        try:
+            s = float(f["sentiment"])
+            if s > 0.1:
+                bullish.append("sentiment positive")
+            elif s < -0.1:
+                bearish.append("sentiment negative")
+        except (TypeError, ValueError):
+            pass
+    if f.get("price") is not None and f.get("dcf") is not None:
+        try:
+            price = float(f["price"])
+            dcf = float(f["dcf"])
+            if price > 0:
+                gap_pct = (dcf - price) / price * 100
+                if gap_pct > 10:
+                    bullish.append(f"{gap_pct:.0f}% DCF upside")
+                elif gap_pct < -10:
+                    bearish.append(f"{abs(gap_pct):.0f}% DCF downside")
+        except (TypeError, ValueError):
+            pass
+    if not bullish and not bearish:
+        return ""
+    if len(bullish) > len(bearish):
+        return "Buy — " + ", ".join(bullish)
+    if len(bearish) > len(bullish):
+        return "Sell — " + ", ".join(bearish)
+    return "Hold — " + ", ".join(bullish + bearish)
+
+
+def _generate_analysis_methods(f):
+    """Comma-separated list of analysis methods inferred from non-null fields."""
+    methods = []
+    if f.get("rsi") is not None or f.get("ma10") is not None:
+        methods.append("RSI/MA")
+    if f.get("sentiment") is not None:
+        methods.append("Sentiment")
+    if f.get("health") is not None:
+        methods.append("Health Score")
+    if f.get("eq_flag") is not None:
+        methods.append("Earnings Quality")
+    if f.get("dcf") is not None:
+        methods.append("DCF")
+    if f.get("peer_pe") is not None:
+        methods.append("Peer Comparison")
+    return ", ".join(methods)
+
+
+def _generate_data_source_credibility(f, ticker_data):
+    """Tier + source list based on which source-suffixed keys are non-null."""
+    td = ticker_data or {}
+    sources = []
+    tier_order = {"High": 3, "Medium": 2, "Low": 1}
+
+    if any("Yahoo" in k and td.get(k) is not None for k in td):
+        sources.append(("Yahoo", "High"))
+    if any("Finviz" in k and td.get(k) is not None for k in td):
+        sources.append(("Finviz", "High"))
+    if any("Finnhub" in k and td.get(k) is not None for k in td):
+        sources.append(("Finnhub", "High"))
+    if f.get("sentiment") is not None:
+        sources.append(("News", "Medium"))
+    if any("Reddit" in k and td.get(k) is not None for k in td):
+        sources.append(("Reddit", "Low"))
+
+    if not sources:
+        return ""
+    top_tier = max(sources, key=lambda s: tier_order[s[1]])[1]
+    return f"{top_tier} ({', '.join(s[0] for s in sources)})"
+
+
+def _intelligence_cols(f, ticker_data):
+    """Return the 4 intelligence columns for any tab row."""
+    return [
+        serialize_value(_generate_ticker_summary(f)),
+        serialize_value(_generate_recommended_action(f)),
+        serialize_value(_generate_analysis_methods(f)),
+        serialize_value(_generate_data_source_credibility(f, ticker_data)),
+    ]
+
+
 def _scraper_extras(f, export_date, include_pe=True):
     """Return scraper-specific columns appended after existing tab schema.
 
@@ -263,7 +429,7 @@ def _scraper_extras(f, export_date, include_pe=True):
     return extras
 
 
-def _build_row_us(ticker, f, export_date):
+def _build_row_us(ticker, f, export_date, ticker_data=None):
     """US Stock: map to existing A-AG schema, append scraper extras at AH+."""
     price = serialize_value(f["price"])
     row = [""] * _US_EXISTING_COLS
@@ -277,7 +443,9 @@ def _build_row_us(ticker, f, export_date):
     # AH(33): Export Date, AI(34): Fwd P/E, AJ(35): P/B, AK(36): RSI,
     # AL(37): MA10, AM(38): MA20, AN(39): MA50, AO(40): Sentiment,
     # AP(41): Revenue, AQ(42): Profit Margin, AR(43): Op Margin,
-    # AS(44): Debt/Equity, AT(45): Health Score, AU(46): EQ Flag, AV(47): Peer P/E
+    # AS(44): Debt/Equity, AT(45): Health Score, AU(46): EQ Flag, AV(47): Peer P/E,
+    # AW(48): Ticker Summary, AX(49): Recommended Action,
+    # AY(50): Analysis Methods, AZ(51): Data Source Credibility
     row += [
         export_date,
         serialize_value(f["fwd_pe"]),
@@ -295,10 +463,11 @@ def _build_row_us(ticker, f, export_date):
         serialize_value(f["eq_flag"]),
         serialize_value(f["peer_pe"]),
     ]
-    return row  # 48 cols total
+    row += _intelligence_cols(f, ticker_data)
+    return row  # 52 cols total
 
 
-def _build_row_sg(ticker, f, export_date):
+def _build_row_sg(ticker, f, export_date, ticker_data=None):
     """SG Stock: map to existing A-Z schema, append scraper extras at AA+."""
     price = serialize_value(f["price"])
     row = [""] * _SG_EXISTING_COLS
@@ -309,7 +478,9 @@ def _build_row_sg(ticker, f, export_date):
     # AA(26): Export Date, AB(27): EPS, AC(28): RSI, AD(29): MA10,
     # AE(30): MA20, AF(31): MA50, AG(32): Sentiment, AH(33): Revenue,
     # AI(34): Profit Margin, AJ(35): Op Margin, AK(36): Debt/Equity,
-    # AL(37): Health Score, AM(38): EQ Flag, AN(39): DCF, AO(40): Peer P/E
+    # AL(37): Health Score, AM(38): EQ Flag, AN(39): DCF, AO(40): Peer P/E,
+    # AP(41): Ticker Summary, AQ(42): Recommended Action,
+    # AR(43): Analysis Methods, AS(44): Data Source Credibility
     row += [
         export_date,
         serialize_value(f["eps"]),
@@ -327,10 +498,11 @@ def _build_row_sg(ticker, f, export_date):
         serialize_value(f["dcf"]),
         serialize_value(f["peer_pe"]),
     ]
-    return row  # 41 cols total
+    row += _intelligence_cols(f, ticker_data)
+    return row  # 45 cols total
 
 
-def _build_row_hk(ticker, f, export_date):
+def _build_row_hk(ticker, f, export_date, ticker_data=None):
     """HK Stock: map to existing A-AA schema, append scraper extras at AB+."""
     price = serialize_value(f["price"])
     row = [""] * _HK_EXISTING_COLS
@@ -344,7 +516,9 @@ def _build_row_hk(ticker, f, export_date):
     # AF(31): MA10, AG(32): MA20, AH(33): MA50, AI(34): Sentiment,
     # AJ(35): Revenue, AK(36): Profit Margin, AL(37): Op Margin,
     # AM(38): Debt/Equity, AN(39): Health Score, AO(40): EQ Flag,
-    # AP(41): DCF, AQ(42): Peer P/E
+    # AP(41): DCF, AQ(42): Peer P/E,
+    # AR(43): Ticker Summary, AS(44): Recommended Action,
+    # AT(45): Analysis Methods, AU(46): Data Source Credibility
     row += [
         export_date,
         serialize_value(f["eps"]),
@@ -363,12 +537,13 @@ def _build_row_hk(ticker, f, export_date):
         serialize_value(f["dcf"]),
         serialize_value(f["peer_pe"]),
     ]
-    return row  # 43 cols total
+    row += _intelligence_cols(f, ticker_data)
+    return row  # 47 cols total
 
 
-def _build_row_others(ticker, f, export_date):
-    """Others Stock: flat 20-column schema (tab is auto-created, we own it)."""
-    return [
+def _build_row_others(ticker, f, export_date, ticker_data=None):
+    """Others Stock: flat 24-column schema (tab is auto-created, we own it)."""
+    row = [
         export_date,
         ticker,
         serialize_value(f["price"]),
@@ -389,7 +564,9 @@ def _build_row_others(ticker, f, export_date):
         serialize_value(f["eq_flag"]),
         serialize_value(f["dcf"]),
         serialize_value(f["peer_pe"]),
-    ]  # 20 cols total
+    ]
+    row += _intelligence_cols(f, ticker_data)
+    return row  # 24 cols total
 
 
 _ROW_BUILDERS = {
@@ -401,10 +578,10 @@ _ROW_BUILDERS = {
 
 # Expected row lengths per tab (used by tests)
 ROW_LENGTHS = {
-    _TAB_US: 48,
-    _TAB_SG: 41,
-    _TAB_HK: 43,
-    _TAB_OTHERS: 20,
+    _TAB_US: 52,
+    _TAB_SG: 45,
+    _TAB_HK: 47,
+    _TAB_OTHERS: 24,
 }
 
 # Column index (0-based) that holds the ticker symbol in each tab
@@ -434,6 +611,10 @@ _SCRAPER_HEADERS = {
         (45, "Health Score"),
         (46, "Earnings Quality Flag"),
         (47, "Peer P/E Percentile"),
+        (48, "Ticker Summary"),
+        (49, "Recommended Action"),
+        (50, "Analysis Methods"),
+        (51, "Data Source Credibility"),
     ],
     _TAB_SG: [
         (26, "Export Date"),
@@ -451,6 +632,10 @@ _SCRAPER_HEADERS = {
         (38, "Earnings Quality Flag"),
         (39, "DCF Intrinsic Value"),
         (40, "Peer P/E Percentile"),
+        (41, "Ticker Summary"),
+        (42, "Recommended Action"),
+        (43, "Analysis Methods"),
+        (44, "Data Source Credibility"),
     ],
     _TAB_HK: [
         (27, "Export Date"),
@@ -469,6 +654,10 @@ _SCRAPER_HEADERS = {
         (40, "Earnings Quality Flag"),
         (41, "DCF Intrinsic Value"),
         (42, "Peer P/E Percentile"),
+        (43, "Ticker Summary"),
+        (44, "Recommended Action"),
+        (45, "Analysis Methods"),
+        (46, "Data Source Credibility"),
     ],
 }
 
@@ -608,8 +797,9 @@ def export_tickers_to_sheets(tickers, data):
     buckets: dict[str, list] = {}
     for ticker in tickers:
         tab = _classify_ticker(ticker)
-        fields = _extract_fields(data.get(ticker, {}))
-        row = _ROW_BUILDERS[tab](ticker, fields, export_date)
+        ticker_data = data.get(ticker, {})
+        fields = _extract_fields(ticker_data)
+        row = _ROW_BUILDERS[tab](ticker, fields, export_date, ticker_data)
         buckets.setdefault(tab, []).append(row)
 
     total = 0

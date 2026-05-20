@@ -150,25 +150,25 @@ _SAMPLE_FIELDS = _extract_fields(
 @pytest.mark.unit
 def test_row_length_us():
     row = _build_row_us("AAPL", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_US]  # 48
+    assert len(row) == ROW_LENGTHS[_TAB_US]  # 52
 
 
 @pytest.mark.unit
 def test_row_length_sg():
     row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 41
+    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 45
 
 
 @pytest.mark.unit
 def test_row_length_hk():
     row = _build_row_hk("0700.HK", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_HK]  # 43
+    assert len(row) == ROW_LENGTHS[_TAB_HK]  # 47
 
 
 @pytest.mark.unit
 def test_row_length_others():
     row = _build_row_others("BRK.B", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_OTHERS]  # 20
+    assert len(row) == ROW_LENGTHS[_TAB_OTHERS]  # 24
 
 
 @pytest.mark.unit
@@ -235,6 +235,125 @@ def test_none_fields_serialize_to_empty():
     assert row[3] == ""
     assert row[6] == ""
     assert row[36] == ""
+
+
+# ---------------------------------------------------------------------------
+# Intelligence columns
+# ---------------------------------------------------------------------------
+
+from src.utils.sheets_utils import (  # noqa: E402
+    _generate_ticker_summary,
+    _generate_recommended_action,
+    _generate_analysis_methods,
+    _generate_data_source_credibility,
+)
+
+_INTEL_FIELDS = _extract_fields(
+    {
+        "Price": 100.0,
+        "P/E Ratio (Yahoo)": 20.0,
+        "RSI": 25.0,  # oversold → bullish RSI
+        "MA10 Signal": "Bullish (Price > MA)",
+        "MA20 Signal": "Bullish (Price > MA)",
+        "MA50 Signal": "Bearish (Price < MA)",
+        "Sentiment Score": 0.5,  # positive sentiment
+        "DCF Intrinsic Value": 130.0,  # 30% upside
+        "Health Score": "B",
+        "Earnings Quality Flag": "Pass",
+        "Peer P/E Percentile": 60,
+    }
+)
+
+_INTEL_TICKER_DATA = {
+    "Price (Yahoo)": 100.0,
+    "P/E Ratio (Yahoo)": 20.0,
+    "Sentiment Score": 0.5,
+}
+
+
+@pytest.mark.unit
+def test_ticker_summary_contains_pe_rsi_ma_health_dcf():
+    summary = _generate_ticker_summary(_INTEL_FIELDS)
+    assert "P/E 20" in summary
+    assert "RSI 25" in summary
+    assert "MA bullish" in summary
+    assert "Health B" in summary
+    assert "DCF upside" in summary
+
+
+@pytest.mark.unit
+def test_ticker_summary_empty_when_all_fields_none():
+    empty = _extract_fields({})
+    assert _generate_ticker_summary(empty) == ""
+
+
+@pytest.mark.unit
+def test_recommended_action_buy_on_bullish_signals():
+    action = _generate_recommended_action(_INTEL_FIELDS)
+    assert action.startswith("Buy")
+
+
+@pytest.mark.unit
+def test_recommended_action_sell_on_bearish_signals():
+    bearish = _extract_fields(
+        {
+            "RSI": 80.0,
+            "MA10 Signal": "Bearish",
+            "MA20 Signal": "Bearish",
+            "MA50 Signal": "Bearish",
+            "Sentiment Score": -0.5,
+        }
+    )
+    action = _generate_recommended_action(bearish)
+    assert action.startswith("Sell")
+
+
+@pytest.mark.unit
+def test_recommended_action_empty_when_no_signals():
+    empty = _extract_fields({})
+    assert _generate_recommended_action(empty) == ""
+
+
+@pytest.mark.unit
+def test_analysis_methods_lists_present_methods():
+    methods = _generate_analysis_methods(_INTEL_FIELDS)
+    assert "RSI/MA" in methods
+    assert "Sentiment" in methods
+    assert "Health Score" in methods
+    assert "DCF" in methods
+    assert "Peer Comparison" in methods
+
+
+@pytest.mark.unit
+def test_analysis_methods_empty_when_no_data():
+    empty = _extract_fields({})
+    assert _generate_analysis_methods(empty) == ""
+
+
+@pytest.mark.unit
+def test_data_source_credibility_detects_yahoo():
+    cred = _generate_data_source_credibility(_INTEL_FIELDS, _INTEL_TICKER_DATA)
+    assert "Yahoo" in cred
+    assert "High" in cred
+
+
+@pytest.mark.unit
+def test_data_source_credibility_empty_with_no_sources():
+    empty = _extract_fields({})
+    cred = _generate_data_source_credibility(empty, {})
+    assert cred == ""
+
+
+@pytest.mark.unit
+def test_sg_row_intelligence_cols_at_end():
+    row = _build_row_sg("D05.SI", _INTEL_FIELDS, "2026-05-17", _INTEL_TICKER_DATA)
+    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 45
+    # Last 4 are intelligence cols
+    ticker_summary, recommended_action, analysis_methods, data_source = row[-4:]
+    assert ticker_summary != ""
+    assert recommended_action.startswith("Buy")
+    assert "RSI/MA" in analysis_methods
+    assert "High" in data_source
 
 
 # ---------------------------------------------------------------------------
@@ -624,7 +743,7 @@ def test_others_tab_auto_created():
     ), patch("os.path.exists", return_value=True):
         result = export_tickers_to_sheets(["BRK.B"], {"BRK.B": {"Price": 500.0}})
     assert result == 1
-    mock_sh.add_worksheet.assert_called_once_with(title=_TAB_OTHERS, rows=1000, cols=20)
+    mock_sh.add_worksheet.assert_called_once_with(title=_TAB_OTHERS, rows=1000, cols=24)
 
 
 @pytest.mark.unit
@@ -649,7 +768,7 @@ def test_export_updates_existing_ticker_in_us_tab():
         ["", "", "AAPL", "100.0"],
     ]
     # Pre-populate row 1 so _ensure_scraper_headers writes nothing extra
-    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 48
+    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 52
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
@@ -668,7 +787,7 @@ def test_export_upsert_mixed_new_and_existing():
         ["", "", "AAPL", "100.0"],
     ]
     # Pre-populate row 1 so _ensure_scraper_headers writes nothing extra
-    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 48
+    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 52
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
