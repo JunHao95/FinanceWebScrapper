@@ -105,7 +105,7 @@ A high-performance Python application for scraping and analyzing financial metri
 ### Output & Reporting
 - Multiple formats: CSV, Excel, Text reports
 - Email reports with HTML formatting
-- Google Sheets export via `POST /api/export-sheets` — routes tickers to US/SG/HK/Others tabs, auto-expands sheet column count if the grid is too narrow, skips formula cells during upsert, matches tickers stored as `=HYPERLINK()` via formatted display text, appends only after the last non-empty row, and never overwrites existing user data with empty strings (preserves columns like Category/Name that the scraper does not populate); SG Stock tab schema updated to A-Z existing cols (26) with scraper extras at AA+
+- Google Sheets export via `POST /api/export-sheets` — routes tickers to US/SG/HK/Others tabs, auto-expands sheet column count if the grid is too narrow, skips formula cells during upsert, matches tickers stored as `=HYPERLINK()` via formatted display text, appends only after the last non-empty row, and never overwrites existing user data with empty strings (preserves columns like Category/Name that the scraper does not populate); SG Stock tab schema updated to A-Z existing cols (26) with scraper extras at AA+; each exported row includes 4 server-side intelligence columns: **Ticker Summary** (~100-char digest of P/E, RSI, MA consensus, Health grade, DCF gap), **Recommended Action** (Buy/Hold/Sell + rationale from all available signals), **Analysis Methods** (comma-separated list of methods that ran, inferred from non-null fields), and **Data Source Credibility** (tier + source list based on which source-suffixed keys are non-null)
 - Summary comparison reports
 - Interactive web visualizations
 
