@@ -1211,7 +1211,8 @@ class TestExportSheets:
         from unittest.mock import patch
 
         with patch(
-            "src.utils.sheets_utils.export_tickers_to_sheets", return_value=2
+            "src.utils.sheets_utils.export_tickers_to_sheets",
+            return_value={"rows_added": 2},
         ), patch("os.path.exists", return_value=True), patch.dict(
             "os.environ",
             {
@@ -1278,3 +1279,19 @@ class TestExportSheets:
         assert resp.status_code in (400, 500)
         data = resp.get_json()
         assert data["success"] is False
+
+    def test_export_sheets_ti_partial_failure(self, client):
+        """TI failure → 200 + {success: true, rows_added: N, warning: ...}"""
+        from unittest.mock import patch
+
+        with patch(
+            "src.utils.sheets_utils.export_tickers_to_sheets",
+            return_value={"rows_added": 2, "warning": "Trading Indicators: tab error"},
+        ):
+            resp = client.post("/api/export-sheets", json=self._EXPORT_PAYLOAD)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["rows_added"] == 2
+        assert "warning" in data
+        assert "Trading Indicators" in data["warning"]

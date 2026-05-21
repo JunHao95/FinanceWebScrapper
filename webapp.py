@@ -2825,12 +2825,20 @@ def export_to_sheets():
 
         tickers = payload.get("tickers", [])
         data = payload.get("data", {})
+        trading_indicators_data = payload.get("trading_indicators_data", {})
 
         if not tickers:
             return jsonify({"success": False, "error": "No tickers provided"}), 400
 
-        rows_added = export_tickers_to_sheets(tickers, data)
-        return jsonify({"success": True, "rows_added": rows_added})
+        export_result = export_tickers_to_sheets(
+            tickers, data, trading_indicators_data=trading_indicators_data
+        )
+        response = {"success": True, "rows_added": export_result["rows_added"]}
+        if "ti_rows_added" in export_result:
+            response["ti_rows_added"] = export_result["ti_rows_added"]
+        if "warning" in export_result:
+            response["warning"] = export_result["warning"]
+        return jsonify(response)
 
     except FileNotFoundError as e:
         return jsonify({"success": False, "error": str(e)}), 500

@@ -678,7 +678,7 @@ def test_us_tickers_go_to_us_tab():
             ["AAPL", "MSFT"],
             {"AAPL": {"Price": "175.00"}, "MSFT": {"RSI": None}},
         )
-    assert result == 2
+    assert result["rows_added"] == 2
     assert worksheets[_TAB_US].update.call_count == 1
     for tab in [_TAB_SG, _TAB_HK]:
         assert worksheets[tab].update.call_count == 0
@@ -694,7 +694,7 @@ def test_sg_tickers_go_to_sg_tab():
             ["D05.SI", "C6L.SI"],
             {"D05.SI": {"Price": 37.5}, "C6L.SI": {"Price": 6.1}},
         )
-    assert result == 2
+    assert result["rows_added"] == 2
     assert worksheets[_TAB_SG].update.call_count == 1
     assert worksheets[_TAB_US].update.call_count == 0
 
@@ -709,7 +709,7 @@ def test_hk_tickers_go_to_hk_tab():
             ["0700.HK"],
             {"0700.HK": {"Price": 320.0}},
         )
-    assert result == 1
+    assert result["rows_added"] == 1
     assert worksheets[_TAB_HK].update.call_count == 1
 
 
@@ -727,7 +727,7 @@ def test_multi_region_routes_to_separate_tabs():
                 "0700.HK": {"Price": 320.0},
             },
         )
-    assert result == 3
+    assert result["rows_added"] == 3
     assert worksheets[_TAB_US].update.call_count == 1
     assert worksheets[_TAB_SG].update.call_count == 1
     assert worksheets[_TAB_HK].update.call_count == 1
@@ -742,7 +742,7 @@ def test_others_tab_auto_created():
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
         result = export_tickers_to_sheets(["BRK.B"], {"BRK.B": {"Price": 500.0}})
-    assert result == 1
+    assert result["rows_added"] == 1
     mock_sh.add_worksheet.assert_called_once_with(title=_TAB_OTHERS, rows=1000, cols=24)
 
 
@@ -753,7 +753,7 @@ def test_empty_tickers():
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
         result = export_tickers_to_sheets([], {})
-    assert result == 0
+    assert result["rows_added"] == 0
     for ws in worksheets.values():
         assert ws.update.call_count == 0
 
@@ -773,7 +773,7 @@ def test_export_updates_existing_ticker_in_us_tab():
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
         result = export_tickers_to_sheets(["AAPL"], {"AAPL": {"Price": "175.00"}})
-    assert result == 1
+    assert result["rows_added"] == 1
     worksheets[_TAB_US].batch_update.assert_called_once()
     worksheets[_TAB_US].update.assert_not_called()
 
@@ -795,6 +795,90 @@ def test_export_upsert_mixed_new_and_existing():
             ["AAPL", "MSFT"],
             {"AAPL": {"Price": "175.00"}, "MSFT": {"Price": "400.00"}},
         )
-    assert result == 2
+    assert result["rows_added"] == 2
     worksheets[_TAB_US].batch_update.assert_called_once()
     worksheets[_TAB_US].update.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _build_row_ti and Trading Indicators tab
+# ---------------------------------------------------------------------------
+
+from src.utils.sheets_utils import (
+    _build_row_ti,
+    TI_COLUMN_HEADERS,
+    _TAB_TI,
+)  # noqa: E402
+
+
+@pytest.mark.unit
+def test_build_row_ti_length():
+    row = _build_row_ti("AAPL", {}, "2026-05-21")
+    assert len(row) == 15
+
+
+@pytest.mark.unit
+def test_build_row_ti_ticker_at_b():
+    row = _build_row_ti("AAPL", {"composite_score": 0.8}, "2026-05-21")
+    assert row[1] == "AAPL"
+
+
+@pytest.mark.unit
+def test_build_row_ti_composite_dissenters_list_joined():
+    row = _build_row_ti(
+        "AAPL", {"composite_dissenters": ["AVWAP", "Order Flow"]}, "2026-05-21"
+    )
+    assert row[14] == "AVWAP, Order Flow"
+
+
+@pytest.mark.unit
+def test_build_row_ti_dissenters_string_passthrough():
+    row = _build_row_ti("AAPL", {"composite_dissenters": "AVWAP"}, "2026-05-21")
+    assert row[14] == "AVWAP"
+
+
+@pytest.mark.unit
+def test_ti_column_headers_length():
+    assert len(TI_COLUMN_HEADERS) == 15
+
+
+@pytest.mark.unit
+def test_export_with_ti_data_returns_ti_rows_added():
+    mock_gc, worksheets, mock_sh = _make_mock_gc()
+    ti_ws = MagicMock()
+    ti_ws.get_all_values.return_value = [[]]
+    mock_sh.worksheet.side_effect = lambda name: (
+        ti_ws if name == _TAB_TI else worksheets.get(name, MagicMock())
+    )
+    mock_sh.add_worksheet.return_value = ti_ws
+    ti_data = {"AAPL": {"composite_score": 0.8, "composite_dissenters": ["AVWAP"]}}
+    with patch("gspread.service_account", return_value=mock_gc), patch.dict(
+        "os.environ", _ENV
+    ), patch("os.path.exists", return_value=True):
+        result = export_tickers_to_sheets(
+            ["AAPL"], {"AAPL": {}}, trading_indicators_data=ti_data
+        )
+    assert "ti_rows_added" in result
+    assert result["ti_rows_added"] == 1
+
+
+@pytest.mark.unit
+def test_export_ti_failure_returns_warning():
+    mock_gc, worksheets, mock_sh = _make_mock_gc()
+
+    def raise_for_ti(name):
+        if name == _TAB_TI:
+            raise Exception("TI tab error")
+        return worksheets.get(name, MagicMock())
+
+    mock_sh.worksheet.side_effect = raise_for_ti
+    ti_data = {"AAPL": {"composite_score": 0.8}}
+    with patch("gspread.service_account", return_value=mock_gc), patch.dict(
+        "os.environ", _ENV
+    ), patch("os.path.exists", return_value=True):
+        result = export_tickers_to_sheets(
+            ["AAPL"], {"AAPL": {}}, trading_indicators_data=ti_data
+        )
+    assert "warning" in result
+    assert "Trading Indicators" in result["warning"]
+    assert "rows_added" in result

@@ -569,6 +569,26 @@ def _build_row_others(ticker, f, export_date, ticker_data=None):
     return row  # 24 cols total
 
 
+_TAB_TI = "Trading Indicators"
+
+TI_COLUMN_HEADERS = [
+    "Export Date",  # A 0
+    "Ticker",  # B 1
+    "Lookback (days)",  # C 2
+    "Volume Profile Signal",  # D 3
+    "AVWAP Signal",  # E 4
+    "AVWAP Convergence",  # F 5
+    "Order Flow Signal",  # G 6
+    "Order Flow Divergence",  # H 7
+    "Sweep Signal",  # I 8
+    "Sweep Price",  # J 9
+    "Footprint Signal",  # K 10
+    "Footprint Cum Delta",  # L 11
+    "Composite Direction",  # M 12
+    "Composite Score",  # N 13
+    "Composite Dissenters",  # O 14
+]
+
 _ROW_BUILDERS = {
     _TAB_US: _build_row_us,
     _TAB_SG: _build_row_sg,
@@ -582,6 +602,7 @@ ROW_LENGTHS = {
     _TAB_SG: 45,
     _TAB_HK: 47,
     _TAB_OTHERS: 24,
+    _TAB_TI: 15,
 }
 
 # Column index (0-based) that holds the ticker symbol in each tab
@@ -590,6 +611,7 @@ _TICKER_COL = {
     _TAB_SG: 2,  # C: Google Quote
     _TAB_HK: 2,  # C: Google Quote
     _TAB_OTHERS: 1,  # B: Ticker
+    _TAB_TI: 1,  # B: Ticker
 }
 
 # (col_index, header_label) pairs for scraper-added columns in pre-existing tabs.
@@ -756,7 +778,31 @@ def _upsert_rows(ws, rows, ticker_col_idx):
         )
 
 
-def export_tickers_to_sheets(tickers, data):
+def _build_row_ti(ticker, ti_data, export_date):
+    """Build a 15-element Trading Indicators row from ti_data dict."""
+    dissenters = ti_data.get("composite_dissenters", "")
+    if isinstance(dissenters, list):
+        dissenters = ", ".join(str(d) for d in dissenters)
+    return [
+        export_date,
+        ticker,
+        serialize_value(ti_data.get("lookback")),
+        serialize_value(ti_data.get("volume_profile_signal")),
+        serialize_value(ti_data.get("avwap_signal")),
+        serialize_value(ti_data.get("avwap_convergence")),
+        serialize_value(ti_data.get("order_flow_signal")),
+        serialize_value(ti_data.get("order_flow_divergence")),
+        serialize_value(ti_data.get("sweep_signal")),
+        serialize_value(ti_data.get("sweep_price")),
+        serialize_value(ti_data.get("footprint_signal")),
+        serialize_value(ti_data.get("footprint_cum_delta")),
+        serialize_value(ti_data.get("composite_direction")),
+        serialize_value(ti_data.get("composite_score")),
+        serialize_value(dissenters),
+    ]
+
+
+def export_tickers_to_sheets(tickers, data, trading_indicators_data=None):
     """Export stock data for *tickers* to the configured Google Spreadsheet.
 
     Routes each ticker to the correct tab:
@@ -765,15 +811,18 @@ def export_tickers_to_sheets(tickers, data):
       - Suffix .HK     → "HK Stock"
       - Everything else → "Others Stock" (auto-created if absent)
 
-    If a ticker already exists in the tab (matched by ticker column), its row
-    is updated in-place. Otherwise a new row is appended.
+    Optionally exports Trading Indicators data to the "Trading Indicators" tab
+    (auto-created). TI failures are isolated — fundamentals still write.
 
     Args:
         tickers: list of ticker strings (e.g. ["AAPL", "D05.SI"])
         data: dict mapping ticker → dict of field_name → value
+        trading_indicators_data: optional dict mapping ticker → TI field dict
 
     Returns:
-        int: total number of rows upserted across all tabs
+        dict: {"rows_added": N} on basic success,
+              {"rows_added": N, "ti_rows_added": M} when TI tab written,
+              {"rows_added": N, "warning": "Trading Indicators: ..."} on TI failure
 
     Raises:
         ValueError: if GOOGLE_SHEETS_SPREADSHEET_ID is not set
@@ -781,7 +830,7 @@ def export_tickers_to_sheets(tickers, data):
         gspread.exceptions.SpreadsheetNotFound: if spreadsheet cannot be opened
     """
     if not tickers:
-        return 0
+        return {"rows_added": 0}
 
     spreadsheet_id = os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", "").strip()
     if not spreadsheet_id:
@@ -816,4 +865,27 @@ def export_tickers_to_sheets(tickers, data):
         )
         total += len(rows)
 
-    return total
+    result: dict = {"rows_added": total}
+
+    ti_data = trading_indicators_data or {}
+    if ti_data:
+        try:
+            ti_rows = [
+                _build_row_ti(ticker, td, export_date)
+                for ticker, td in ti_data.items()
+                if td
+            ]
+            if ti_rows:
+                ti_ws = _get_or_create_worksheet(sh, _TAB_TI)
+                _upsert_rows(ti_ws, ti_rows, _TICKER_COL[_TAB_TI])
+                logger.info(
+                    "Upserted %d rows to TI tab in sheet %s",
+                    len(ti_rows),
+                    spreadsheet_id,
+                )
+                result["ti_rows_added"] = len(ti_rows)
+        except Exception as ti_err:
+            logger.warning("TI tab export failed (fundamentals unaffected): %s", ti_err)
+            result["warning"] = f"Trading Indicators: {ti_err}"
+
+    return result
