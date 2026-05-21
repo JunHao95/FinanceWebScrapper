@@ -1,13 +1,17 @@
 # Phase 31: Integration with GoogleSheets for local Webapp — Context
 
 **Gathered:** 2026-05-17
-**Updated:** 2026-05-20
-**Status:** Ready for planning
+**Updated:** 2026-05-21
+**Status:** Active — new requirement added (Trading Indicators tab export)
 
 <domain>
 ## Phase Boundary
 
-Add a "Export to Google Sheets" feature to the local webapp. After scraping tickers, the user can manually push a curated set of financial metrics and analytics scores into a Google Sheet they own. Each export appends timestamped rows (one row per ticker). This is local-only — not deployed to Render. The Sheet is pre-created by the user; the webapp writes rows into it.
+Add a "Export to Google Sheets" feature to the local webapp. After scraping tickers, the user can manually push a curated set of financial metrics, analytics scores, and trading indicator signals into a Google Sheet they own. Each export upserts rows (one row per ticker, matched by ticker column; new tickers are appended). This is local-only — not deployed to Render. The Sheet is pre-created by the user; the webapp writes rows into it.
+
+**Tabs written:**
+- Fundamental data → existing user tabs (`US Stock`, `SG Stock`, `HK Stock`, `Others Stock`)
+- Trading indicator signals → new auto-created `Trading Indicators` tab (webapp owns full schema)
 
 Out of scope:
 - Pulling data from Sheets into the webapp
@@ -72,15 +76,78 @@ Out of scope:
 - **Format:** `Tier (source1, source2, ...)` — e.g. `"High (Yahoo, Finnhub, News)"` or `"Medium (News, Reddit)"`
 - **Sources detected** from which fields are non-null in the export payload (Yahoo → Price/PE/fundamentals; Finviz → Peer data; Finnhub → supplementary quote; Sentiment → sentiment score + breakdown)
 
-### Append behavior
-- Each export **appends** new rows to the Sheet (never overwrites)
+### Trading Indicators tab export (new — 2026-05-21)
+
+**Source data:** `AppState.tradingIndicatorsData[ticker]` in the browser — populated only when the user opens the Trading Indicators tab for a ticker. The frontend sends this dict as `trading_indicators_data` in the export payload alongside the existing `data` dict.
+
+**Skip rule:** Tickers with no TI data (user never opened the tab) are silently skipped — no row written. Only tickers with a non-empty entry in `trading_indicators_data` appear in the `Trading Indicators` tab.
+
+**Write mode:** Upsert — match by ticker at column B (index 1); update in-place if found, append after last data row if new. Same `_upsert_rows` logic as other tabs.
+
+**Tab:** `"Trading Indicators"` — auto-created if absent (webapp owns full schema via `TI_COLUMN_HEADERS`).
+
+**Schema (A–O, 15 columns — FINAL):**
+
+| Col | Index | Field |
+|-----|-------|-------|
+| A | 0 | Export Date |
+| B | 1 | Ticker |
+| C | 2 | Lookback (days) |
+| D | 3 | Volume Profile Signal |
+| E | 4 | AVWAP Signal |
+| F | 5 | AVWAP Convergence |
+| G | 6 | Order Flow Signal |
+| H | 7 | Order Flow Divergence |
+| I | 8 | Sweep Signal |
+| J | 9 | Sweep Price |
+| K | 10 | Footprint Signal |
+| L | 11 | Footprint Cum Delta |
+| M | 12 | Composite Direction |
+| N | 13 | Composite Score |
+| O | 14 | Composite Dissenters |
+
+**Frontend mapping** from `AppState.tradingIndicatorsData[ticker]`:
+- `lookback` → Lookback
+- `volume_profile_signal` → Volume Profile Signal
+- `avwap_signal` → AVWAP Signal
+- `avwap_convergence` → AVWAP Convergence
+- `avwap_current_price` → not exported (redundant with Price in fundamentals tab)
+- `order_flow_signal` → Order Flow Signal
+- `order_flow_divergence` → Order Flow Divergence
+- `sweep_signal` → Sweep Signal
+- `sweep_price` → Sweep Price
+- `footprint_signal` → Footprint Signal
+- `footprint_cum_delta` → Footprint Cum Delta
+- `composite_direction` → Composite Direction
+- `composite_score` → Composite Score
+- `composite_dissenters` → Composite Dissenters (list joined as comma-separated string, e.g. `"AVWAP, Order Flow"`)
+
+**Changes required (amend existing 3 plans, not a 4th):**
+1. `static/js/stockScraper.js` `exportSheets()` — add `trading_indicators_data: AppState.tradingIndicatorsData || {}` to `exportData` *(→ Plan 03)*
+2. `webapp.py` `/api/export-sheets` — extract `trading_indicators_data = payload.get("trading_indicators_data", {})` and pass to `export_tickers_to_sheets` *(→ Plan 02)*
+3. `src/utils/sheets_utils.py` — add `_TAB_TI`, `TI_COLUMN_HEADERS` (15 cols), `_build_row_ti(ticker, ti_data, export_date)`, `ROW_LENGTHS[_TAB_TI] = 15`, `_TICKER_COL[_TAB_TI] = 1`; update `export_tickers_to_sheets` to accept `trading_indicators_data=None` and route non-empty entries to TI tab after the fundamentals loop *(→ Plan 02)*
+4. Tests — new stubs then implementations in `test_unit_sheets_utils.py`: `_build_row_ti` length/columns, skip-empty behavior, TI tab auto-created, upsert routes TI data correctly *(→ Plan 01 stubs, Plan 02 implementations)*
+5. README — update Google Sheets export description to mention `Trading Indicators` tab *(→ Plan 03)*
+
+### Partial failure behavior (multi-tab exports)
+- **Fundamentals and TI tab are isolated** — a failure in the TI tab does NOT abort fundamentals writes, and vice versa
+- **TI tab auto-creation failure** — only blocks TI rows; fundamentals still write
+- **Response when TI fails:** `{ "success": true, "rows_added": N, "warning": "Trading Indicators: <reason>" }`
+- **Response when TI succeeds:** `{ "success": true, "rows_added": N, "ti_rows_added": M }` (no warning field)
+- **Frontend alert on full success:** `"Exported 3 tickers to Google Sheets ✓ (Trading Indicators: 2 tickers)"`
+- **Frontend alert on partial success:** `"Exported 3 tickers to Google Sheets ✓ — Warning: <reason>"` (type: `warning`)
+- **Frontend alert on full failure:** `"Google Sheets export failed: <reason>"` (type: `error`)
+
+### Upsert behavior (all tabs)
+- Each export **upserts** rows — existing ticker row updated in-place, new tickers appended after last data row
 - Every row tagged with the export date (`YYYY-MM-DD`) as the first column
-- Multiple exports from the same session produce separate rows — user can filter by date in Sheets
+- Formula cells (starting with `=`) preserved — never overwritten
+- TI tab: ticker matched at column B (index 1); fundamentals tabs: same
 
 ### Sheets target
 - User pre-creates the Google Sheet manually in their Drive
 - User copies the Spreadsheet ID from the URL and sets it in `.env` as `GOOGLE_SHEETS_SPREADSHEET_ID`
-- Data written to the first sheet tab (`Sheet1` / index 0)
+- Data written to named tabs (`US Stock`, `SG Stock`, `HK Stock`, `Others Stock`; `Trading Indicators` auto-created)
 - ID persists across sessions via `.env` — set once, works forever
 
 ### Auth
@@ -97,15 +164,17 @@ Out of scope:
 
 ### Feedback
 - Uses existing `Utils.showAlert(message, type)` pattern (`alertContainer` in `utils.js`)
-- Success: `"Exported 3 tickers to Google Sheets ✓"` (type: `success`)
+- Success (all tabs): `"Exported 3 tickers to Google Sheets ✓ (Trading Indicators: 2 tickers)"` (type: `success`)
+- Partial success (TI failed): `"Exported 3 tickers to Google Sheets ✓ — Warning: Trading Indicators: <reason>"` (type: `warning`)
 - Error: `"Google Sheets export failed: <reason>"` (type: `error`)
 - While exporting: button shows spinner / disabled state, same UX pattern as email send
 
 ### Flask route
-- New endpoint: `POST /api/export-sheets`
-- Request body: `{ "tickers": ["AAPL", "MSFT"], "data": { ... } }` — frontend sends the curated field subset
-- Backend authenticates via service account, appends rows to the target Sheet
-- Returns `{ "success": true, "rows_added": 3 }` or `{ "success": false, "error": "..." }`
+- Endpoint: `POST /api/export-sheets`
+- Request body: `{ "tickers": ["AAPL", "MSFT"], "data": { ... }, "trading_indicators_data": { ... } }`
+- Returns full success: `{ "success": true, "rows_added": N, "ti_rows_added": M }`
+- Returns partial success: `{ "success": true, "rows_added": N, "warning": "Trading Indicators: <reason>" }`
+- Returns failure: `{ "success": false, "error": "..." }`
 
 ### Setup documentation
 - A new **"Google Sheets Setup"** section in `README.md` — step-by-step:
@@ -131,7 +200,7 @@ Out of scope:
 
 ### Reusable Assets
 - `static/js/api.js:59` — `API.sendEmail()`: pattern to replicate for `API.exportSheets()` — `fetch('/api/export-sheets', { method: 'POST', body: JSON.stringify(...) })`
-- `static/js/utils.js:59` — `Utils.showAlert(message, type)` with `alertContainer` — use for success/error feedback; no new toast system needed
+- `static/js/utils.js:59` — `Utils.showAlert(message, type)` with `alertContainer` — use for success/error feedback; no new toast system needed; supports `"warning"` type for partial success
 - `static/js/stockScraper.js:287` — `StockScraper.sendEmail()`: model for `StockScraper.exportSheets()` — same guard pattern (check `AppState.currentData` before proceeding)
 - `src/utils/email_utils.py` — existing pattern for a utility module handling external service integration; `src/utils/sheets_utils.py` follows the same structure
 
@@ -146,6 +215,7 @@ Out of scope:
 - `requirements.txt` — add `gspread` and `google-auth`
 - `.env.example` — add `GOOGLE_SHEETS_CREDENTIALS_PATH` and `GOOGLE_SHEETS_SPREADSHEET_ID` with placeholder values and comments
 - `static/js/stockScraper.js` — add `exportSheets()` method; wire to button in `main.js`
+- `static/js/tradingIndicators.js:33–50` — `AppState.tradingIndicatorsData[ticker]` populated with all 14 signal fields when user opens the TI tab
 
 </code_context>
 
@@ -154,13 +224,15 @@ Out of scope:
 
 - This feature is explicitly **local-only** — the user noted it's "for local Webapp", so no need to handle Render deployment constraints (no 512MB ceiling concern, no environment var secrets concern beyond .env)
 - The service account approach mirrors how many local Python tools (e.g. gspread tutorials) work — user is comfortable with this level of setup given they already configured SMTP, OpenAI keys, and FinHub API keys
+- TI tab failure is isolated — fundamentals always write regardless of TI status, to avoid losing fundamental data due to a TI-only problem
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-- None — discussion stayed within phase scope
+- `avwap_current_price` field not exported — redundant with Price already in fundamentals tab
+- AVWAP % deviation column (price vs AVWAP as %) — could be added to TI schema later, but not needed for v1
 
 </deferred>
 
@@ -168,3 +240,4 @@ Out of scope:
 
 *Phase: 31-integration-with-googlesheets-for-local-webapp*
 *Context gathered: 2026-05-17*
+*Context updated: 2026-05-21*
