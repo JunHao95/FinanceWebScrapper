@@ -393,13 +393,7 @@ const StockScraper = {
             const result = await API.exportSheets(exportData);
 
             if (result.success) {
-                let msg = `Exported ${result.rows_added} tickers to Google Sheets ✓`;
-                if (result.ti_rows_added != null) {
-                    msg += ` | TI: ${result.ti_rows_added} rows`;
-                }
-                if (result.warning) {
-                    msg += ` (warning: ${result.warning})`;
-                }
+                const msg = `Exported ${result.rows_added} tickers to Google Sheets ✓`;
                 Utils.showAlert(msg, 'success');
             } else {
                 Utils.showAlert('Google Sheets export failed: ' + result.error, 'error');

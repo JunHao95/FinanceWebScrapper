@@ -7,6 +7,9 @@ read from GOOGLE_SHEETS_CREDENTIALS_PATH at call time (not at import time).
 
 Tab routing and column mapping
 -------------------------------
+Trading Indicator (TI) columns are appended inline to each stock tab row
+after the intelligence columns. 13 TI cols per row (Lookback through Dissenters).
+
 US Stock  (existing cols A-AG, indices 0-32) + scraper extras starting at AH (33):
   C(2)=Google Quote, D(3)=Google Price, F(5)=EPS, G(6)=P/E Yahoo,
   K(10)=Yahoo Quote, L(11)=Yahoo Price, AC(28)=Price Target (DCF)
@@ -15,7 +18,12 @@ US Stock  (existing cols A-AG, indices 0-32) + scraper extras starting at AH (33
   AP(41)=Revenue, AQ(42)=Profit Margin, AR(43)=Op Margin,
   AS(44)=Debt/Equity, AT(45)=Health Score, AU(46)=EQ Flag, AV(47)=Peer P/E,
   AW(48)=Ticker Summary, AX(49)=Recommended Action,
-  AY(50)=Analysis Methods, AZ(51)=Data Source Credibility
+  AY(50)=Analysis Methods, AZ(51)=Data Source Credibility,
+  BA(52)=Lookback, BB(53)=Vol Profile, BC(54)=AVWAP Signal,
+  BD(55)=AVWAP Conv, BE(56)=Order Flow, BF(57)=Order Flow Div,
+  BG(58)=Sweep Signal, BH(59)=Sweep Price, BI(60)=Footprint,
+  BJ(61)=Footprint Delta, BK(62)=Composite Dir, BL(63)=Composite Score,
+  BM(64)=Composite Dissenters
 
 SG Stock  (existing cols A-Z, indices 0-25) + scraper extras starting at AA (26):
   C(2)=Yahoo Quote, D(3)=Yahoo Price, U(20)=P/B, V(21)=Fwd P/E
@@ -24,7 +32,12 @@ SG Stock  (existing cols A-Z, indices 0-25) + scraper extras starting at AA (26)
   AJ(35)=Op Margin, AK(36)=Debt/Equity, AL(37)=Health Score,
   AM(38)=EQ Flag, AN(39)=DCF, AO(40)=Peer P/E,
   AP(41)=Ticker Summary, AQ(42)=Recommended Action,
-  AR(43)=Analysis Methods, AS(44)=Data Source Credibility
+  AR(43)=Analysis Methods, AS(44)=Data Source Credibility,
+  AT(45)=Lookback, AU(46)=Vol Profile, AV(47)=AVWAP Signal,
+  AW(48)=AVWAP Conv, AX(49)=Order Flow, AY(50)=Order Flow Div,
+  AZ(51)=Sweep Signal, BA(52)=Sweep Price, BB(53)=Footprint,
+  BC(54)=Footprint Delta, BD(55)=Composite Dir, BE(56)=Composite Score,
+  BF(57)=Composite Dissenters
 
 HK Stock  (existing cols A-AA, indices 0-26) + scraper extras starting at AB (27):
   C(2)=Google Quote, D(3)=Google Price, E(4)=Yahoo Quote, F(5)=Yahoo Price,
@@ -34,9 +47,14 @@ HK Stock  (existing cols A-AA, indices 0-26) + scraper extras starting at AB (27
   AK(36)=Profit Margin, AL(37)=Op Margin, AM(38)=Debt/Equity,
   AN(39)=Health Score, AO(40)=EQ Flag, AP(41)=DCF, AQ(42)=Peer P/E,
   AR(43)=Ticker Summary, AS(44)=Recommended Action,
-  AT(45)=Analysis Methods, AU(46)=Data Source Credibility
+  AT(45)=Analysis Methods, AU(46)=Data Source Credibility,
+  AV(47)=Lookback, AW(48)=Vol Profile, AX(49)=AVWAP Signal,
+  AY(50)=AVWAP Conv, AZ(51)=Order Flow, BA(52)=Order Flow Div,
+  BB(53)=Sweep Signal, BC(54)=Sweep Price, BD(55)=Footprint,
+  BE(56)=Footprint Delta, BF(57)=Composite Dir, BG(58)=Composite Score,
+  BH(59)=Composite Dissenters
 
-Others Stock  (auto-created, flat 24-column schema)
+Others Stock  (auto-created, flat 37-column schema including TI cols)
 """
 
 import logging
@@ -77,6 +95,19 @@ COLUMN_HEADERS = [
     "Recommended Action",
     "Analysis Methods",
     "Data Source Credibility",
+    "Lookback (days)",
+    "Volume Profile Signal",
+    "AVWAP Signal",
+    "AVWAP Convergence",
+    "Order Flow Signal",
+    "Order Flow Divergence",
+    "Sweep Signal",
+    "Sweep Price",
+    "Footprint Signal",
+    "Footprint Cum Delta",
+    "Composite Direction",
+    "Composite Score",
+    "Composite Dissenters",
 ]
 
 _TAB_US = "US Stock"
@@ -400,6 +431,46 @@ def _intelligence_cols(f, ticker_data):
     ]
 
 
+TI_INLINE_HEADERS = [
+    "Lookback (days)",
+    "Volume Profile Signal",
+    "AVWAP Signal",
+    "AVWAP Convergence",
+    "Order Flow Signal",
+    "Order Flow Divergence",
+    "Sweep Signal",
+    "Sweep Price",
+    "Footprint Signal",
+    "Footprint Cum Delta",
+    "Composite Direction",
+    "Composite Score",
+    "Composite Dissenters",
+]
+
+
+def _ti_cols(ti_data):
+    """Return 13 TI column values from ti_data dict; all empty if None or {}."""
+    td = ti_data or {}
+    dissenters = td.get("composite_dissenters", "")
+    if isinstance(dissenters, list):
+        dissenters = ", ".join(str(d) for d in dissenters)
+    return [
+        serialize_value(td.get("lookback")),
+        serialize_value(td.get("volume_profile_signal")),
+        serialize_value(td.get("avwap_signal")),
+        serialize_value(td.get("avwap_convergence")),
+        serialize_value(td.get("order_flow_signal")),
+        serialize_value(td.get("order_flow_divergence")),
+        serialize_value(td.get("sweep_signal")),
+        serialize_value(td.get("sweep_price")),
+        serialize_value(td.get("footprint_signal")),
+        serialize_value(td.get("footprint_cum_delta")),
+        serialize_value(td.get("composite_direction")),
+        serialize_value(td.get("composite_score")),
+        serialize_value(dissenters),
+    ]
+
+
 def _scraper_extras(f, export_date, include_pe=True):
     """Return scraper-specific columns appended after existing tab schema.
 
@@ -429,8 +500,8 @@ def _scraper_extras(f, export_date, include_pe=True):
     return extras
 
 
-def _build_row_us(ticker, f, export_date, ticker_data=None):
-    """US Stock: map to existing A-AG schema, append scraper extras at AH+."""
+def _build_row_us(ticker, f, export_date, ticker_data=None, ti_data=None):
+    """US Stock: map to existing A-AG schema, append scraper extras at AH+, TI cols at BA+."""
     price = serialize_value(f["price"])
     row = [""] * _US_EXISTING_COLS
     row[2] = ticker  # C: Google Quote
@@ -445,7 +516,8 @@ def _build_row_us(ticker, f, export_date, ticker_data=None):
     # AP(41): Revenue, AQ(42): Profit Margin, AR(43): Op Margin,
     # AS(44): Debt/Equity, AT(45): Health Score, AU(46): EQ Flag, AV(47): Peer P/E,
     # AW(48): Ticker Summary, AX(49): Recommended Action,
-    # AY(50): Analysis Methods, AZ(51): Data Source Credibility
+    # AY(50): Analysis Methods, AZ(51): Data Source Credibility,
+    # BA(52)-BM(64): TI cols
     row += [
         export_date,
         serialize_value(f["fwd_pe"]),
@@ -464,11 +536,12 @@ def _build_row_us(ticker, f, export_date, ticker_data=None):
         serialize_value(f["peer_pe"]),
     ]
     row += _intelligence_cols(f, ticker_data)
-    return row  # 52 cols total
+    row += _ti_cols(ti_data)
+    return row  # 65 cols total
 
 
-def _build_row_sg(ticker, f, export_date, ticker_data=None):
-    """SG Stock: map to existing A-Z schema, append scraper extras at AA+."""
+def _build_row_sg(ticker, f, export_date, ticker_data=None, ti_data=None):
+    """SG Stock: map to existing A-Z schema, append scraper extras at AA+, TI cols at AT+."""
     price = serialize_value(f["price"])
     row = [""] * _SG_EXISTING_COLS
     row[2] = ticker  # C: Yahoo Quote
@@ -480,7 +553,8 @@ def _build_row_sg(ticker, f, export_date, ticker_data=None):
     # AI(34): Profit Margin, AJ(35): Op Margin, AK(36): Debt/Equity,
     # AL(37): Health Score, AM(38): EQ Flag, AN(39): DCF, AO(40): Peer P/E,
     # AP(41): Ticker Summary, AQ(42): Recommended Action,
-    # AR(43): Analysis Methods, AS(44): Data Source Credibility
+    # AR(43): Analysis Methods, AS(44): Data Source Credibility,
+    # AT(45)-BF(57): TI cols
     row += [
         export_date,
         serialize_value(f["eps"]),
@@ -499,11 +573,12 @@ def _build_row_sg(ticker, f, export_date, ticker_data=None):
         serialize_value(f["peer_pe"]),
     ]
     row += _intelligence_cols(f, ticker_data)
-    return row  # 45 cols total
+    row += _ti_cols(ti_data)
+    return row  # 58 cols total
 
 
-def _build_row_hk(ticker, f, export_date, ticker_data=None):
-    """HK Stock: map to existing A-AA schema, append scraper extras at AB+."""
+def _build_row_hk(ticker, f, export_date, ticker_data=None, ti_data=None):
+    """HK Stock: map to existing A-AA schema, append scraper extras at AB+, TI cols at AV+."""
     price = serialize_value(f["price"])
     row = [""] * _HK_EXISTING_COLS
     row[2] = ticker  # C: Google Quote
@@ -518,7 +593,8 @@ def _build_row_hk(ticker, f, export_date, ticker_data=None):
     # AM(38): Debt/Equity, AN(39): Health Score, AO(40): EQ Flag,
     # AP(41): DCF, AQ(42): Peer P/E,
     # AR(43): Ticker Summary, AS(44): Recommended Action,
-    # AT(45): Analysis Methods, AU(46): Data Source Credibility
+    # AT(45): Analysis Methods, AU(46): Data Source Credibility,
+    # AV(47)-BH(59): TI cols
     row += [
         export_date,
         serialize_value(f["eps"]),
@@ -538,11 +614,12 @@ def _build_row_hk(ticker, f, export_date, ticker_data=None):
         serialize_value(f["peer_pe"]),
     ]
     row += _intelligence_cols(f, ticker_data)
-    return row  # 47 cols total
+    row += _ti_cols(ti_data)
+    return row  # 60 cols total
 
 
-def _build_row_others(ticker, f, export_date, ticker_data=None):
-    """Others Stock: flat 24-column schema (tab is auto-created, we own it)."""
+def _build_row_others(ticker, f, export_date, ticker_data=None, ti_data=None):
+    """Others Stock: flat 37-column schema including TI cols (tab is auto-created)."""
     row = [
         export_date,
         ticker,
@@ -566,7 +643,8 @@ def _build_row_others(ticker, f, export_date, ticker_data=None):
         serialize_value(f["peer_pe"]),
     ]
     row += _intelligence_cols(f, ticker_data)
-    return row  # 24 cols total
+    row += _ti_cols(ti_data)
+    return row  # 37 cols total
 
 
 _TAB_TI = "Trading Indicators"
@@ -598,10 +676,10 @@ _ROW_BUILDERS = {
 
 # Expected row lengths per tab (used by tests)
 ROW_LENGTHS = {
-    _TAB_US: 52,
-    _TAB_SG: 45,
-    _TAB_HK: 47,
-    _TAB_OTHERS: 24,
+    _TAB_US: 65,
+    _TAB_SG: 58,
+    _TAB_HK: 60,
+    _TAB_OTHERS: 37,
     _TAB_TI: 15,
 }
 
@@ -637,6 +715,19 @@ _SCRAPER_HEADERS = {
         (49, "Recommended Action"),
         (50, "Analysis Methods"),
         (51, "Data Source Credibility"),
+        (52, "Lookback (days)"),
+        (53, "Volume Profile Signal"),
+        (54, "AVWAP Signal"),
+        (55, "AVWAP Convergence"),
+        (56, "Order Flow Signal"),
+        (57, "Order Flow Divergence"),
+        (58, "Sweep Signal"),
+        (59, "Sweep Price"),
+        (60, "Footprint Signal"),
+        (61, "Footprint Cum Delta"),
+        (62, "Composite Direction"),
+        (63, "Composite Score"),
+        (64, "Composite Dissenters"),
     ],
     _TAB_SG: [
         (26, "Export Date"),
@@ -658,6 +749,19 @@ _SCRAPER_HEADERS = {
         (42, "Recommended Action"),
         (43, "Analysis Methods"),
         (44, "Data Source Credibility"),
+        (45, "Lookback (days)"),
+        (46, "Volume Profile Signal"),
+        (47, "AVWAP Signal"),
+        (48, "AVWAP Convergence"),
+        (49, "Order Flow Signal"),
+        (50, "Order Flow Divergence"),
+        (51, "Sweep Signal"),
+        (52, "Sweep Price"),
+        (53, "Footprint Signal"),
+        (54, "Footprint Cum Delta"),
+        (55, "Composite Direction"),
+        (56, "Composite Score"),
+        (57, "Composite Dissenters"),
     ],
     _TAB_HK: [
         (27, "Export Date"),
@@ -680,6 +784,19 @@ _SCRAPER_HEADERS = {
         (44, "Recommended Action"),
         (45, "Analysis Methods"),
         (46, "Data Source Credibility"),
+        (47, "Lookback (days)"),
+        (48, "Volume Profile Signal"),
+        (49, "AVWAP Signal"),
+        (50, "AVWAP Convergence"),
+        (51, "Order Flow Signal"),
+        (52, "Order Flow Divergence"),
+        (53, "Sweep Signal"),
+        (54, "Sweep Price"),
+        (55, "Footprint Signal"),
+        (56, "Footprint Cum Delta"),
+        (57, "Composite Direction"),
+        (58, "Composite Score"),
+        (59, "Composite Dissenters"),
     ],
 }
 
@@ -811,8 +928,8 @@ def export_tickers_to_sheets(tickers, data, trading_indicators_data=None):
       - Suffix .HK     → "HK Stock"
       - Everything else → "Others Stock" (auto-created if absent)
 
-    Optionally exports Trading Indicators data to the "Trading Indicators" tab
-    (auto-created). TI failures are isolated — fundamentals still write.
+    Trading Indicators data is written inline as 13 extra columns appended to
+    each stock tab row (after intelligence columns). No separate TI tab is created.
 
     Args:
         tickers: list of ticker strings (e.g. ["AAPL", "D05.SI"])
@@ -820,9 +937,7 @@ def export_tickers_to_sheets(tickers, data, trading_indicators_data=None):
         trading_indicators_data: optional dict mapping ticker → TI field dict
 
     Returns:
-        dict: {"rows_added": N} on basic success,
-              {"rows_added": N, "ti_rows_added": M} when TI tab written,
-              {"rows_added": N, "warning": "Trading Indicators: ..."} on TI failure
+        dict: {"rows_added": N}
 
     Raises:
         ValueError: if GOOGLE_SHEETS_SPREADSHEET_ID is not set
@@ -842,13 +957,15 @@ def export_tickers_to_sheets(tickers, data, trading_indicators_data=None):
     gc = get_sheets_client()
     sh = gc.open_by_key(spreadsheet_id)
     export_date = date.today().strftime("%Y-%m-%d")
+    ti_data = trading_indicators_data or {}
 
     buckets: dict[str, list] = {}
     for ticker in tickers:
         tab = _classify_ticker(ticker)
         ticker_data = data.get(ticker, {})
         fields = _extract_fields(ticker_data)
-        row = _ROW_BUILDERS[tab](ticker, fields, export_date, ticker_data)
+        ticker_ti = ti_data.get(ticker)
+        row = _ROW_BUILDERS[tab](ticker, fields, export_date, ticker_data, ticker_ti)
         buckets.setdefault(tab, []).append(row)
 
     total = 0
@@ -865,27 +982,4 @@ def export_tickers_to_sheets(tickers, data, trading_indicators_data=None):
         )
         total += len(rows)
 
-    result: dict = {"rows_added": total}
-
-    ti_data = trading_indicators_data or {}
-    if ti_data:
-        try:
-            ti_rows = [
-                _build_row_ti(ticker, td, export_date)
-                for ticker, td in ti_data.items()
-                if td
-            ]
-            if ti_rows:
-                ti_ws = _get_or_create_worksheet(sh, _TAB_TI)
-                _upsert_rows(ti_ws, ti_rows, _TICKER_COL[_TAB_TI])
-                logger.info(
-                    "Upserted %d rows to TI tab in sheet %s",
-                    len(ti_rows),
-                    spreadsheet_id,
-                )
-                result["ti_rows_added"] = len(ti_rows)
-        except Exception as ti_err:
-            logger.warning("TI tab export failed (fundamentals unaffected): %s", ti_err)
-            result["warning"] = f"Trading Indicators: {ti_err}"
-
-    return result
+    return {"rows_added": total}

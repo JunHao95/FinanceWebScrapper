@@ -150,25 +150,25 @@ _SAMPLE_FIELDS = _extract_fields(
 @pytest.mark.unit
 def test_row_length_us():
     row = _build_row_us("AAPL", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_US]  # 52
+    assert len(row) == ROW_LENGTHS[_TAB_US]  # 65
 
 
 @pytest.mark.unit
 def test_row_length_sg():
     row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 45
+    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 58
 
 
 @pytest.mark.unit
 def test_row_length_hk():
     row = _build_row_hk("0700.HK", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_HK]  # 47
+    assert len(row) == ROW_LENGTHS[_TAB_HK]  # 60
 
 
 @pytest.mark.unit
 def test_row_length_others():
     row = _build_row_others("BRK.B", _SAMPLE_FIELDS, "2026-05-17")
-    assert len(row) == ROW_LENGTHS[_TAB_OTHERS]  # 24
+    assert len(row) == ROW_LENGTHS[_TAB_OTHERS]  # 37
 
 
 @pytest.mark.unit
@@ -345,11 +345,14 @@ def test_data_source_credibility_empty_with_no_sources():
 
 
 @pytest.mark.unit
-def test_sg_row_intelligence_cols_at_end():
+def test_sg_row_intelligence_cols():
     row = _build_row_sg("D05.SI", _INTEL_FIELDS, "2026-05-17", _INTEL_TICKER_DATA)
-    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 45
-    # Last 4 are intelligence cols
-    ticker_summary, recommended_action, analysis_methods, data_source = row[-4:]
+    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 58
+    # Intelligence cols at indices 41-44 (before 13 TI cols at 45-57)
+    ticker_summary = row[41]
+    recommended_action = row[42]
+    analysis_methods = row[43]
+    data_source = row[44]
     assert ticker_summary != ""
     assert recommended_action.startswith("Buy")
     assert "RSI/MA" in analysis_methods
@@ -537,7 +540,7 @@ def test_ensure_min_cols_noop_when_wide_enough():
 
 @pytest.mark.unit
 def test_export_resizes_sg_tab_to_min_cols():
-    """export_tickers_to_sheets must resize SG tab to ROW_LENGTHS[_TAB_SG]=41 cols."""
+    """export_tickers_to_sheets must resize SG tab to ROW_LENGTHS[_TAB_SG]=58 cols."""
     mock_gc, worksheets, _ = _make_mock_gc()
     worksheets[_TAB_SG].col_count = 30  # narrow — needs resize
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
@@ -743,7 +746,7 @@ def test_others_tab_auto_created():
     ), patch("os.path.exists", return_value=True):
         result = export_tickers_to_sheets(["BRK.B"], {"BRK.B": {"Price": 500.0}})
     assert result["rows_added"] == 1
-    mock_sh.add_worksheet.assert_called_once_with(title=_TAB_OTHERS, rows=1000, cols=24)
+    mock_sh.add_worksheet.assert_called_once_with(title=_TAB_OTHERS, rows=1000, cols=37)
 
 
 @pytest.mark.unit
@@ -768,7 +771,7 @@ def test_export_updates_existing_ticker_in_us_tab():
         ["", "", "AAPL", "100.0"],
     ]
     # Pre-populate row 1 so _ensure_scraper_headers writes nothing extra
-    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 52
+    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 65
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
@@ -787,7 +790,7 @@ def test_export_upsert_mixed_new_and_existing():
         ["", "", "AAPL", "100.0"],
     ]
     # Pre-populate row 1 so _ensure_scraper_headers writes nothing extra
-    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 52
+    worksheets[_TAB_US].row_values.return_value = ["hdr"] * 65
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
@@ -804,11 +807,10 @@ def test_export_upsert_mixed_new_and_existing():
 # _build_row_ti and Trading Indicators tab
 # ---------------------------------------------------------------------------
 
-from src.utils.sheets_utils import (
+from src.utils.sheets_utils import (  # noqa: E402
     _build_row_ti,
     TI_COLUMN_HEADERS,
-    _TAB_TI,
-)  # noqa: E402
+)
 
 
 @pytest.mark.unit
@@ -843,14 +845,9 @@ def test_ti_column_headers_length():
 
 
 @pytest.mark.unit
-def test_export_with_ti_data_returns_ti_rows_added():
+def test_export_with_ti_data_embeds_ti_inline():
+    """TI data included → written inline in stock tab; result is rows_added only."""
     mock_gc, worksheets, mock_sh = _make_mock_gc()
-    ti_ws = MagicMock()
-    ti_ws.get_all_values.return_value = [[]]
-    mock_sh.worksheet.side_effect = lambda name: (
-        ti_ws if name == _TAB_TI else worksheets.get(name, MagicMock())
-    )
-    mock_sh.add_worksheet.return_value = ti_ws
     ti_data = {"AAPL": {"composite_score": 0.8, "composite_dissenters": ["AVWAP"]}}
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
@@ -858,27 +855,30 @@ def test_export_with_ti_data_returns_ti_rows_added():
         result = export_tickers_to_sheets(
             ["AAPL"], {"AAPL": {}}, trading_indicators_data=ti_data
         )
-    assert "ti_rows_added" in result
-    assert result["ti_rows_added"] == 1
+    assert result["rows_added"] == 1
+    assert "ti_rows_added" not in result
+    assert "warning" not in result
 
 
 @pytest.mark.unit
-def test_export_ti_failure_returns_warning():
-    mock_gc, worksheets, mock_sh = _make_mock_gc()
-
-    def raise_for_ti(name):
-        if name == _TAB_TI:
-            raise Exception("TI tab error")
-        return worksheets.get(name, MagicMock())
-
-    mock_sh.worksheet.side_effect = raise_for_ti
-    ti_data = {"AAPL": {"composite_score": 0.8}}
+def test_export_with_no_ti_data_no_warning():
+    """No TI data → TI cols are empty strings inline; result has no warning."""
+    mock_gc, worksheets, _ = _make_mock_gc()
     with patch("gspread.service_account", return_value=mock_gc), patch.dict(
         "os.environ", _ENV
     ), patch("os.path.exists", return_value=True):
         result = export_tickers_to_sheets(
-            ["AAPL"], {"AAPL": {}}, trading_indicators_data=ti_data
+            ["AAPL"], {"AAPL": {}}, trading_indicators_data={}
         )
-    assert "warning" in result
-    assert "Trading Indicators" in result["warning"]
-    assert "rows_added" in result
+    assert result["rows_added"] == 1
+    assert "warning" not in result
+
+
+@pytest.mark.unit
+def test_build_row_sg_with_ti_data_appends_ti_cols():
+    """With ti_data, TI cols at indices 45-57 in SG tab row."""
+    ti_data = {"composite_score": 0.75, "composite_direction": "bullish"}
+    row = _build_row_sg("D05.SI", _SAMPLE_FIELDS, "2026-05-21", None, ti_data)
+    assert len(row) == ROW_LENGTHS[_TAB_SG]  # 58
+    assert row[55] == "bullish"  # Composite Direction at AT+10 = 45+10 = 55
+    assert row[56] == 0.75  # Composite Score at AT+11 = 45+11 = 56
