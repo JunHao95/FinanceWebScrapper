@@ -324,18 +324,19 @@ Plans:
 **Goal:** A local-only "Export to Sheets" feature is live — after scraping tickers, the user can click "Export to Sheets" to append a timestamped row per ticker into a pre-created Google Sheet they own. Each row includes price/valuation/technical/fundamental/analytics columns plus four intelligence columns: Ticker Summary (narrative), Recommended Action (enhanced Buy/Hold/Sell verdict with rationale), Analysis Methods (which models ran), and Data Source Credibility (composite source quality label). Authenticated via a service account JSON credential file, with clear error messages when credentials are missing or the Sheet is not shared.
 **Requirements**: SHEETS-UNIT, SHEETS-INT, SHEETS-BACKEND, SHEETS-FRONTEND, SHEETS-DOCS
 **Depends on:** Phase 30
-**Plans:** 3/3 plans complete
+**Plans:** 4 plans (revised 2026-05-21 to incorporate upsert, named tabs, TI tab, partial failure)
 
 Plans:
-- [ ] 31-01-PLAN.md — Wave 0 test stubs: test_unit_sheets_utils.py (12 stubs) + TestExportSheets class in test_integration_routes.py (wave 0)
-- [ ] 31-02-PLAN.md — Backend: src/utils/sheets_utils.py + POST /api/export-sheets route + requirements.txt + .env.example (wave 1)
-- [ ] 31-03-PLAN.md — Frontend: index.html button + api.js API.exportSheets() + stockScraper.js StockScraper.exportSheets() + README Google Sheets Setup + visual checkpoint (wave 2)
+- [ ] 31-01-PLAN.md — Wave 0 test stubs: 20+ stubs covering serialize, upsert (3), TI tab (3), tab routing (4), partial-failure/ti_rows_added integration tests (7) (wave 0)
+- [ ] 31-02-PLAN.md — Backend skeleton: sheets_utils.py module constants + pure functions + stubs; requirements.txt + .env.example (wave 1)
+- [ ] 31-02b-PLAN.md — Backend full: _upsert_rows, named tab routing, 4 intelligence column generators, _build_row_ti, _create_tab_if_absent, export_tickers_to_sheets, POST /api/export-sheets (wave 2)
+- [ ] 31-03-PLAN.md — Frontend: index.html button + api.js API.exportSheets() + stockScraper.js (ti_rows_added/warning alerts, trading_indicators_data payload) + README + visual checkpoint (wave 3)
 
 ---
 
 *Roadmap created: 2026-04-08*
 *Phase 27 added: 2026-05-04 — Codebase Quality, Security, and Reliability Hardening (12 requirements from code review)*
 *Phase 29 added: 2026-05-10 — Feynman Research Integration (POC — RF section), 3 plans planned*
-*Phase 31 planned: 2026-05-17 — Integration with googlesheets for local Webapp, 3 plans*
+*Phase 31 planned: 2026-05-17 — Integration with googlesheets for local Webapp, 3 plans (revised 2026-05-21: split plan 31-02 into 31-02 + 31-02b, now 4 plans total)*
 *Milestone: v2.2 Trading Indicators*
 *Previous milestone: v2.1 (Phases 13–17, all Complete)*
