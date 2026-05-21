@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: milestone
 status: planning
-stopped_at: Phase 31 context updated — intelligence column decisions captured
-last_updated: "2026-05-19T17:03:50.973Z"
+stopped_at: Phase 31 context updated — partial failure behavior, plan coverage strategy, TI schema finalized
+last_updated: "2026-05-21T05:02:30.551Z"
 last_activity: 2026-04-08 — Roadmap created; 18 requirements mapped across 5 phases (18–22)
 progress:
   total_phases: 15
@@ -156,6 +156,7 @@ Recent decisions affecting current work:
 
 ### Roadmap Evolution
 
+- Phase 31 updated (2026-05-21): New requirement — Trading Indicators tab export. `AppState.tradingIndicatorsData` sent in export payload; new `"Trading Indicators"` tab auto-created; skip-if-no-data; upsert by ticker. 5 changes required (stockScraper.js, webapp.py, sheets_utils.py, tests, README).
 - Phase 31 added: Integration with googlesheets for local Webapp
 - Phase 28 added: I want to enhance the Stock Details Tab
 - Phase 27 added: Codebase Quality, Security, and Reliability Hardening — 12 requirements from code review (REL-01–04, QA-01–04, TEST-09–11, ARCH-01)
@@ -181,6 +182,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-19T17:03:50.963Z
-Stopped at: Phase 31 context updated — intelligence column decisions captured
+Last session: 2026-05-21T05:02:30.542Z
+Stopped at: Phase 31 context updated — partial failure behavior, plan coverage strategy, TI schema finalized
 Resume file: .planning/phases/31-integration-with-googlesheets-for-local-webapp/31-CONTEXT.md
